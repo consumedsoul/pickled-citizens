@@ -1798,6 +1798,16 @@ eval("\nObject.defineProperty(exports, \"__esModule\", ({\n    value: true\n}));
 
 /***/ }),
 
+/***/ "(ssr)/./node_modules/next/link.js":
+/*!***********************************!*\
+  !*** ./node_modules/next/link.js ***!
+  \***********************************/
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+eval("module.exports = __webpack_require__(/*! ./dist/client/link */ \"(ssr)/./node_modules/next/dist/client/link.js\");\n//# sourceURL=[module]\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiKHNzcikvLi9ub2RlX21vZHVsZXMvbmV4dC9saW5rLmpzIiwibWFwcGluZ3MiOiJBQUFBQSwrR0FBeUIiLCJzb3VyY2VzIjpbIndlYnBhY2s6Ly9waWNrbGVkLWNpdGl6ZW5zLy4vbm9kZV9tb2R1bGVzL25leHQvbGluay5qcz83NWIzIl0sInNvdXJjZXNDb250ZW50IjpbIm1vZHVsZS5leHBvcnRzID0gcmVxdWlyZSgnLi9kaXN0L2NsaWVudC9saW5rJylcbiJdLCJuYW1lcyI6WyJtb2R1bGUiLCJleHBvcnRzIiwicmVxdWlyZSJdLCJzb3VyY2VSb290IjoiIn0=\n//# sourceURL=webpack-internal:///(ssr)/./node_modules/next/link.js\n");
+
+/***/ }),
+
 /***/ "(rsc)/./node_modules/next/dist/build/output/log.js":
 /*!****************************************************!*\
   !*** ./node_modules/next/dist/build/output/log.js ***!

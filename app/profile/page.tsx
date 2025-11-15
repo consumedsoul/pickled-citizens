@@ -1,0 +1,555 @@
+'use client';
+
+import { FormEvent, useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabaseClient';
+
+type Profile = {
+  first_name: string | null;
+  last_name: string | null;
+  gender: string | null;
+  dupr_id: string | null;
+  self_reported_dupr: number | null;
+};
+
+type League = {
+  id: string;
+  name: string;
+};
+
+export default function ProfilePage() {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [gender, setGender] = useState('');
+  const [duprId, setDuprId] = useState('');
+  const [selfDupr, setSelfDupr] = useState('');
+
+  const [duprScore, setDuprScore] = useState<number | null>(null);
+  const [duprStatus, setDuprStatus] = useState<string | null>(null);
+  const [duprLoading, setDuprLoading] = useState(false);
+
+  const [leagues, setLeagues] = useState<League[]>([]);
+
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    async function load() {
+      setLoading(true);
+      setError(null);
+      setSuccess(null);
+
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (!active) return;
+
+      if (userError) {
+        setError(userError.message);
+        setLoading(false);
+        return;
+      }
+
+      const user = userData.user;
+      if (!user) {
+        setError('You need to be signed in to view your profile.');
+        setLoading(false);
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, gender, dupr_id, self_reported_dupr')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (!active) return;
+
+      if (profileError) {
+        setError(profileError.message);
+      } else if (profile) {
+        const p = profile as Profile;
+        setFirstName(p.first_name ?? '');
+        setLastName(p.last_name ?? '');
+        setGender(p.gender ?? '');
+        setDuprId(p.dupr_id ?? '');
+        setSelfDupr(
+          p.self_reported_dupr !== null && p.self_reported_dupr !== undefined
+            ? p.self_reported_dupr.toFixed(2)
+            : ''
+        );
+      }
+
+      const { data: memberRows, error: leaguesError } = await supabase
+        .from('league_members')
+        .select('league:leagues(id, name)')
+        .eq('user_id', user.id);
+
+      if (!active) return;
+
+      if (!leaguesError && memberRows) {
+        const mapped: League[] = (memberRows as any[])
+          .map((row) => row.league)
+          .filter(Boolean);
+        setLeagues(mapped);
+      }
+
+      setLoading(false);
+    }
+
+    load();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!duprId || duprId.length !== 6) {
+      setDuprScore(null);
+      setDuprStatus(null);
+      return;
+    }
+
+    let active = true;
+
+    async function fetchDupr() {
+      setDuprLoading(true);
+      setDuprStatus(null);
+      setDuprScore(null);
+
+      try {
+        const res = await fetch(`/api/dupr-score?duprId=${encodeURIComponent(duprId)}`);
+        if (!active) return;
+
+        if (!res.ok) {
+          setDuprStatus('Unable to fetch DUPR score (API not configured).');
+          setDuprLoading(false);
+          return;
+        }
+
+        const data = (await res.json()) as { score?: number | null; message?: string };
+        if (data.score != null) {
+          setDuprScore(data.score);
+          setDuprStatus(null);
+        } else {
+          setDuprScore(null);
+          setDuprStatus(data.message ?? 'No DUPR score found for this ID.');
+        }
+      } catch {
+        if (!active) return;
+        setDuprStatus('Error contacting DUPR API.');
+      } finally {
+        if (active) {
+          setDuprLoading(false);
+        }
+      }
+    }
+
+    fetchDupr();
+
+    return () => {
+      active = false;
+    };
+  }, [duprId]);
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    setError(null);
+    setSuccess(null);
+
+    if (!firstName.trim() || !lastName.trim() || !gender) {
+      setError('First name, last name, and gender are required.');
+      return;
+    }
+
+    if (duprId && duprId.length !== 6) {
+      setError('DUPR ID must be exactly 6 characters if provided.');
+      return;
+    }
+
+    if (selfDupr && !/^\d{1,2}(\.\d{1,2})?$/.test(selfDupr)) {
+      setError('Self-reported DUPR must be a number like 3.75.');
+      return;
+    }
+
+    setSaving(true);
+
+    const {
+      data: userData,
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !userData.user) {
+      setError(userError?.message ?? 'You must be signed in.');
+      setSaving(false);
+      return;
+    }
+
+    const selfDuprNumber = selfDupr ? Number(selfDupr) : null;
+
+    const { error: upsertError } = await supabase.from('profiles').upsert({
+      id: userData.user.id,
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
+      gender,
+      dupr_id: duprId || null,
+      self_reported_dupr: selfDuprNumber,
+      updated_at: new Date().toISOString(),
+    });
+
+    if (upsertError) {
+      setError(upsertError.message);
+    } else {
+      setSuccess('Profile saved.');
+    }
+
+    setSaving(false);
+  }
+
+  function openDeleteDialog() {
+    setDeleteOpen(true);
+    setDeleteConfirm('');
+    setError(null);
+    setSuccess(null);
+  }
+
+  function closeDeleteDialog() {
+    setDeleteOpen(false);
+    setDeleteConfirm('');
+    setDeleteLoading(false);
+  }
+
+  async function handleDeleteAccount() {
+    if (deleteConfirm !== 'delete') return;
+
+    setDeleteLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    const {
+      data: userData,
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !userData.user) {
+      setError(userError?.message ?? 'You must be signed in.');
+      setDeleteLoading(false);
+      return;
+    }
+
+    const user = userData.user;
+
+    // Best-effort cleanup of user-related data.
+    // Depending on your RLS policies, some of these may require
+    // additional delete policies to succeed.
+    const email = user.email ?? '';
+
+    const operations = [
+      supabase.from('league_members').delete().eq('user_id', user.id),
+      supabase.from('league_invites').delete().eq('email', email),
+      supabase.from('leagues').delete().eq('owner_id', user.id),
+      supabase.from('profiles').delete().eq('id', user.id),
+    ];
+
+    for (const op of operations) {
+      const { error } = await op;
+      if (error) {
+        // Surface the first error and stop; user can retry after policies are adjusted.
+        setError(error.message);
+        setDeleteLoading(false);
+        return;
+      }
+    }
+
+    await supabase.auth.signOut();
+
+    // Redirect back to home after account data is removed.
+    window.location.href = '/';
+  }
+
+  if (loading) {
+    return (
+      <div className="section">
+        <h1 className="section-title">Profile</h1>
+        <p className="hero-subtitle">Loading your profile…</p>
+      </div>
+    );
+  }
+
+  if (error && !saving && !success && !firstName && !lastName && !gender) {
+    return (
+      <div className="section">
+        <h1 className="section-title">Profile</h1>
+        <p className="hero-subtitle" style={{ color: '#fca5a5' }}>
+          {error}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="section" style={{ maxWidth: 640 }}>
+      <h1 className="section-title">Profile</h1>
+      {error && (
+        <p className="hero-subtitle" style={{ color: '#fca5a5' }}>
+          {error}
+        </p>
+      )}
+      {success && (
+        <p className="hero-subtitle" style={{ color: '#4ade80' }}>
+          {success}
+        </p>
+      )}
+
+      <form
+        onSubmit={handleSubmit}
+        style={{ display: 'grid', gap: '0.75rem', marginTop: '1rem' }}
+      >
+        <div style={{ display: 'grid', gap: '0.5rem', gridTemplateColumns: '1fr 1fr' }}>
+          <label style={{ fontSize: '0.8rem' }}>
+            First name (required)
+            <input
+              type="text"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              required
+              style={{
+                marginTop: '0.35rem',
+                width: '100%',
+                padding: '0.45rem 0.6rem',
+                borderRadius: '0.5rem',
+                border: '1px solid #1f2937',
+                background: '#020617',
+                color: '#e5e7eb',
+              }}
+            />
+          </label>
+
+          <label style={{ fontSize: '0.8rem' }}>
+            Last name (required)
+            <input
+              type="text"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              required
+              style={{
+                marginTop: '0.35rem',
+                width: '100%',
+                padding: '0.45rem 0.6rem',
+                borderRadius: '0.5rem',
+                border: '1px solid #1f2937',
+                background: '#020617',
+                color: '#e5e7eb',
+              }}
+            />
+          </label>
+        </div>
+
+        <label style={{ fontSize: '0.8rem' }}>
+          Gender (required)
+          <select
+            value={gender}
+            onChange={(e) => setGender(e.target.value)}
+            required
+            style={{
+              marginTop: '0.35rem',
+              width: '100%',
+              padding: '0.45rem 0.6rem',
+              borderRadius: '0.5rem',
+              border: '1px solid #1f2937',
+              background: '#020617',
+              color: '#e5e7eb',
+            }}
+          >
+            <option value="">Select gender</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </select>
+        </label>
+
+        <div style={{ display: 'grid', gap: '0.5rem', gridTemplateColumns: '1fr 1fr' }}>
+          <label style={{ fontSize: '0.8rem' }}>
+            DUPR ID (6 characters, optional)
+            <input
+              type="text"
+              value={duprId}
+              onChange={(e) => setDuprId(e.target.value.trim())}
+              maxLength={6}
+              style={{
+                marginTop: '0.35rem',
+                width: '100%',
+                padding: '0.45rem 0.6rem',
+                borderRadius: '0.5rem',
+                border: '1px solid #1f2937',
+                background: '#020617',
+                color: '#e5e7eb',
+              }}
+            />
+          </label>
+
+          <label style={{ fontSize: '0.8rem' }}>
+            Self-reported DUPR (x.xx, optional)
+            <input
+              type="text"
+              value={selfDupr}
+              onChange={(e) => setSelfDupr(e.target.value)}
+              placeholder="e.g. 3.75"
+              style={{
+                marginTop: '0.35rem',
+                width: '100%',
+                padding: '0.45rem 0.6rem',
+                borderRadius: '0.5rem',
+                border: '1px solid #1f2937',
+                background: '#020617',
+                color: '#e5e7eb',
+              }}
+            />
+          </label>
+        </div>
+
+        <button
+          type="submit"
+          className="btn-primary"
+          disabled={saving}
+          style={{ marginTop: '0.5rem', justifySelf: 'flex-start' }}
+        >
+          {saving ? 'Saving…' : 'Save profile'}
+        </button>
+      </form>
+
+      <div style={{ marginTop: '1.5rem' }}>
+        <h2 className="section-title">DUPR Score</h2>
+        {duprLoading && <p className="hero-subtitle">Fetching DUPR score…</p>}
+        {!duprLoading && duprId && duprId.length === 6 && duprScore != null && (
+          <p className="hero-subtitle">Current DUPR score: {duprScore.toFixed(2)}</p>
+        )}
+        {!duprLoading && duprId && duprId.length === 6 && duprScore == null && duprStatus && (
+          <p className="hero-subtitle">{duprStatus}</p>
+        )}
+        {!duprLoading && !duprId && (
+          <p className="hero-subtitle">Add your DUPR ID to see your official score.</p>
+        )}
+      </div>
+
+      <div style={{ marginTop: '1.5rem' }}>
+        <h2 className="section-title">Leagues you belong to</h2>
+        {leagues.length === 0 ? (
+          <p className="hero-subtitle">You are not in any leagues yet.</p>
+        ) : (
+          <ul className="section-list">
+            {leagues.map((league) => (
+              <li key={league.id}>{league.name}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div
+        style={{
+          marginTop: '2rem',
+          paddingTop: '1rem',
+          borderTop: '1px solid #1f2937',
+        }}
+      >
+        <h2 className="section-title">Delete account</h2>
+        <p className="hero-subtitle">
+          This will delete your profile and league data in PickledCitizens. This
+          action cannot be undone.
+        </p>
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={openDeleteDialog}
+          style={{
+            marginTop: '0.75rem',
+            background: '#b91c1c',
+            borderColor: '#b91c1c',
+            color: '#fee2e2',
+          }}
+        >
+          Delete account
+        </button>
+      </div>
+
+      {deleteOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15,23,42,0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 40,
+          }}
+        >
+          <div
+            className="section"
+            style={{
+              maxWidth: 420,
+              width: '90%',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+            }}
+          >
+            <h2 className="section-title">Delete account</h2>
+            <p className="hero-subtitle">
+              This will permanently delete your profile and league data. Type
+              <span style={{ fontWeight: 600 }}> delete </span>
+              to confirm.
+            </p>
+            <input
+              type="text"
+              value={deleteConfirm}
+              onChange={(e) => setDeleteConfirm(e.target.value)}
+              placeholder="Type delete to confirm"
+              style={{
+                marginTop: '0.75rem',
+                width: '100%',
+                padding: '0.45rem 0.6rem',
+                borderRadius: '0.5rem',
+                border: '1px solid #1f2937',
+                background: '#020617',
+                color: '#e5e7eb',
+              }}
+            />
+            <div
+              style={{
+                marginTop: '1rem',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '0.5rem',
+              }}
+            >
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={closeDeleteDialog}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handleDeleteAccount}
+                disabled={deleteLoading || deleteConfirm !== 'delete'}
+                style={{
+                  background: '#b91c1c',
+                  borderColor: '#b91c1c',
+                  color: '#fee2e2',
+                }}
+              >
+                {deleteLoading ? 'Deleting…' : 'Confirm delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
