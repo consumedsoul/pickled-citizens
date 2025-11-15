@@ -33,6 +33,8 @@ export default function ProfilePage() {
 
   const [leagues, setLeagues] = useState<League[]>([]);
 
+  const [leaveLeagueId, setLeaveLeagueId] = useState<string | null>(null);
+
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -156,6 +158,22 @@ export default function ProfilePage() {
     }
 
     setSaving(false);
+  }
+
+  function openLeaveLeagueDialog(leagueId: string) {
+    setLeaveLeagueId(leagueId);
+    setError(null);
+    setSuccess(null);
+  }
+
+  async function confirmLeaveLeague() {
+    if (!leaveLeagueId) return;
+    await handleLeaveLeague(leaveLeagueId);
+    setLeaveLeagueId(null);
+  }
+
+  function closeLeaveLeagueDialog() {
+    setLeaveLeagueId(null);
   }
 
   async function handleLeaveLeague(leagueId: string) {
@@ -339,7 +357,7 @@ export default function ProfilePage() {
           </label>
         </div>
 
-        <div style={{ display: 'grid', gap: '0.5rem', gridTemplateColumns: '1fr 1fr' }}>
+        <div style={{ display: 'grid', gap: '0.5rem', gridTemplateColumns: '1fr' }}>
           <label style={{ fontSize: '0.8rem' }}>
             Gender (required)
             <select
@@ -361,41 +379,41 @@ export default function ProfilePage() {
               <option value="female">Female</option>
             </select>
           </label>
-
-          <label style={{ fontSize: '0.8rem' }}>
-            Self-reported DUPR (required, x.xx)
-            <input
-              type="text"
-              value={selfDupr}
-              onChange={(e) => setSelfDupr(e.target.value)}
-              placeholder="e.g. 3.75"
-              style={{
-                marginTop: '0.35rem',
-                width: '100%',
-                padding: '0.45rem 0.6rem',
-                borderRadius: '0.5rem',
-                border: '1px solid #1f2937',
-                background: '#020617',
-                color: '#e5e7eb',
-              }}
-            />
-            <p
-              className="hero-subtitle"
-              style={{ fontSize: '0.75rem', marginTop: '0.35rem' }}
-            >
-              Need help estimating your rating? See{' '}
-              <a
-                href="https://www.pickleheads.com/guides/pickleball-rating"
-                target="_blank"
-                rel="noreferrer"
-                style={{ color: '#60a5fa', textDecoration: 'underline' }}
-              >
-                this guide
-              </a>
-              .
-            </p>
-          </label>
         </div>
+
+        <label style={{ fontSize: '0.8rem' }}>
+          Self-reported DUPR (required, x.xx)
+          <input
+            type="text"
+            value={selfDupr}
+            onChange={(e) => setSelfDupr(e.target.value)}
+            placeholder="e.g. 3.75"
+            style={{
+              marginTop: '0.35rem',
+              width: '100%',
+              padding: '0.45rem 0.6rem',
+              borderRadius: '0.5rem',
+              border: '1px solid #1f2937',
+              background: '#020617',
+              color: '#e5e7eb',
+            }}
+          />
+          <p
+            className="hero-subtitle"
+            style={{ fontSize: '0.75rem', marginTop: '0.35rem' }}
+          >
+            Need help estimating your rating? See{' '}
+            <a
+              href="https://www.pickleheads.com/guides/pickleball-rating"
+              target="_blank"
+              rel="noreferrer"
+              style={{ color: '#60a5fa', textDecoration: 'underline' }}
+            >
+              this guide
+            </a>
+            .
+          </p>
+        </label>
 
         <button
           type="submit"
@@ -428,7 +446,7 @@ export default function ProfilePage() {
                 <button
                   type="button"
                   className="btn-secondary"
-                  onClick={() => handleLeaveLeague(league.id)}
+                  onClick={() => openLeaveLeagueDialog(league.id)}
                 >
                   Leave league
                 </button>
@@ -533,6 +551,60 @@ export default function ProfilePage() {
                 }}
               >
                 {deleteLoading ? 'Deleting…' : 'Confirm delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {leaveLeagueId && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15,23,42,0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 40,
+          }}
+        >
+          <div
+            className="section"
+            style={{
+              maxWidth: 420,
+              width: '90%',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+            }}
+          >
+            <h2 className="section-title">Leave league</h2>
+            <p className="hero-subtitle">
+              Are you sure you want to leave{' '}
+              {leagues.find((league) => league.id === leaveLeagueId)?.name ?? 'this league'}
+              ?
+            </p>
+            <div
+              style={{
+                marginTop: '1rem',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '0.5rem',
+              }}
+            >
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={closeLeaveLeagueDialog}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={confirmLeaveLeague}
+                disabled={saving}
+              >
+                {saving ? 'Leaving…' : 'Leave league'}
               </button>
             </div>
           </div>

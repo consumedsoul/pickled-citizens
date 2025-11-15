@@ -741,7 +741,7 @@ export default function SessionsPage() {
   }
 
   const nowTime = new Date().getTime();
-  const cutoffTime = nowTime - 24 * 60 * 60 * 1000;
+  const cutoffTime = nowTime - 12 * 60 * 60 * 1000;
   const enriched = sessions.map((session) => {
     const effective = session.scheduled_for ?? session.created_at;
     const time = effective ? new Date(effective).getTime() : Number.NaN;
