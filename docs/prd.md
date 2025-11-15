@@ -1,5 +1,5 @@
 # Product Requirements Document (PRD)
-**Product:** PickledCitizens 2.0  
+**Product:** Pickled Citizens  
 **Purpose:** Lightweight, low-cost pickleball platform for league game setup, scheduling, and player history tracking.  
 **Owner:** Hun Kim  
 **Status:** Draft v0.2
@@ -9,7 +9,7 @@
 ## 1. Problem Statement
 Pickleball groups still rely on texts, spreadsheets, and manual coordination. There is no simple tool for small leagues to schedule structured match sessions, manage players, and track history without bloated tournament-level features.
 
-PickledCitizens 2.0 provides a streamlined platform for:
+Pickled Citizens provides a streamlined platform for:
 - League admins to set up games quickly  
 - Players to view schedule and history  
 - Automated match generation within strict time constraints  

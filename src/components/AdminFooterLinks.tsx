@@ -34,14 +34,8 @@ export function AdminFooterLinks() {
     };
   }, []);
 
-  if (state.loading || !state.email) {
-    return null;
-  }
-
-  const email = state.email.toLowerCase();
-  if (email !== 'hun@ghkim.com') {
-    return null;
-  }
+  const email = state.email?.toLowerCase() ?? null;
+  const isAdmin = email === 'hun@ghkim.com';
 
   return (
     <nav
@@ -52,9 +46,21 @@ export function AdminFooterLinks() {
         fontSize: '0.8rem',
       }}
     >
-      <Link href="/admin/events">Logs</Link>
-      <span style={{ opacity: 0.7 }}>·</span>
-      <Link href="/admin/users">Users</Link>
+      {isAdmin && (
+        <>
+          <Link href="/admin/events">Logs</Link>
+          <span style={{ opacity: 0.7 }}>·</span>
+          <Link href="/admin/users">Users</Link>
+          <span style={{ opacity: 0.7 }}>·</span>
+        </>
+      )}
+      <Link
+        href="https://github.com/consumedsoul/pickled-citizens"
+        target="_blank"
+        rel="noreferrer"
+      >
+        GitHub
+      </Link>
     </nav>
   );
 }

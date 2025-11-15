@@ -1,4 +1,4 @@
-# PickledCitizens 2.0
+# Pickled Citizens
 
 Lightweight web app for running casual pickleball leagues: create leagues, invite players, schedule sessions, auto-generate balanced doubles matchups, and track results with a simple DUPR-style rating display.
 

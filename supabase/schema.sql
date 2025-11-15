@@ -1,4 +1,4 @@
--- Supabase schema for PickledCitizens MVP
+-- Supabase schema for Pickled Citizens MVP
 
 -- Users are managed by Supabase auth. This table stores app-specific profile data.
 create table if not exists public.profiles (

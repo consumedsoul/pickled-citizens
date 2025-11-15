@@ -23,6 +23,7 @@ type SessionSummary = {
   id: string;
   league_id: string | null;
   league_name: string | null;
+  created_by: string;
   created_at: string;
   scheduled_for: string | null;
   player_count: number;
@@ -46,6 +47,9 @@ export default function SessionsPage() {
 
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [sessionResults, setSessionResults] = useState<
+    Record<string, { teamGreenWins: number; teamBlueWins: number }>
+  >({});
 
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>("");
   const [membersLoading, setMembersLoading] = useState(false);
@@ -58,6 +62,7 @@ export default function SessionsPage() {
 
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -207,6 +212,7 @@ export default function SessionsPage() {
           id: row.id,
           league_id: row.league_id ?? null,
           league_name: leagueName,
+          created_by: row.created_by,
           created_at: row.created_at,
           scheduled_for: row.scheduled_for ?? null,
           player_count: row.player_count,
@@ -222,7 +228,63 @@ export default function SessionsPage() {
         return new Date(bTime).getTime() - new Date(aTime).getTime();
       });
 
+      let resultsBySession: Record<string, { teamGreenWins: number; teamBlueWins: number }> = {};
+
+      const sessionIds = mapped.map((s) => s.id);
+      if (sessionIds.length) {
+        const { data: matchRows, error: matchResultsError } = await supabase
+          .from("matches")
+          .select(
+            "id, session_id, result:match_results(team1_score, team2_score)"
+          )
+          .in("session_id", sessionIds);
+
+        if (!active) return;
+
+        if (!matchResultsError && matchRows) {
+          const bySession: Record<string, { teamGreenWins: number; teamBlueWins: number }> = {};
+
+          (matchRows as any[]).forEach((row) => {
+            const sessionId = (row as any).session_id as string | null;
+            if (!sessionId) return;
+
+            const rawResult = (row as any).result as
+              | { team1_score: number | null; team2_score: number | null }[]
+              | { team1_score: number | null; team2_score: number | null }
+              | null
+              | undefined;
+
+            let result: { team1_score: number | null; team2_score: number | null } | null = null;
+            if (rawResult) {
+              if (Array.isArray(rawResult)) {
+                result = rawResult[0] ?? null;
+              } else {
+                result = rawResult;
+              }
+            }
+
+            if (!result) return;
+            if (result.team1_score == null || result.team2_score == null) return;
+
+            let entry = bySession[sessionId];
+            if (!entry) {
+              entry = { teamGreenWins: 0, teamBlueWins: 0 };
+              bySession[sessionId] = entry;
+            }
+
+            if (result.team1_score > result.team2_score) {
+              entry.teamGreenWins += 1;
+            } else if (result.team2_score > result.team1_score) {
+              entry.teamBlueWins += 1;
+            }
+          });
+
+          resultsBySession = bySession;
+        }
+      }
+
       setSessions(mapped);
+      setSessionResults(resultsBySession);
 
       setSessionsLoading(false);
       setLoading(false);
@@ -458,6 +520,39 @@ export default function SessionsPage() {
     });
   }
 
+  async function handleDeleteSession(sessionId: string) {
+    if (!userId) return;
+
+    setError(null);
+    setDeletingSessionId(sessionId);
+
+    try {
+      const { error: deleteError } = await supabase
+        .from("game_sessions")
+        .delete()
+        .eq("id", sessionId)
+        .eq("created_by", userId);
+
+      if (deleteError) {
+        setError(deleteError.message);
+        setDeletingSessionId(null);
+        return;
+      }
+
+      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+      setSessionResults((prev) => {
+        if (!(sessionId in prev)) return prev;
+        const next = { ...prev };
+        delete next[sessionId];
+        return next;
+      });
+    } catch (e: any) {
+      setError(e?.message ?? "Unable to delete session.");
+    } finally {
+      setDeletingSessionId(null);
+    }
+  }
+
   async function handleGenerate(event: FormEvent) {
     event.preventDefault();
     setError(null);
@@ -630,7 +725,7 @@ export default function SessionsPage() {
   if (loading) {
     return (
       <div className="section">
-        <h1 className="section-title">Game sessions</h1>
+        <h1 className="section-title">Create session</h1>
         <p className="hero-subtitle">Loading leagues…</p>
       </div>
     );
@@ -639,13 +734,14 @@ export default function SessionsPage() {
   if (!userId) {
     return (
       <div className="section">
-        <h1 className="section-title">Game sessions</h1>
+        <h1 className="section-title">Create session</h1>
         <p className="hero-subtitle">You must be signed in to create sessions.</p>
       </div>
     );
   }
 
   const nowTime = new Date().getTime();
+  const cutoffTime = nowTime - 24 * 60 * 60 * 1000;
   const enriched = sessions.map((session) => {
     const effective = session.scheduled_for ?? session.created_at;
     const time = effective ? new Date(effective).getTime() : Number.NaN;
@@ -653,12 +749,12 @@ export default function SessionsPage() {
   });
 
   const upcomingSessions = enriched
-    .filter((item) => !Number.isNaN(item.time) && item.time >= nowTime)
+    .filter((item) => !Number.isNaN(item.time) && item.time >= cutoffTime)
     .sort((a, b) => a.time - b.time)
     .map((item) => item.session);
 
   const pastSessions = enriched
-    .filter((item) => Number.isNaN(item.time) || item.time < nowTime)
+    .filter((item) => Number.isNaN(item.time) || item.time < cutoffTime)
     .sort((a, b) => {
       const aNaN = Number.isNaN(a.time);
       const bNaN = Number.isNaN(b.time);
@@ -671,7 +767,7 @@ export default function SessionsPage() {
 
   return (
     <div className="section">
-      <h1 className="section-title">Game sessions</h1>
+      <h1 className="section-title">Create session</h1>
       {userEmail && (
         <p className="hero-subtitle" style={{ marginBottom: "0.5rem" }}>
           Signed in as {userEmail}
@@ -690,212 +786,216 @@ export default function SessionsPage() {
         </p>
       )}
 
-      <form
-        onSubmit={handleGenerate}
-        style={{
-          marginTop: "1rem",
-          display: "grid",
-          gap: "0.75rem",
-        }}
-      >
-        <div
-          style={{
-            display: "grid",
-            gap: "0.5rem",
-            gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)",
-          }}
-        >
-          <label style={{ fontSize: "0.8rem" }}>
-            League
-            <select
-              value={selectedLeagueId}
-              onChange={(e) => handleLeagueChange(e.target.value)}
+      {leagues.length > 0 && (
+        <>
+          <form
+            onSubmit={handleGenerate}
+            style={{
+              marginTop: "1rem",
+              display: "grid",
+              gap: "0.75rem",
+            }}
+          >
+            <div
               style={{
-                marginTop: "0.35rem",
-                width: "100%",
-                padding: "0.45rem 0.6rem",
-                borderRadius: "0.5rem",
-                border: "1px solid #1f2937",
-                background: "#020617",
-                color: "#e5e7eb",
+                display: "grid",
+                gap: "0.5rem",
+                gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)",
               }}
             >
-              {leagues.map((league) => (
-                <option key={league.id} value={league.id}>
-                  {league.name}
-                </option>
-              ))}
-            </select>
-          </label>
+              <label style={{ fontSize: "0.8rem" }}>
+                League
+                <select
+                  value={selectedLeagueId}
+                  onChange={(e) => handleLeagueChange(e.target.value)}
+                  style={{
+                    marginTop: "0.35rem",
+                    width: "100%",
+                    padding: "0.45rem 0.6rem",
+                    borderRadius: "0.5rem",
+                    border: "1px solid #1f2937",
+                    background: "#020617",
+                    color: "#e5e7eb",
+                  }}
+                >
+                  {leagues.map((league) => (
+                    <option key={league.id} value={league.id}>
+                      {league.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
 
-          <label style={{ fontSize: "0.8rem" }}>
-            Date and time
-            <input
-              type="datetime-local"
-              value={scheduledFor}
-              onChange={(e) => setScheduledFor(e.target.value)}
-              style={{
-                marginTop: "0.35rem",
-                width: "100%",
-                padding: "0.45rem 0.6rem",
-                borderRadius: "0.5rem",
-                border: "1px solid #1f2937",
-                background: "#020617",
-                color: "#e5e7eb",
-              }}
-            />
-          </label>
-        </div>
+              <label style={{ fontSize: "0.8rem" }}>
+                Date and time
+                <input
+                  type="datetime-local"
+                  value={scheduledFor}
+                  onChange={(e) => setScheduledFor(e.target.value)}
+                  style={{
+                    marginTop: "0.35rem",
+                    width: "100%",
+                    padding: "0.45rem 0.6rem",
+                    borderRadius: "0.5rem",
+                    border: "1px solid #1f2937",
+                    background: "#020617",
+                    color: "#e5e7eb",
+                  }}
+                />
+              </label>
+            </div>
 
-        <div
-          style={{
-            display: "grid",
-            gap: "0.5rem",
-            gridTemplateColumns: "minmax(0,1fr) minmax(0,2fr)",
-            alignItems: "flex-start",
-          }}
-        >
-          <label style={{ fontSize: "0.8rem" }}>
-            Player count
-            <select
-              value={playerCount}
-              onChange={(e) => handlePlayerCountChange(e.target.value)}
+            <div
               style={{
-                marginTop: "0.35rem",
-                width: "100%",
-                padding: "0.45rem 0.6rem",
-                borderRadius: "0.5rem",
-                border: "1px solid #1f2937",
-                background: "#020617",
-                color: "#e5e7eb",
+                display: "grid",
+                gap: "0.5rem",
+                gridTemplateColumns: "minmax(0,1fr) minmax(0,2fr)",
+                alignItems: "flex-start",
               }}
             >
-              {PLAYER_COUNTS.map((n) => (
-                <option key={n} value={n}>
-                  {n} players
-                </option>
-              ))}
-            </select>
-          </label>
+              <label style={{ fontSize: "0.8rem" }}>
+                Player count
+                <select
+                  value={playerCount}
+                  onChange={(e) => handlePlayerCountChange(e.target.value)}
+                  style={{
+                    marginTop: "0.35rem",
+                    width: "100%",
+                    padding: "0.45rem 0.6rem",
+                    borderRadius: "0.5rem",
+                    border: "1px solid #1f2937",
+                    background: "#020617",
+                    color: "#e5e7eb",
+                  }}
+                >
+                  {PLAYER_COUNTS.map((n) => (
+                    <option key={n} value={n}>
+                      {n} players
+                    </option>
+                  ))}
+                </select>
+              </label>
 
-          <div>
-            <p className="hero-subtitle" style={{ marginBottom: "0.25rem" }}>
-              Select players
-            </p>
-            {membersLoading && (
-              <p className="hero-subtitle" style={{ fontSize: "0.8rem" }}>
-                Loading league members…
-              </p>
-            )}
-            {!membersLoading && !members.length && (
-              <p className="hero-subtitle" style={{ fontSize: "0.8rem" }}>
-                This league has no members yet.
-              </p>
-            )}
-            {!membersLoading && members.length > 0 && (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-                  gap: "0.5rem",
-                }}
-              >
-                {Array.from({ length: playerCount }).map((_, i) => (
-                  <select
-                    key={i}
-                    value={selectedPlayerIds[i] ?? ""}
-                    onChange={(e) => handlePlayerSelect(i, e.target.value)}
+              <div>
+                <p className="hero-subtitle" style={{ marginBottom: "0.25rem" }}>
+                  Select players
+                </p>
+                {membersLoading && (
+                  <p className="hero-subtitle" style={{ fontSize: "0.8rem" }}>
+                    Loading league members…
+                  </p>
+                )}
+                {!membersLoading && !members.length && (
+                  <p className="hero-subtitle" style={{ fontSize: "0.8rem" }}>
+                    This league has no members yet.
+                  </p>
+                )}
+                {!membersLoading && members.length > 0 && (
+                  <div
                     style={{
-                      padding: "0.45rem 0.6rem",
-                      borderRadius: "0.5rem",
-                      border: "1px solid #1f2937",
-                      background: "#020617",
-                      color: "#e5e7eb",
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                      gap: "0.5rem",
                     }}
                   >
-                    <option value="">Slot {i + 1}</option>
-                    {members.map((member) => (
-                      <option key={member.user_id} value={member.user_id}>
-                        {displayPlayer(member)}
-                      </option>
+                    {Array.from({ length: playerCount }).map((_, i) => (
+                      <select
+                        key={i}
+                        value={selectedPlayerIds[i] ?? ""}
+                        onChange={(e) => handlePlayerSelect(i, e.target.value)}
+                        style={{
+                          padding: "0.45rem 0.6rem",
+                          borderRadius: "0.5rem",
+                          border: "1px solid #1f2937",
+                          background: "#020617",
+                          color: "#e5e7eb",
+                        }}
+                      >
+                        <option value="">Slot {i + 1}</option>
+                        {members.map((member) => (
+                          <option key={member.user_id} value={member.user_id}>
+                            {displayPlayer(member)}
+                          </option>
+                        ))}
+                      </select>
                     ))}
-                  </select>
-                ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={generating || membersLoading || !members.length}
+              style={{ justifySelf: "flex-start", marginTop: "0.5rem" }}
+            >
+              {generating ? "Creating session..." : "Create session"}
+            </button>
+          </form>
+          <div style={{ marginTop: "1.5rem" }}>
+            <h2 className="section-title">Players (snaking order)</h2>
+            {!orderedPlayers.length ? (
+              <p className="hero-subtitle" style={{ fontSize: "0.85rem" }}>
+                After selecting players, they will appear here sorted by DUPR. Use the
+                arrows to adjust the order; teams and matchups will be based on this
+                list.
+              </p>
+            ) : (
+              <div
+                style={{
+                  marginTop: "0.75rem",
+                  borderRadius: "0.75rem",
+                  border: "1px solid #1f2937",
+                  padding: "0.5rem 0.6rem",
+                }}
+              >
+                <ul
+                  className="section-list"
+                  style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}
+                >
+                  {orderedPlayers.map((member, index) => (
+                    <li
+                      key={member.user_id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: "0.5rem",
+                        padding: "0.25rem 0",
+                      }}
+                    >
+                      <span style={{ fontSize: "0.85rem" }}>
+                        {index + 1}. {displayPlayer(member)}
+                      </span>
+                      <div style={{ display: "flex", gap: "0.25rem" }}>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={() => movePlayer(index, index - 1)}
+                          disabled={index === 0}
+                          style={{ padding: "0.1rem 0.35rem", fontSize: "0.75rem" }}
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={() => movePlayer(index, index + 1)}
+                          disabled={index === orderedPlayers.length - 1}
+                          style={{ padding: "0.1rem 0.35rem", fontSize: "0.75rem" }}
+                        >
+                          ↓
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </div>
-        </div>
-
-        <button
-          type="submit"
-          className="btn-primary"
-          disabled={generating || membersLoading || !members.length}
-          style={{ justifySelf: "flex-start", marginTop: "0.5rem" }}
-        >
-          {generating ? "Creating session..." : "Create session"}
-        </button>
-      </form>
-      <div style={{ marginTop: "1.5rem" }}>
-        <h2 className="section-title">Players (snaking order)</h2>
-        {!orderedPlayers.length ? (
-          <p className="hero-subtitle" style={{ fontSize: "0.85rem" }}>
-            After selecting players, they will appear here sorted by DUPR. Use the
-            arrows to adjust the order; teams and matchups will be based on this
-            list.
-          </p>
-        ) : (
-          <div
-            style={{
-              marginTop: "0.75rem",
-              borderRadius: "0.75rem",
-              border: "1px solid #1f2937",
-              padding: "0.5rem 0.6rem",
-            }}
-          >
-            <ul
-              className="section-list"
-              style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}
-            >
-              {orderedPlayers.map((member, index) => (
-                <li
-                  key={member.user_id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: "0.5rem",
-                    padding: "0.25rem 0",
-                  }}
-                >
-                  <span style={{ fontSize: "0.85rem" }}>
-                    {index + 1}. {displayPlayer(member)}
-                  </span>
-                  <div style={{ display: "flex", gap: "0.25rem" }}>
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      onClick={() => movePlayer(index, index - 1)}
-                      disabled={index === 0}
-                      style={{ padding: "0.1rem 0.35rem", fontSize: "0.75rem" }}
-                    >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      onClick={() => movePlayer(index, index + 1)}
-                      disabled={index === orderedPlayers.length - 1}
-                      style={{ padding: "0.1rem 0.35rem", fontSize: "0.75rem" }}
-                    >
-                      ↓
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
+        </>
+      )}
 
       <div style={{ marginTop: "1.5rem" }}>
         <h2 className="section-title">Your sessions</h2>
@@ -905,7 +1005,9 @@ export default function SessionsPage() {
           </p>
         ) : sessions.length === 0 ? (
           <p className="hero-subtitle" style={{ fontSize: "0.85rem" }}>
-            No sessions yet. Create one above to see it here.
+            {leagues.length
+              ? "No sessions yet. Create one above to see it here."
+              : "No sessions yet. You'll see sessions you play in here."}
           </p>
         ) : (
           <div
@@ -958,13 +1060,30 @@ export default function SessionsPage() {
                           )}
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        className="btn-secondary"
-                        onClick={() => router.push(`/sessions/${session.id}`)}
-                      >
-                        View
-                      </button>
+                      <div style={{ display: "flex", gap: "0.5rem" }}>
+                        {session.created_by === userId && (
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            onClick={() => handleDeleteSession(session.id)}
+                            disabled={deletingSessionId === session.id}
+                            style={{
+                              opacity: deletingSessionId === session.id ? 0.7 : 1,
+                            }}
+                          >
+                            {deletingSessionId === session.id
+                              ? "Deleting..."
+                              : "Delete"}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={() => router.push(`/sessions/${session.id}`)}
+                        >
+                          View
+                        </button>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -1011,14 +1130,59 @@ export default function SessionsPage() {
                             session.scheduled_for ?? session.created_at
                           )}
                         </div>
+                        {(() => {
+                          const summary = sessionResults[session.id];
+                          if (!summary) return null;
+                          const green = summary.teamGreenWins;
+                          const blue = summary.teamBlueWins;
+                          if (green === 0 && blue === 0) return null;
+
+                          let label: string;
+                          if (green > blue) {
+                            label = `Team Green won ${green}-${blue}`;
+                          } else if (blue > green) {
+                            label = `Team Blue won ${blue}-${green}`;
+                          } else {
+                            label = `Teams tied ${green}-${blue}`;
+                          }
+
+                          return (
+                            <div
+                              style={{
+                                color: "#bbf7d0",
+                                marginTop: "0.1rem",
+                                fontSize: "0.8rem",
+                              }}
+                            >
+                              {label}
+                            </div>
+                          );
+                        })()}
                       </div>
-                      <button
-                        type="button"
-                        className="btn-secondary"
-                        onClick={() => router.push(`/sessions/${session.id}`)}
-                      >
-                        View
-                      </button>
+                      <div style={{ display: "flex", gap: "0.5rem" }}>
+                        {session.created_by === userId && (
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            onClick={() => handleDeleteSession(session.id)}
+                            disabled={deletingSessionId === session.id}
+                            style={{
+                              opacity: deletingSessionId === session.id ? 0.7 : 1,
+                            }}
+                          >
+                            {deletingSessionId === session.id
+                              ? "Deleting..."
+                              : "Delete"}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={() => router.push(`/sessions/${session.id}`)}
+                        >
+                          View
+                        </button>
+                      </div>
                     </li>
                   ))}
                 </ul>

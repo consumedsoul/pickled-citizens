@@ -454,11 +454,6 @@ export default function SessionDetailPage() {
   return (
     <div className="section">
       <h1 className="section-title">Session details</h1>
-      {userEmail && (
-        <p className="hero-subtitle" style={{ marginBottom: '0.25rem' }}>
-          Signed in as {userEmail}
-        </p>
-      )}
       <p className="hero-subtitle" style={{ marginBottom: '0.5rem' }}>
         {session.league_name || 'Unknown league'} · {session.player_count} players ·{' '}
         {formatDateTime(session.scheduled_for ?? session.created_at)}
@@ -471,10 +466,9 @@ export default function SessionDetailPage() {
       )}
 
       <div
+        className="session-details-grid"
         style={{
           marginTop: '1.5rem',
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 1.4fr) minmax(0, 1.2fr)',
           gap: '1rem',
           alignItems: 'flex-start',
         }}
@@ -509,9 +503,14 @@ export default function SessionDetailPage() {
                     color: '#ecfdf5',
                     fontWeight: 600,
                     textAlign: 'center',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
                 >
-                  Team A
+                  <span>Team</span>
+                  <span>Green</span>
                 </div>
                 <div
                   style={{
@@ -520,9 +519,14 @@ export default function SessionDetailPage() {
                     color: '#dbeafe',
                     fontWeight: 600,
                     textAlign: 'center',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
                 >
-                  Team B
+                  <span>Team</span>
+                  <span>Blue</span>
                 </div>
               </div>
 
@@ -550,7 +554,6 @@ export default function SessionDetailPage() {
                     {teamStats.team1.wins}
                   </div>
                   {teamStats.team1.roster.map((p) => {
-                    const stats = playerStatsMap.get(p.id);
                     return (
                       <div
                         key={p.id}
@@ -558,15 +561,13 @@ export default function SessionDetailPage() {
                           padding: '0.25rem 0.6rem',
                           fontSize: '0.85rem',
                           display: 'flex',
-                          justifyContent: 'space-between',
+                          justifyContent: 'center',
                           gap: '0.5rem',
+                          textAlign: 'center',
                           color: '#dcfce7',
                         }}
                       >
                         <span>{displayPlayerName(p)}</span>
-                        <span style={{ opacity: 0.8 }}>
-                          {stats ? `${stats.wins}-${stats.losses}` : '0-0'}
-                        </span>
                       </div>
                     );
                   })}
@@ -590,7 +591,6 @@ export default function SessionDetailPage() {
                     {teamStats.team2.wins}
                   </div>
                   {teamStats.team2.roster.map((p) => {
-                    const stats = playerStatsMap.get(p.id);
                     return (
                       <div
                         key={p.id}
@@ -598,15 +598,13 @@ export default function SessionDetailPage() {
                           padding: '0.25rem 0.6rem',
                           fontSize: '0.85rem',
                           display: 'flex',
-                          justifyContent: 'space-between',
+                          justifyContent: 'center',
                           gap: '0.5rem',
+                          textAlign: 'center',
                           color: '#dbeafe',
                         }}
                       >
                         <span>{displayPlayerName(p)}</span>
-                        <span style={{ opacity: 0.8 }}>
-                          {stats ? `${stats.wins}-${stats.losses}` : '0-0'}
-                        </span>
                       </div>
                     );
                   })}
@@ -635,20 +633,18 @@ export default function SessionDetailPage() {
               {matches.map((match, index) => {
                 const teamALabel =
                   match.team1.length >= 2
-                    ? `${displayPlayerName(match.team1[0])} + ${displayPlayerName(
-                        match.team1[1]
-                      )}`
-                    : match.team1.map(displayPlayerName).join(', ');
+                    ? [
+                        `${displayPlayerName(match.team1[0])} +`,
+                        displayPlayerName(match.team1[1]),
+                      ]
+                    : [match.team1.map(displayPlayerName).join(', ')];
                 const teamBLabel =
                   match.team2.length >= 2
-                    ? `${displayPlayerName(match.team2[0])} + ${displayPlayerName(
-                        match.team2[1]
-                      )}`
-                    : match.team2.map(displayPlayerName).join(', ');
-
-                let winnerLabel = 'Not recorded';
-                if (match.winner === 1) winnerLabel = 'Team A win';
-                else if (match.winner === 2) winnerLabel = 'Team B win';
+                    ? [
+                        `${displayPlayerName(match.team2[0])} +`,
+                        displayPlayerName(match.team2[1]),
+                      ]
+                    : [match.team2.map(displayPlayerName).join(', ')];
 
                 return (
                   <div
@@ -659,34 +655,36 @@ export default function SessionDetailPage() {
                         'auto minmax(0, 1fr) auto minmax(0, 1fr) auto',
                       gap: '0.25rem',
                       alignItems: 'center',
+                      justifyItems: 'center',
                       padding: '0.3rem 0',
                       borderTop: index === 0 ? undefined : '1px solid #1f2937',
                     }}
                   >
-                    {canEdit ? (
-                      <button
-                        type="button"
-                        className="btn-secondary"
-                        onClick={() => handleToggleWinner(match.id, 1)}
-                        disabled={updatingMatchId === match.id}
-                        style={{
-                          padding: '0.15rem 0.4rem',
-                          fontSize: '0.75rem',
-                          background:
-                            match.winner === 1 ? '#15803d' : 'transparent',
-                          borderColor:
-                            match.winner === 1 ? '#15803d' : '#4b5563',
-                          color:
-                            match.winner === 1 ? '#ecfdf5' : '#e5e7eb',
-                        }}
-                      >
-                        Win
-                      </button>
-                    ) : (
-                      <span />
-                    )}
-                    <span style={{ fontSize: '0.85rem', color: '#bbf7d0' }}>
-                      {teamALabel}
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={canEdit ? () => handleToggleWinner(match.id, 1) : undefined}
+                      disabled={!canEdit || updatingMatchId === match.id}
+                      style={{
+                        padding: '0.15rem 0.4rem',
+                        fontSize: '0.75rem',
+                        background: match.winner === 1 ? '#15803d' : 'transparent',
+                        borderColor: match.winner === 1 ? '#15803d' : '#4b5563',
+                        color: match.winner === 1 ? '#ecfdf5' : '#e5e7eb',
+                      }}
+                    >
+                      Win
+                    </button>
+                    <span
+                      style={{
+                        fontSize: '0.85rem',
+                        color: '#bbf7d0',
+                        textAlign: 'center',
+                      }}
+                    >
+                      {teamALabel.map((line, idx) => (
+                        <div key={idx}>{line}</div>
+                      ))}
                     </span>
                     <span
                       style={{
@@ -697,39 +695,32 @@ export default function SessionDetailPage() {
                     >
                       vs
                     </span>
-                    <span style={{ fontSize: '0.85rem', color: '#bfdbfe' }}>
-                      {teamBLabel}
+                    <span
+                      style={{
+                        fontSize: '0.85rem',
+                        color: '#bfdbfe',
+                        textAlign: 'center',
+                      }}
+                    >
+                      {teamBLabel.map((line, idx) => (
+                        <div key={idx}>{line}</div>
+                      ))}
                     </span>
-                    {canEdit ? (
-                      <button
-                        type="button"
-                        className="btn-secondary"
-                        onClick={() => handleToggleWinner(match.id, 2)}
-                        disabled={updatingMatchId === match.id}
-                        style={{
-                          padding: '0.15rem 0.4rem',
-                          fontSize: '0.75rem',
-                          background:
-                            match.winner === 2 ? '#1d4ed8' : 'transparent',
-                          borderColor:
-                            match.winner === 2 ? '#1d4ed8' : '#4b5563',
-                          color:
-                            match.winner === 2 ? '#dbeafe' : '#e5e7eb',
-                        }}
-                      >
-                        Win
-                      </button>
-                    ) : (
-                      <span
-                        style={{
-                          fontSize: '0.8rem',
-                          color: '#e5e7eb',
-                          textAlign: 'right',
-                        }}
-                      >
-                        {winnerLabel}
-                      </span>
-                    )}
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={canEdit ? () => handleToggleWinner(match.id, 2) : undefined}
+                      disabled={!canEdit || updatingMatchId === match.id}
+                      style={{
+                        padding: '0.15rem 0.4rem',
+                        fontSize: '0.75rem',
+                        background: match.winner === 2 ? '#1d4ed8' : 'transparent',
+                        borderColor: match.winner === 2 ? '#1d4ed8' : '#4b5563',
+                        color: match.winner === 2 ? '#dbeafe' : '#e5e7eb',
+                      }}
+                    >
+                      Win
+                    </button>
                   </div>
                 );
               })}
@@ -771,18 +762,11 @@ export default function SessionDetailPage() {
                     <div>
                       <div style={{ fontSize: '0.85rem' }}>
                         {displayPlayerName(ps.player)}
+                        {ps.player.self_reported_dupr != null &&
+                          !Number.isNaN(ps.player.self_reported_dupr) && (
+                            <> ({ps.player.self_reported_dupr.toFixed(2)})</>
+                          )}
                       </div>
-                      {ps.player.self_reported_dupr != null && (
-                        <div
-                          style={{
-                            fontSize: '0.75rem',
-                            color: '#9ca3af',
-                            marginTop: '0.1rem',
-                          }}
-                        >
-                          DUPR {ps.player.self_reported_dupr.toFixed(2)}
-                        </div>
-                      )}
                     </div>
                     <div
                       style={{
@@ -793,9 +777,6 @@ export default function SessionDetailPage() {
                     >
                       <div>
                         {ps.wins}-{ps.losses}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
-                        Games: {ps.games}
                       </div>
                     </div>
                   </li>

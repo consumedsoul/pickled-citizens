@@ -36,8 +36,28 @@ export default function AuthPage() {
     setMessage(null);
 
     try {
+      const normalizedEmail = email.trim().toLowerCase();
+
+      const { data: existingProfile, error: existingError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', normalizedEmail)
+        .maybeSingle();
+
+      if (existingError) {
+        setStatus('error');
+        setMessage(existingError.message);
+        return;
+      }
+
+      if (existingProfile) {
+        setStatus('error');
+        setMessage('An account already exists with this email. Please sign in with email only.');
+        return;
+      }
+
       const params = new URLSearchParams({
-        email: email.trim(),
+        email: normalizedEmail,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         gender,
@@ -46,7 +66,7 @@ export default function AuthPage() {
 
       const redirectTo = `${window.location.origin}/auth/complete?${params.toString()}`;
       const { error } = await supabase.auth.signInWithOtp({
-        email,
+        email: normalizedEmail,
         options: {
           emailRedirectTo: redirectTo,
         },

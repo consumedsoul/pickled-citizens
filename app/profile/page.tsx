@@ -339,61 +339,63 @@ export default function ProfilePage() {
           </label>
         </div>
 
-        <label style={{ fontSize: '0.8rem' }}>
-          Gender (required)
-          <select
-            value={gender}
-            onChange={(e) => setGender(e.target.value)}
-            required
-            style={{
-              marginTop: '0.35rem',
-              width: '100%',
-              padding: '0.45rem 0.6rem',
-              borderRadius: '0.5rem',
-              border: '1px solid #1f2937',
-              background: '#020617',
-              color: '#e5e7eb',
-            }}
-          >
-            <option value="">Select gender</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-          </select>
-        </label>
-
-        <label style={{ fontSize: '0.8rem' }}>
-          Self-reported DUPR (required, x.xx)
-          <input
-            type="text"
-            value={selfDupr}
-            onChange={(e) => setSelfDupr(e.target.value)}
-            placeholder="e.g. 3.75"
-            style={{
-              marginTop: '0.35rem',
-              width: '100%',
-              padding: '0.45rem 0.6rem',
-              borderRadius: '0.5rem',
-              border: '1px solid #1f2937',
-              background: '#020617',
-              color: '#e5e7eb',
-            }}
-          />
-          <p
-            className="hero-subtitle"
-            style={{ fontSize: '0.75rem', marginTop: '0.35rem' }}
-          >
-            Need help estimating your rating? See{' '}
-            <a
-              href="https://www.pickleheads.com/guides/pickleball-rating"
-              target="_blank"
-              rel="noreferrer"
-              style={{ color: '#60a5fa', textDecoration: 'underline' }}
+        <div style={{ display: 'grid', gap: '0.5rem', gridTemplateColumns: '1fr 1fr' }}>
+          <label style={{ fontSize: '0.8rem' }}>
+            Gender (required)
+            <select
+              value={gender}
+              onChange={(e) => setGender(e.target.value)}
+              required
+              style={{
+                marginTop: '0.35rem',
+                width: '100%',
+                padding: '0.45rem 0.6rem',
+                borderRadius: '0.5rem',
+                border: '1px solid #1f2937',
+                background: '#020617',
+                color: '#e5e7eb',
+              }}
             >
-              this guide
-            </a>
-            .
-          </p>
-        </label>
+              <option value="">Select gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+          </label>
+
+          <label style={{ fontSize: '0.8rem' }}>
+            Self-reported DUPR (required, x.xx)
+            <input
+              type="text"
+              value={selfDupr}
+              onChange={(e) => setSelfDupr(e.target.value)}
+              placeholder="e.g. 3.75"
+              style={{
+                marginTop: '0.35rem',
+                width: '100%',
+                padding: '0.45rem 0.6rem',
+                borderRadius: '0.5rem',
+                border: '1px solid #1f2937',
+                background: '#020617',
+                color: '#e5e7eb',
+              }}
+            />
+            <p
+              className="hero-subtitle"
+              style={{ fontSize: '0.75rem', marginTop: '0.35rem' }}
+            >
+              Need help estimating your rating? See{' '}
+              <a
+                href="https://www.pickleheads.com/guides/pickleball-rating"
+                target="_blank"
+                rel="noreferrer"
+                style={{ color: '#60a5fa', textDecoration: 'underline' }}
+              >
+                this guide
+              </a>
+              .
+            </p>
+          </label>
+        </div>
 
         <button
           type="submit"
@@ -445,7 +447,7 @@ export default function ProfilePage() {
       >
         <h2 className="section-title">Delete account</h2>
         <p className="hero-subtitle">
-          This will delete your profile and league data in PickledCitizens. This
+          This will delete your profile and league data in Pickled Citizens. This
           action cannot be undone.
         </p>
         <button

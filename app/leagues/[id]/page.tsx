@@ -30,9 +30,15 @@ export default function LeagueMembersPage() {
   const [league, setLeague] = useState<League | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
 
+  const [isOwner, setIsOwner] = useState(false);
+
   const [emailInput, setEmailInput] = useState('');
   const [renameInput, setRenameInput] = useState('');
   const [renaming, setRenaming] = useState(false);
+
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -66,13 +72,9 @@ export default function LeagueMembersPage() {
         return;
       }
 
-      if (leagueData.owner_id !== user.id) {
-        setError('Only the league owner can manage members.');
-        setLoading(false);
-        return;
-      }
-
       setLeague(leagueData as League);
+      const owner = leagueData.owner_id === user.id;
+      setIsOwner(owner);
       setRenameInput(leagueData.name);
 
       const { data: memberRows, error: membersError } = await supabase
@@ -85,39 +87,72 @@ export default function LeagueMembersPage() {
 
       if (membersError) {
         setError(membersError.message);
-      } else if (memberRows) {
-        if (!memberRows.length) {
-          setMembers([]);
-        } else {
-          const userIds = (memberRows as { user_id: string; email: string | null }[]).map(
-            (m) => m.user_id
-          );
-
-          const { data: profileRows, error: profilesError } = await supabase
-            .from('profiles')
-            .select('id, first_name, last_name, email, self_reported_dupr')
-            .in('id', userIds);
-
-          if (profilesError) {
-            setError(profilesError.message);
-          } else {
-            const membersWithNames: Member[] = (memberRows as any[]).map((m) => {
-              const profile = (profileRows ?? []).find((p) => p.id === m.user_id);
-              return {
-                user_id: m.user_id,
-                email: m.email ?? profile?.email ?? null,
-                first_name: profile?.first_name ?? null,
-                last_name: profile?.last_name ?? null,
-                self_reported_dupr:
-                  profile && profile.self_reported_dupr != null
-                    ? Number(profile.self_reported_dupr)
-                    : null,
-              };
-            });
-            setMembers(membersWithNames);
-          }
-        }
+        setLoading(false);
+        return;
       }
+
+      const rows = (memberRows ?? []) as { user_id: string; email: string | null }[];
+      const isMember = rows.some((m) => m.user_id === user.id);
+
+      if (!owner && !isMember) {
+        setError('You are not a member of this league.');
+        setLoading(false);
+        return;
+      }
+
+      if (!rows.length) {
+        setMembers([]);
+        setLoading(false);
+        return;
+      }
+
+      const userIds = rows.map((m) => m.user_id);
+
+      const { data: profileRows, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, email, self_reported_dupr')
+        .in('id', userIds);
+
+      if (!active) return;
+
+      if (profilesError) {
+        setError(profilesError.message);
+        setLoading(false);
+        return;
+      }
+
+      const membersWithNames: Member[] = rows.map((m) => {
+        const profile = (profileRows ?? []).find((p) => p.id === m.user_id);
+        return {
+          user_id: m.user_id,
+          email: m.email ?? profile?.email ?? null,
+          first_name: profile?.first_name ?? null,
+          last_name: profile?.last_name ?? null,
+          self_reported_dupr:
+            profile && profile.self_reported_dupr != null
+              ? Number(profile.self_reported_dupr)
+              : null,
+        };
+      });
+
+      membersWithNames.sort((a, b) => {
+        const an = `${a.first_name ?? ''} ${a.last_name ?? ''}`.trim().toLowerCase();
+        const bn = `${b.first_name ?? ''} ${b.last_name ?? ''}`.trim().toLowerCase();
+
+        if (an && bn) {
+          const cmp = an.localeCompare(bn);
+          if (cmp !== 0) return cmp;
+        } else if (an) {
+          return -1;
+        } else if (bn) {
+          return 1;
+        }
+
+        const ae = (a.email ?? '').toLowerCase();
+        const be = (b.email ?? '').toLowerCase();
+        return ae.localeCompare(be);
+      });
+      setMembers(membersWithNames);
 
       setLoading(false);
     }
@@ -238,7 +273,25 @@ export default function LeagueMembersPage() {
       setMembers((prev) => {
         const exists = prev.some((m) => m.user_id === memberToAdd.user_id);
         if (exists) return prev;
-        return [...prev, memberToAdd];
+        const next = [...prev, memberToAdd];
+        next.sort((a, b) => {
+          const an = `${a.first_name ?? ''} ${a.last_name ?? ''}`.trim().toLowerCase();
+          const bn = `${b.first_name ?? ''} ${b.last_name ?? ''}`.trim().toLowerCase();
+
+          if (an && bn) {
+            const cmp = an.localeCompare(bn);
+            if (cmp !== 0) return cmp;
+          } else if (an) {
+            return -1;
+          } else if (bn) {
+            return 1;
+          }
+
+          const ae = (a.email ?? '').toLowerCase();
+          const be = (b.email ?? '').toLowerCase();
+          return ae.localeCompare(be);
+        });
+        return next;
       });
       setEmailInput('');
 
@@ -259,6 +312,59 @@ export default function LeagueMembersPage() {
     }
 
     setSaving(false);
+  }
+
+  function openDeleteDialog() {
+    setDeleteOpen(true);
+    setDeleteConfirm('');
+    setError(null);
+  }
+
+  function closeDeleteDialog() {
+    setDeleteOpen(false);
+    setDeleteConfirm('');
+    setDeleteLoading(false);
+  }
+
+  async function handleDeleteLeague() {
+    if (!leagueId || !league) return;
+    if (deleteConfirm !== 'delete') return;
+
+    setDeleteLoading(true);
+    setError(null);
+
+    const {
+      data: userData,
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !userData.user) {
+      setError(userError?.message ?? 'You must be signed in.');
+      setDeleteLoading(false);
+      return;
+    }
+
+    const { error: deleteError } = await supabase
+      .from('leagues')
+      .delete()
+      .eq('id', leagueId);
+
+    if (deleteError) {
+      setError(deleteError.message);
+      setDeleteLoading(false);
+      return;
+    }
+
+    await supabase.from('admin_events').insert({
+      event_type: 'league.deleted',
+      user_id: userData.user.id,
+      user_email: userData.user.email?.toLowerCase() ?? null,
+      league_id: leagueId,
+      payload: { league_name: league.name },
+    });
+
+    closeDeleteDialog();
+    router.replace('/leagues');
   }
 
   async function handleRemoveMember(member: Member) {
@@ -331,77 +437,81 @@ export default function LeagueMembersPage() {
   return (
     <div className="section">
       <h1 className="section-title">{league.name} roster</h1>
-      <form
-        onSubmit={handleRename}
-        style={{
-          marginTop: '0.75rem',
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '0.5rem',
-        }}
-      >
-        <input
-          type="text"
-          placeholder="League name"
-          value={renameInput}
-          onChange={(e) => setRenameInput(e.target.value)}
-          style={{
-            flex: '1 1 220px',
-            padding: '0.45rem 0.6rem',
-            borderRadius: '0.5rem',
-            border: '1px solid #1f2937',
-            background: '#020617',
-            color: '#e5e7eb',
-          }}
-        />
-        <button
-          type="submit"
-          className="btn-secondary"
-          disabled={
-            renaming ||
-            !renameInput.trim() ||
-            renameInput.trim() === league.name.trim()
-          }
-        >
-          {renaming ? 'Renaming…' : 'Rename league'}
-        </button>
-      </form>
-      <p className="hero-subtitle">
-        Add or remove authenticated players from this league by email. Players must have
-        already signed up and saved their profile so their email is stored.
-      </p>
+      {isOwner && (
+        <>
+          <form
+            onSubmit={handleRename}
+            style={{
+              marginTop: '0.75rem',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '0.5rem',
+            }}
+          >
+            <input
+              type="text"
+              placeholder="League name"
+              value={renameInput}
+              onChange={(e) => setRenameInput(e.target.value)}
+              style={{
+                flex: '1 1 220px',
+                padding: '0.45rem 0.6rem',
+                borderRadius: '0.5rem',
+                border: '1px solid #1f2937',
+                background: '#020617',
+                color: '#e5e7eb',
+              }}
+            />
+            <button
+              type="submit"
+              className="btn-secondary"
+              disabled={
+                renaming ||
+                !renameInput.trim() ||
+                renameInput.trim() === league.name.trim()
+              }
+            >
+              {renaming ? 'Renaming…' : 'Rename league'}
+            </button>
+          </form>
+          <p className="hero-subtitle">
+            Add or remove authenticated players from this league by email. Players must
+            have already signed up and saved their profile so their email is stored.
+          </p>
 
-      <form
-        onSubmit={handleAddMember}
-        style={{
-          marginTop: '1rem',
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '0.5rem',
-        }}
-      >
-        <input
-          type="email"
-          placeholder="Player email"
-          value={emailInput}
-          onChange={(e) => setEmailInput(e.target.value)}
-          style={{
-            flex: '1 1 220px',
-            padding: '0.45rem 0.6rem',
-            borderRadius: '0.5rem',
-            border: '1px solid #1f2937',
-            background: '#020617',
-            color: '#e5e7eb',
-          }}
-        />
-        <button
-          type="submit"
-          className="btn-primary"
-          disabled={saving || !emailInput.trim()}
-        >
-          {saving ? 'Saving…' : 'Add player'}
-        </button>
-      </form>
+          <form
+            onSubmit={handleAddMember}
+            style={{
+              marginTop: '1rem',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '0.5rem',
+            }}
+          >
+            <input
+              type="email"
+              placeholder="Player email"
+              value={emailInput}
+              onChange={(e) => setEmailInput(e.target.value)}
+              style={{
+                flex: '1 1 220px',
+                padding: '0.45rem 0.6rem',
+                borderRadius: '0.5rem',
+                border: '1px solid #1f2937',
+                background: '#020617',
+                color: '#e5e7eb',
+              }}
+            />
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={saving || !emailInput.trim()}
+            >
+              {saving ? 'Saving…' : 'Add player'}
+            </button>
+          </form>
+        </>
+      )}
 
       <div style={{ marginTop: '1.5rem' }}>
         <h2 className="section-title">Members</h2>
@@ -441,22 +551,129 @@ export default function LeagueMembersPage() {
                     return base;
                   })()}
                 </span>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => handleRemoveMember(member)}
-                  style={{
-                    borderColor: '#b91c1c',
-                    color: '#fecaca',
-                  }}
-                >
-                  Remove
-                </button>
+                {isOwner && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => handleRemoveMember(member)}
+                    style={{
+                      borderColor: '#b91c1c',
+                      color: '#fecaca',
+                    }}
+                  >
+                    Remove
+                  </button>
+                )}
               </li>
             ))}
           </ul>
         )}
       </div>
+
+      {isOwner && (
+        <>
+          <div
+            style={{
+              marginTop: '2rem',
+              paddingTop: '1rem',
+              borderTop: '1px solid #1f2937',
+            }}
+          >
+            <h2 className="section-title">Delete league</h2>
+            <p className="hero-subtitle">
+              This will permanently delete this league and its data. This action cannot be
+              undone.
+            </p>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={openDeleteDialog}
+              style={{
+                marginTop: '0.75rem',
+                background: '#b91c1c',
+                borderColor: '#b91c1c',
+                color: '#fee2e2',
+              }}
+            >
+              Delete league
+            </button>
+          </div>
+
+          {deleteOpen && (
+            <div
+              style={{
+                position: 'fixed',
+                inset: 0,
+                background: 'rgba(15,23,42,0.85)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 40,
+              }}
+            >
+              <div
+                className="section"
+                style={{
+                  maxWidth: 420,
+                  width: '90%',
+                  boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+                }}
+              >
+                <h2 className="section-title">Delete league</h2>
+                <p className="hero-subtitle">
+                  This will permanently delete this league and its data. Type
+                  <span style={{ fontWeight: 600 }}> delete </span>
+                  to confirm.
+                </p>
+                <input
+                  type="text"
+                  value={deleteConfirm}
+                  onChange={(e) => setDeleteConfirm(e.target.value)}
+                  placeholder="Type delete to confirm"
+                  style={{
+                    marginTop: '0.75rem',
+                    width: '100%',
+                    padding: '0.45rem 0.6rem',
+                    borderRadius: '0.5rem',
+                    border: '1px solid #1f2937',
+                    background: '#020617',
+                    color: '#e5e7eb',
+                  }}
+                />
+                <div
+                  style={{
+                    marginTop: '1rem',
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    gap: '0.5rem',
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={closeDeleteDialog}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={handleDeleteLeague}
+                    disabled={deleteLoading || deleteConfirm !== 'delete'}
+                    style={{
+                      background: '#b91c1c',
+                      borderColor: '#b91c1c',
+                      color: '#fee2e2',
+                    }}
+                  >
+                    {deleteLoading ? 'Deleting…' : 'Confirm delete'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

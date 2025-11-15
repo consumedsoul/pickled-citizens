@@ -2,7 +2,7 @@ export default function HomePage() {
   return (
     <section className="hero">
       <div>
-        <h1 className="hero-title">PickledCitizens 2.0</h1>
+        <h1 className="hero-title">Pickled Citizens</h1>
         <p className="hero-subtitle">
           Lightweight, low-cost pickleball platform for small leagues to create
           structured match sessions, track scores, and keep players out of

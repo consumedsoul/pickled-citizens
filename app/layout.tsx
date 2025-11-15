@@ -7,7 +7,7 @@ import { AuthStatus } from "@/components/AuthStatus";
 import { AdminFooterLinks } from "@/components/AdminFooterLinks";
 
 export const metadata = {
-  title: "PickledCitizens 2.0",
+  title: "Pickled Citizens",
   description:
     "Lightweight pickleball league tool for scheduling sessions and tracking match history.",
   icons: {
@@ -26,7 +26,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <Link href="/" className="app-logo">
                 <Image
                   src={logo}
-                  alt="PickledCitizens logo"
+                  alt="Pickled Citizens logo"
                   width={40}
                   height={40}
                   priority
