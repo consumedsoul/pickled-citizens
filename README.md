@@ -33,7 +33,7 @@ Lightweight web app for running casual pickleball leagues: create leagues, invit
   - Uses scheduled time when available, otherwise creation time.
 
 - **Admin tools**
-  - Restricted to super-admin (`hun@ghkim.com`) via RLS and UI checks.
+  - Restricted to super-admin (`h**@****m.com`) via RLS and UI checks.
   - `/admin/events`: System event log (e.g., league created, session created, user signup).
   - `/admin/users`: User management (view, edit, delete profiles).
   - Footer shows `Logs` and `Users` links only for the super-admin.
@@ -108,7 +108,7 @@ This file defines tables like:
 - `profiles`
 - `leagues`, `league_members`
 - `game_sessions`, `matches`, `match_players`, `match_results`
-- `admin_events` (with RLS allowing only `hun@ghkim.com` to read events)
+- `admin_events` (with RLS allowing only `h**@****m.com` to read events)
 
 It also sets up constraints (e.g., allowed player counts for sessions) and RLS policies.
 
@@ -117,7 +117,7 @@ It also sets up constraints (e.g., allowed player counts for sessions) and RLS p
 The super-admin email is currently hard-coded as:
 
 ```text
-hun@ghkim.com
+h**@****m.com
 ```
 
 - RLS policies in `supabase/schema.sql` and UI components like `AdminFooterLinks` assume this email.
