@@ -80,3 +80,22 @@ create table if not exists public.match_results (
   team2_score int,
   completed_at timestamptz
 );
+
+-- Admin events
+create table if not exists public.admin_events (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz default now(),
+  event_type text not null,
+  user_id uuid references auth.users(id) on delete set null,
+  user_email text,
+  league_id uuid references public.leagues(id) on delete set null,
+  payload jsonb
+);
+
+alter table public.admin_events enable row level security;
+create policy admin_events_insert_authenticated on public.admin_events
+  for insert
+  with check (auth.role() = 'authenticated');
+create policy admin_events_select_admin on public.admin_events
+  for select
+  using ((auth.jwt() ->> 'email') = 'hun@ghkim.com');

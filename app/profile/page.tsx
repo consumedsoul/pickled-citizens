@@ -235,6 +235,20 @@ export default function ProfilePage() {
     }
 
     setLeagues((prev) => prev.filter((league) => league.id !== leagueId));
+
+    const { data: currentUser } = await supabase.auth.getUser();
+    if (currentUser?.user) {
+      await supabase.from('admin_events').insert({
+        event_type: 'league.member_removed',
+        user_id: currentUser.user.id,
+        user_email: currentUser.user.email?.toLowerCase() ?? null,
+        league_id: leagueId,
+        payload: {
+          via: 'self_leave',
+        },
+      });
+    }
+
     setSaving(false);
   }
 

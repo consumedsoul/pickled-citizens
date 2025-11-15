@@ -1,15 +1,21 @@
 import "./globals.css";
 import type { ReactNode } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import logo from "./images/PKLDCTZN_web_logo.png";
 import { AuthStatus } from "@/components/AuthStatus";
 
 export const metadata = {
   title: "PickledCitizens 2.0",
   description:
     "Lightweight pickleball league tool for scheduling sessions and tracking match history.",
+  icons: {
+    icon: logo.src,
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
+  const year = new Date().getFullYear();
   return (
     <html lang="en">
       <body>
@@ -17,7 +23,16 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <header className="app-header">
             <div className="app-header-inner">
               <Link href="/" className="app-logo">
-                PickledCitizens
+                <Image
+                  src={logo}
+                  alt="PickledCitizens logo"
+                  width={32}
+                  height={32}
+                  style={{
+                    height: "32px",
+                    width: "auto",
+                  }}
+                />
               </Link>
               <div
                 style={{
@@ -38,7 +53,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </header>
           <main className="app-main">{children}</main>
           <footer className="app-footer">
-            PickledCitizens MVP · Powered by Next.js & Supabase
+            {`Copyright ${year} Pickled Citizens | All Rights Reserved`}
           </footer>
         </div>
       </body>

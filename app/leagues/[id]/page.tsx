@@ -15,6 +15,7 @@ type Member = {
   email: string | null;
   first_name?: string | null;
   last_name?: string | null;
+  self_reported_dupr?: number | null;
 };
 
 export default function LeagueMembersPage() {
@@ -30,6 +31,8 @@ export default function LeagueMembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
 
   const [emailInput, setEmailInput] = useState('');
+  const [renameInput, setRenameInput] = useState('');
+  const [renaming, setRenaming] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -70,6 +73,7 @@ export default function LeagueMembersPage() {
       }
 
       setLeague(leagueData as League);
+      setRenameInput(leagueData.name);
 
       const { data: memberRows, error: membersError } = await supabase
         .from('league_members')
@@ -91,7 +95,7 @@ export default function LeagueMembersPage() {
 
           const { data: profileRows, error: profilesError } = await supabase
             .from('profiles')
-            .select('id, first_name, last_name, email')
+            .select('id, first_name, last_name, email, self_reported_dupr')
             .in('id', userIds);
 
           if (profilesError) {
@@ -104,6 +108,10 @@ export default function LeagueMembersPage() {
                 email: m.email ?? profile?.email ?? null,
                 first_name: profile?.first_name ?? null,
                 last_name: profile?.last_name ?? null,
+                self_reported_dupr:
+                  profile && profile.self_reported_dupr != null
+                    ? Number(profile.self_reported_dupr)
+                    : null,
               };
             });
             setMembers(membersWithNames);
@@ -121,6 +129,56 @@ export default function LeagueMembersPage() {
     };
   }, [leagueId, router]);
 
+  async function handleRename(event: FormEvent) {
+    event.preventDefault();
+    if (!leagueId || !league) return;
+    const trimmedName = renameInput.trim();
+    if (!trimmedName || trimmedName === league.name) return;
+
+    setRenaming(true);
+    setError(null);
+
+    const { data: existingLeagues, error: existingError } = await supabase
+      .from('leagues')
+      .select('id, name')
+      .eq('owner_id', league.owner_id);
+
+    if (existingError) {
+      setError(existingError.message);
+      setRenaming(false);
+      return;
+    }
+
+    const duplicate = (existingLeagues ?? []).some(
+      (existing) =>
+        existing.id !== league.id &&
+        existing.name.trim().toLowerCase() === trimmedName.toLowerCase()
+    );
+
+    if (duplicate) {
+      setError('You already have a league with that name.');
+      setRenaming(false);
+      return;
+    }
+
+    const { data: updatedLeague, error } = await supabase
+      .from('leagues')
+      .update({ name: trimmedName })
+      .eq('id', leagueId)
+      .select('id, name, owner_id')
+      .maybeSingle();
+
+    if (error || !updatedLeague) {
+      setError(error?.message ?? 'Unable to rename league.');
+      setRenaming(false);
+      return;
+    }
+
+    setLeague(updatedLeague as League);
+    setRenameInput(updatedLeague.name);
+    setRenaming(false);
+  }
+
   async function handleAddMember(event: FormEvent) {
     event.preventDefault();
     if (!leagueId) return;
@@ -132,7 +190,7 @@ export default function LeagueMembersPage() {
 
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('id, email, first_name, last_name')
+      .select('id, email, first_name, last_name, self_reported_dupr')
       .eq('email', email)
       .maybeSingle();
 
@@ -150,11 +208,13 @@ export default function LeagueMembersPage() {
       email: profileEmail,
       first_name,
       last_name,
+      self_reported_dupr,
     } = profile as {
       id: string;
       email: string | null;
       first_name: string | null;
       last_name: string | null;
+      self_reported_dupr: number | null;
     };
 
     const { data: insertData, error: insertError } = await supabase
@@ -171,6 +231,8 @@ export default function LeagueMembersPage() {
         email: insertData.email,
         first_name,
         last_name,
+        self_reported_dupr:
+          self_reported_dupr != null ? Number(self_reported_dupr) : null,
       };
 
       setMembers((prev) => {
@@ -179,6 +241,21 @@ export default function LeagueMembersPage() {
         return [...prev, memberToAdd];
       });
       setEmailInput('');
+
+      const { data: currentUser } = await supabase.auth.getUser();
+      if (currentUser?.user) {
+        await supabase.from('admin_events').insert({
+          event_type: 'league.member_added',
+          user_id: currentUser.user.id,
+          user_email: currentUser.user.email?.toLowerCase() ?? null,
+          league_id: leagueId,
+          payload: {
+            league_name: league?.name ?? null,
+            member_user_id: insertData.user_id,
+            member_email: insertData.email,
+          },
+        });
+      }
     }
 
     setSaving(false);
@@ -203,6 +280,22 @@ export default function LeagueMembersPage() {
     }
 
     setMembers((prev) => prev.filter((m) => m.user_id !== member.user_id));
+
+    const { data: currentUser } = await supabase.auth.getUser();
+    if (currentUser?.user) {
+      await supabase.from('admin_events').insert({
+        event_type: 'league.member_removed',
+        user_id: currentUser.user.id,
+        user_email: currentUser.user.email?.toLowerCase() ?? null,
+        league_id: leagueId,
+        payload: {
+          league_name: league?.name ?? null,
+          member_user_id: member.user_id,
+          member_email: member.email,
+        },
+      });
+    }
+
     setSaving(false);
   }
 
@@ -238,6 +331,41 @@ export default function LeagueMembersPage() {
   return (
     <div className="section">
       <h1 className="section-title">{league.name} roster</h1>
+      <form
+        onSubmit={handleRename}
+        style={{
+          marginTop: '0.75rem',
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '0.5rem',
+        }}
+      >
+        <input
+          type="text"
+          placeholder="League name"
+          value={renameInput}
+          onChange={(e) => setRenameInput(e.target.value)}
+          style={{
+            flex: '1 1 220px',
+            padding: '0.45rem 0.6rem',
+            borderRadius: '0.5rem',
+            border: '1px solid #1f2937',
+            background: '#020617',
+            color: '#e5e7eb',
+          }}
+        />
+        <button
+          type="submit"
+          className="btn-secondary"
+          disabled={
+            renaming ||
+            !renameInput.trim() ||
+            renameInput.trim() === league.name.trim()
+          }
+        >
+          {renaming ? 'Renaming…' : 'Rename league'}
+        </button>
+      </form>
       <p className="hero-subtitle">
         Add or remove authenticated players from this league by email. Players must have
         already signed up and saved their profile so their email is stored.
@@ -298,9 +426,19 @@ export default function LeagueMembersPage() {
                       .filter(Boolean)
                       .join(' ');
                     const email = member.email ?? '';
-                    return fullName && email
-                      ? `${fullName} (${email})`
-                      : email || fullName || member.user_id;
+                    const base =
+                      fullName && email
+                        ? `${fullName} (${email})`
+                        : email || fullName || member.user_id;
+
+                    if (member.self_reported_dupr != null) {
+                      const dupr = Number(member.self_reported_dupr);
+                      if (!Number.isNaN(dupr)) {
+                        return `${base} ${dupr.toFixed(2)}`;
+                      }
+                    }
+
+                    return base;
                   })()}
                 </span>
                 <button

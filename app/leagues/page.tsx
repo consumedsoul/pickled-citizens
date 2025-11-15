@@ -8,6 +8,7 @@ type League = {
   id: string;
   name: string;
   created_at: string;
+  memberCount?: number;
 };
 
 const MAX_LEAGUES = 3;
@@ -57,7 +58,36 @@ export default function LeaguesPage() {
       if (error) {
         setError(error.message);
       } else {
-        setLeagues(data ?? []);
+        const baseLeagues = data ?? [];
+
+        if (!baseLeagues.length) {
+          setLeagues([]);
+        } else {
+          const leagueIds = baseLeagues.map((l) => l.id);
+
+          const { data: memberRows, error: membersError } = await supabase
+            .from('league_members')
+            .select('league_id')
+            .in('league_id', leagueIds);
+
+          if (membersError) {
+            setError(membersError.message);
+            setLeagues(baseLeagues);
+          } else {
+            const counts = new Map<string, number>();
+            (memberRows ?? []).forEach((row: any) => {
+              const leagueId = row.league_id as string;
+              counts.set(leagueId, (counts.get(leagueId) ?? 0) + 1);
+            });
+
+            const leaguesWithCounts: League[] = baseLeagues.map((league) => ({
+              ...league,
+              memberCount: counts.get(league.id) ?? 0,
+            }));
+
+            setLeagues(leaguesWithCounts);
+          }
+        }
       }
 
       setLoading(false);
@@ -111,7 +141,8 @@ export default function LeaguesPage() {
         : error.message;
       setError(message);
     } else if (data) {
-      setLeagues((prev) => [data, ...prev]);
+      const leagueWithCount: League = { ...data, memberCount: 1 };
+      setLeagues((prev) => [leagueWithCount, ...prev]);
       setName('');
 
       const {
@@ -125,6 +156,14 @@ export default function LeaguesPage() {
           league_id: data.id,
           user_id: userData.user.id,
           email: ownerEmail,
+        });
+
+        await supabase.from('admin_events').insert({
+          event_type: 'league.created',
+          user_id: userData.user.id,
+          user_email: ownerEmail,
+          league_id: data.id,
+          payload: { league_name: data.name },
         });
       }
     }
@@ -151,12 +190,23 @@ export default function LeaguesPage() {
     setDeleting(true);
     setError(null);
 
+    const deletedLeague = leagues.find((league) => league.id === deletingId) || null;
+
     const { error } = await supabase.from('leagues').delete().eq('id', deletingId);
 
     if (error) {
       setError(error.message);
       setDeleting(false);
       return;
+    }
+
+    if (userId) {
+      await supabase.from('admin_events').insert({
+        event_type: 'league.deleted',
+        user_id: userId,
+        league_id: deletingId,
+        payload: { league_name: deletedLeague?.name ?? null },
+      });
     }
 
     setLeagues((prev) => prev.filter((league) => league.id !== deletingId));
@@ -249,7 +299,14 @@ export default function LeaguesPage() {
                   padding: '0.25rem 0',
                 }}
               >
-                <span>{league.name}</span>
+                <span>
+                  {league.name}{' '}
+                  {typeof league.memberCount === 'number'
+                    ? `(${league.memberCount} ${
+                        league.memberCount === 1 ? 'member' : 'members'
+                      })`
+                    : ''}
+                </span>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <a
                     href={`/leagues/${league.id}`}

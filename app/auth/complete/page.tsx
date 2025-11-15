@@ -29,6 +29,15 @@ export default function AuthCompletePage() {
       }
 
       const user = userData.user;
+
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      const isNewUser = !existingProfile;
+
       const firstName = searchParams.get('firstName') ?? '';
       const lastName = searchParams.get('lastName') ?? '';
       const gender = searchParams.get('gender') ?? '';
@@ -50,6 +59,15 @@ export default function AuthCompletePage() {
         setStatus('error');
         setMessage(upsertError.message);
         return;
+      }
+
+      if (isNewUser) {
+        await supabase.from('admin_events').insert({
+          event_type: 'user.signup',
+          user_id: user.id,
+          user_email: user.email?.toLowerCase() ?? null,
+          payload,
+        });
       }
 
       setStatus('success');
