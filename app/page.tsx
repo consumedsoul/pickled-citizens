@@ -9,8 +9,8 @@ export default function HomePage() {
           spreadsheets.
         </p>
         <div className="hero-actions">
-          <a href="#" className="btn-primary">
-            Sign in with email (coming soon)
+          <a href="/auth" className="btn-primary">
+            Sign in with email
           </a>
           <a href="/leagues" className="btn-secondary">
             View leagues
