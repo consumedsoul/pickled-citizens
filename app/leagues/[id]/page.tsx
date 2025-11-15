@@ -57,6 +57,8 @@ export default function LeagueMembersPage() {
       }
 
       const user = userData.user;
+      const emailLower = user.email?.toLowerCase() ?? '';
+      const isSuperAdmin = emailLower === 'hun@ghkim.com';
 
       const { data: leagueData, error: leagueError } = await supabase
         .from('leagues')
@@ -74,7 +76,8 @@ export default function LeagueMembersPage() {
 
       setLeague(leagueData as League);
       const owner = leagueData.owner_id === user.id;
-      setIsOwner(owner);
+      const canManage = owner || isSuperAdmin;
+      setIsOwner(canManage);
       setRenameInput(leagueData.name);
 
       const { data: memberRows, error: membersError } = await supabase
@@ -94,7 +97,7 @@ export default function LeagueMembersPage() {
       const rows = (memberRows ?? []) as { user_id: string; email: string | null }[];
       const isMember = rows.some((m) => m.user_id === user.id);
 
-      if (!owner && !isMember) {
+      if (!owner && !isMember && !isSuperAdmin) {
         setError('You are not a member of this league.');
         setLoading(false);
         return;

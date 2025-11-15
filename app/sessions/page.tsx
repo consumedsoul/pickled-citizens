@@ -601,27 +601,48 @@ export default function SessionsPage() {
 
     const { teamA, teamB } = buildTeams(orderedPlayers);
     const totalPlayers = teamA.length + teamB.length;
-    const pairsA = buildPairs(teamA);
-    const pairsB = buildPairs(teamB);
-    const baseGames: { pairA: Pair; pairB: Pair }[] = [];
-    const limit = Math.min(pairsA.length, pairsB.length);
 
-    for (let i = 0; i < limit; i += 1) {
-      baseGames.push({ pairA: pairsA[i], pairB: pairsB[i] });
-    }
+    let gamesPlan: { pairA: Pair; pairB: Pair }[] = [];
 
-    const maxGames =
-      MAX_GAMES_BY_TOTAL_PLAYERS[totalPlayers] ?? baseGames.length;
-    const gamesPlan: { pairA: Pair; pairB: Pair }[] = [];
+    // Special-case 8 players (4 per team) so each round has two disjoint doubles
+    // matches and no player appears on two courts in the same round.
+    if (playerCount === 8 && teamA.length === 4 && teamB.length === 4) {
+      const [a1, a2, a3, a4] = teamA;
+      const [b1, b2, b3, b4] = teamB;
 
-    if (baseGames.length === 0) {
-      setError("Unable to generate matchups for this player selection.");
-      return;
-    }
+      gamesPlan = [
+        // Round 1
+        { pairA: [a1, a2], pairB: [b1, b2] },
+        { pairA: [a3, a4], pairB: [b3, b4] },
+        // Round 2
+        { pairA: [a1, a3], pairB: [b1, b3] },
+        { pairA: [a2, a4], pairB: [b2, b4] },
+        // Round 3
+        { pairA: [a1, a4], pairB: [b1, b4] },
+        { pairA: [a2, a3], pairB: [b2, b3] },
+      ];
+    } else {
+      const pairsA = buildPairs(teamA);
+      const pairsB = buildPairs(teamB);
+      const baseGames: { pairA: Pair; pairB: Pair }[] = [];
+      const limit = Math.min(pairsA.length, pairsB.length);
 
-    for (let i = 0; i < maxGames; i += 1) {
-      const base = baseGames[i % baseGames.length];
-      gamesPlan.push({ pairA: base.pairA, pairB: base.pairB });
+      for (let i = 0; i < limit; i += 1) {
+        baseGames.push({ pairA: pairsA[i], pairB: pairsB[i] });
+      }
+
+      if (baseGames.length === 0) {
+        setError("Unable to generate matchups for this player selection.");
+        return;
+      }
+
+      const maxGames =
+        MAX_GAMES_BY_TOTAL_PLAYERS[totalPlayers] ?? baseGames.length;
+
+      for (let i = 0; i < maxGames; i += 1) {
+        const base = baseGames[i % baseGames.length];
+        gamesPlan.push({ pairA: base.pairA, pairB: base.pairB });
+      }
     }
 
     setGenerating(true);

@@ -52,6 +52,8 @@ export function AdminFooterLinks() {
           <span style={{ opacity: 0.7 }}>·</span>
           <Link href="/admin/users">Users</Link>
           <span style={{ opacity: 0.7 }}>·</span>
+          <Link href="/admin/leagues">Leagues</Link>
+          <span style={{ opacity: 0.7 }}>·</span>
         </>
       )}
       <Link

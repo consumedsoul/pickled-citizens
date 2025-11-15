@@ -86,6 +86,9 @@ export default function SessionDetailPage() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [updatingMatchId, setUpdatingMatchId] = useState<string | null>(null);
 
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   useEffect(() => {
     let active = true;
 
@@ -353,6 +356,25 @@ export default function SessionDetailPage() {
     return m;
   }, [playerStats]);
 
+  const courtsPerRound = useMemo(() => {
+    if (!session) return 1;
+    if (session.player_count >= 12) return 3;
+    if (session.player_count >= 8) return 2;
+    return 1;
+  }, [session]);
+
+  const rounds = useMemo(() => {
+    if (!matches.length) return [] as MatchWithPlayers[][];
+    const perRound = courtsPerRound || 1;
+    const grouped: MatchWithPlayers[][] = [];
+    matches.forEach((match, index) => {
+      const roundIndex = Math.floor(index / perRound);
+      if (!grouped[roundIndex]) grouped[roundIndex] = [];
+      grouped[roundIndex].push(match);
+    });
+    return grouped;
+  }, [matches, courtsPerRound]);
+
   async function handleToggleWinner(matchId: string, team: 1 | 2) {
     if (!session || !canEdit) return;
 
@@ -422,6 +444,52 @@ export default function SessionDetailPage() {
     }
   }
 
+  function openDeleteDialog() {
+    setDeleteOpen(true);
+    setError(null);
+  }
+
+  function closeDeleteDialog() {
+    setDeleteOpen(false);
+    setDeleteLoading(false);
+  }
+
+  async function handleDeleteSession() {
+    if (!session || !userId) return;
+    setDeleteLoading(true);
+    setError(null);
+
+    try {
+      const { error: deleteError } = await supabase
+        .from('game_sessions')
+        .delete()
+        .eq('id', session.id)
+        .eq('created_by', userId);
+
+      if (deleteError) {
+        setError(deleteError.message);
+        setDeleteLoading(false);
+        return;
+      }
+
+      if (userEmail) {
+        await supabase.from('admin_events').insert({
+          event_type: 'session.deleted',
+          user_id: userId,
+          user_email: userEmail.toLowerCase(),
+          league_id: session.league_id,
+          payload: { session_id: session.id },
+        });
+      }
+
+      closeDeleteDialog();
+      router.replace('/sessions');
+    } catch (e: any) {
+      setError(e?.message ?? 'Unable to delete session.');
+      setDeleteLoading(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="section">
@@ -453,7 +521,31 @@ export default function SessionDetailPage() {
 
   return (
     <div className="section">
-      <h1 className="section-title">Session details</h1>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '0.75rem',
+          flexWrap: 'wrap',
+        }}
+      >
+        <h1 className="section-title">Session details</h1>
+        {canEdit && (
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={openDeleteDialog}
+            style={{
+              background: '#b91c1c',
+              borderColor: '#b91c1c',
+              color: '#fee2e2',
+            }}
+          >
+            Delete session
+          </button>
+        )}
+      </div>
       <p className="hero-subtitle" style={{ marginBottom: '0.5rem' }}>
         {session.league_name || 'Unknown league'} · {session.player_count} players ·{' '}
         {formatDateTime(session.scheduled_for ?? session.created_at)}
@@ -630,100 +722,130 @@ export default function SessionDetailPage() {
                 padding: '0.5rem 0.6rem',
               }}
             >
-              {matches.map((match, index) => {
-                const teamALabel =
-                  match.team1.length >= 2
-                    ? [
-                        `${displayPlayerName(match.team1[0])} +`,
-                        displayPlayerName(match.team1[1]),
-                      ]
-                    : [match.team1.map(displayPlayerName).join(', ')];
-                const teamBLabel =
-                  match.team2.length >= 2
-                    ? [
-                        `${displayPlayerName(match.team2[0])} +`,
-                        displayPlayerName(match.team2[1]),
-                      ]
-                    : [match.team2.map(displayPlayerName).join(', ')];
-
-                return (
+              {rounds.map((roundMatches, roundIndex) => (
+                <div
+                  key={roundIndex}
+                  style={{
+                    marginTop: roundIndex === 0 ? 0 : '0.75rem',
+                  }}
+                >
                   <div
-                    key={match.id}
                     style={{
-                      display: 'grid',
-                      gridTemplateColumns:
-                        'auto minmax(0, 1fr) auto minmax(0, 1fr) auto',
-                      gap: '0.25rem',
-                      alignItems: 'center',
-                      justifyItems: 'center',
-                      padding: '0.3rem 0',
-                      borderTop: index === 0 ? undefined : '1px solid #1f2937',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      color: '#e5e7eb',
+                      marginBottom: '0.25rem',
                     }}
                   >
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      onClick={canEdit ? () => handleToggleWinner(match.id, 1) : undefined}
-                      disabled={!canEdit || updatingMatchId === match.id}
-                      style={{
-                        padding: '0.15rem 0.4rem',
-                        fontSize: '0.75rem',
-                        background: match.winner === 1 ? '#15803d' : 'transparent',
-                        borderColor: match.winner === 1 ? '#15803d' : '#4b5563',
-                        color: match.winner === 1 ? '#ecfdf5' : '#e5e7eb',
-                      }}
-                    >
-                      Win
-                    </button>
-                    <span
-                      style={{
-                        fontSize: '0.85rem',
-                        color: '#bbf7d0',
-                        textAlign: 'center',
-                      }}
-                    >
-                      {teamALabel.map((line, idx) => (
-                        <div key={idx}>{line}</div>
-                      ))}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: '0.75rem',
-                        color: '#9ca3af',
-                        textAlign: 'center',
-                      }}
-                    >
-                      vs
-                    </span>
-                    <span
-                      style={{
-                        fontSize: '0.85rem',
-                        color: '#bfdbfe',
-                        textAlign: 'center',
-                      }}
-                    >
-                      {teamBLabel.map((line, idx) => (
-                        <div key={idx}>{line}</div>
-                      ))}
-                    </span>
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      onClick={canEdit ? () => handleToggleWinner(match.id, 2) : undefined}
-                      disabled={!canEdit || updatingMatchId === match.id}
-                      style={{
-                        padding: '0.15rem 0.4rem',
-                        fontSize: '0.75rem',
-                        background: match.winner === 2 ? '#1d4ed8' : 'transparent',
-                        borderColor: match.winner === 2 ? '#1d4ed8' : '#4b5563',
-                        color: match.winner === 2 ? '#dbeafe' : '#e5e7eb',
-                      }}
-                    >
-                      Win
-                    </button>
+                    Round {roundIndex + 1}
                   </div>
-                );
-              })}
+                  {roundMatches.map((match, index) => {
+                    const teamALabel =
+                      match.team1.length >= 2
+                        ? [
+                            `${displayPlayerName(match.team1[0])} +`,
+                            displayPlayerName(match.team1[1]),
+                          ]
+                        : [match.team1.map(displayPlayerName).join(', ')];
+                    const teamBLabel =
+                      match.team2.length >= 2
+                        ? [
+                            `${displayPlayerName(match.team2[0])} +`,
+                            displayPlayerName(match.team2[1]),
+                          ]
+                        : [match.team2.map(displayPlayerName).join(', ')];
+
+                    return (
+                      <div
+                        key={match.id}
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns:
+                            'auto minmax(0, 1fr) auto minmax(0, 1fr) auto',
+                          gap: '0.25rem',
+                          alignItems: 'center',
+                          justifyItems: 'center',
+                          padding: '0.3rem 0',
+                          borderTop:
+                            index === 0 && roundIndex === 0
+                              ? undefined
+                              : '1px solid #1f2937',
+                        }}
+                      >
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={
+                            canEdit ? () => handleToggleWinner(match.id, 1) : undefined
+                          }
+                          disabled={!canEdit || updatingMatchId === match.id}
+                          style={{
+                            padding: '0.15rem 0.4rem',
+                            fontSize: '0.75rem',
+                            background:
+                              match.winner === 1 ? '#15803d' : 'transparent',
+                            borderColor:
+                              match.winner === 1 ? '#15803d' : '#4b5563',
+                            color: match.winner === 1 ? '#ecfdf5' : '#e5e7eb',
+                          }}
+                        >
+                          Win
+                        </button>
+                        <span
+                          style={{
+                            fontSize: '0.85rem',
+                            color: '#bbf7d0',
+                            textAlign: 'center',
+                          }}
+                        >
+                          {teamALabel.map((line, idx) => (
+                            <div key={idx}>{line}</div>
+                          ))}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '0.75rem',
+                            color: '#9ca3af',
+                            textAlign: 'center',
+                          }}
+                        >
+                          vs
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '0.85rem',
+                            color: '#bfdbfe',
+                            textAlign: 'center',
+                          }}
+                        >
+                          {teamBLabel.map((line, idx) => (
+                            <div key={idx}>{line}</div>
+                          ))}
+                        </span>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={
+                            canEdit ? () => handleToggleWinner(match.id, 2) : undefined
+                          }
+                          disabled={!canEdit || updatingMatchId === match.id}
+                          style={{
+                            padding: '0.15rem 0.4rem',
+                            fontSize: '0.75rem',
+                            background:
+                              match.winner === 2 ? '#1d4ed8' : 'transparent',
+                            borderColor:
+                              match.winner === 2 ? '#1d4ed8' : '#4b5563',
+                            color: match.winner === 2 ? '#dbeafe' : '#e5e7eb',
+                          }}
+                        >
+                          Win
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -786,6 +908,63 @@ export default function SessionDetailPage() {
           )}
         </div>
       </div>
+
+      {canEdit && deleteOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15,23,42,0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 40,
+          }}
+        >
+          <div
+            className="section"
+            style={{
+              maxWidth: 420,
+              width: '90%',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+            }}
+          >
+            <h2 className="section-title">Delete session</h2>
+            <p className="hero-subtitle">
+              Are you sure you want to delete this session? This action cannot be undone.
+            </p>
+            <div
+              style={{
+                marginTop: '1rem',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '0.5rem',
+              }}
+            >
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={closeDeleteDialog}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handleDeleteSession}
+                disabled={deleteLoading}
+                style={{
+                  background: '#b91c1c',
+                  borderColor: '#b91c1c',
+                  color: '#fee2e2',
+                }}
+              >
+                {deleteLoading ? 'Deleting…' : 'Confirm delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

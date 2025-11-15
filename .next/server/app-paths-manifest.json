@@ -1,8 +1,7 @@
 {
-  "/leagues/page": "app/leagues/page.js",
+  "/admin/leagues/page": "app/admin/leagues/page.js",
+  "/page": "app/page.js",
   "/sessions/page": "app/sessions/page.js",
   "/sessions/[id]/page": "app/sessions/[id]/page.js",
-  "/leagues/[id]/page": "app/leagues/[id]/page.js",
-  "/page": "app/page.js",
-  "/profile/page": "app/profile/page.js"
+  "/leagues/[id]/page": "app/leagues/[id]/page.js"
 }
