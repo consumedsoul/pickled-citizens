@@ -41,6 +41,7 @@ export default function AuthCompletePage() {
       const firstName = searchParams.get('firstName') ?? '';
       const lastName = searchParams.get('lastName') ?? '';
       const gender = searchParams.get('gender') ?? '';
+      const selfDuprParam = searchParams.get('selfDupr') ?? '';
 
       const payload: any = {
         id: user.id,
@@ -50,6 +51,12 @@ export default function AuthCompletePage() {
       if (firstName) payload.first_name = firstName;
       if (lastName) payload.last_name = lastName;
       if (gender) payload.gender = gender;
+      if (selfDuprParam) {
+        const n = Number(selfDuprParam);
+        if (!Number.isNaN(n)) {
+          payload.self_reported_dupr = n;
+        }
+      }
 
       const { error: upsertError } = await supabase.from('profiles').upsert(payload);
 

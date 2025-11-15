@@ -56,7 +56,14 @@ function formatDateTime(value: string | null) {
   if (!value) return 'Not scheduled';
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return 'Not scheduled';
-  return d.toLocaleString();
+  return d.toLocaleString(undefined, {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
 }
 
 function displayPlayerName(player: SessionPlayer) {
@@ -625,21 +632,6 @@ export default function SessionDetailPage() {
                 padding: '0.5rem 0.6rem',
               }}
             >
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr) auto',
-                  gap: '0.25rem',
-                  marginBottom: '0.5rem',
-                  fontSize: '0.8rem',
-                  color: '#9ca3af',
-                }}
-              >
-                <span>Team A pair</span>
-                <span></span>
-                <span>Team B pair</span>
-                <span>Result</span>
-              </div>
               {matches.map((match, index) => {
                 const teamALabel =
                   match.team1.length >= 2
@@ -664,13 +656,35 @@ export default function SessionDetailPage() {
                     style={{
                       display: 'grid',
                       gridTemplateColumns:
-                        'minmax(0, 1fr) auto minmax(0, 1fr) minmax(0, 140px)',
+                        'auto minmax(0, 1fr) auto minmax(0, 1fr) auto',
                       gap: '0.25rem',
                       alignItems: 'center',
                       padding: '0.3rem 0',
                       borderTop: index === 0 ? undefined : '1px solid #1f2937',
                     }}
                   >
+                    {canEdit ? (
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={() => handleToggleWinner(match.id, 1)}
+                        disabled={updatingMatchId === match.id}
+                        style={{
+                          padding: '0.15rem 0.4rem',
+                          fontSize: '0.75rem',
+                          background:
+                            match.winner === 1 ? '#15803d' : 'transparent',
+                          borderColor:
+                            match.winner === 1 ? '#15803d' : '#4b5563',
+                          color:
+                            match.winner === 1 ? '#ecfdf5' : '#e5e7eb',
+                        }}
+                      >
+                        Win
+                      </button>
+                    ) : (
+                      <span />
+                    )}
                     <span style={{ fontSize: '0.85rem', color: '#bbf7d0' }}>
                       {teamALabel}
                     </span>
@@ -687,50 +701,24 @@ export default function SessionDetailPage() {
                       {teamBLabel}
                     </span>
                     {canEdit ? (
-                      <div
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={() => handleToggleWinner(match.id, 2)}
+                        disabled={updatingMatchId === match.id}
                         style={{
-                          display: 'flex',
-                          justifyContent: 'flex-end',
-                          gap: '0.25rem',
+                          padding: '0.15rem 0.4rem',
+                          fontSize: '0.75rem',
+                          background:
+                            match.winner === 2 ? '#1d4ed8' : 'transparent',
+                          borderColor:
+                            match.winner === 2 ? '#1d4ed8' : '#4b5563',
+                          color:
+                            match.winner === 2 ? '#dbeafe' : '#e5e7eb',
                         }}
                       >
-                        <button
-                          type="button"
-                          className="btn-secondary"
-                          onClick={() => handleToggleWinner(match.id, 1)}
-                          disabled={updatingMatchId === match.id}
-                          style={{
-                            padding: '0.15rem 0.4rem',
-                            fontSize: '0.75rem',
-                            background:
-                              match.winner === 1 ? '#15803d' : 'transparent',
-                            borderColor:
-                              match.winner === 1 ? '#15803d' : '#4b5563',
-                            color:
-                              match.winner === 1 ? '#ecfdf5' : '#e5e7eb',
-                          }}
-                        >
-                          Team A win
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-secondary"
-                          onClick={() => handleToggleWinner(match.id, 2)}
-                          disabled={updatingMatchId === match.id}
-                          style={{
-                            padding: '0.15rem 0.4rem',
-                            fontSize: '0.75rem',
-                            background:
-                              match.winner === 2 ? '#1d4ed8' : 'transparent',
-                            borderColor:
-                              match.winner === 2 ? '#1d4ed8' : '#4b5563',
-                            color:
-                              match.winner === 2 ? '#dbeafe' : '#e5e7eb',
-                          }}
-                        >
-                          Team B win
-                        </button>
-                      </div>
+                        Win
+                      </button>
                     ) : (
                       <span
                         style={{

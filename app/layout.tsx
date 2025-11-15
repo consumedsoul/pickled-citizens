@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import logo from "./images/PKLDCTZN_web_logo.png";
 import { AuthStatus } from "@/components/AuthStatus";
+import { AdminFooterLinks } from "@/components/AdminFooterLinks";
 
 export const metadata = {
   title: "PickledCitizens 2.0",
@@ -26,10 +27,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 <Image
                   src={logo}
                   alt="PickledCitizens logo"
-                  width={32}
-                  height={32}
+                  width={40}
+                  height={40}
+                  priority
+                  quality={100}
                   style={{
-                    height: "32px",
+                    height: "40px",
                     width: "auto",
                   }}
                 />
@@ -44,7 +47,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 <nav className="app-nav">
                   <Link href="/leagues">Leagues</Link>
                   <Link href="/sessions">Sessions</Link>
-                  <Link href="/history">History</Link>
                   <Link href="/profile">Profile</Link>
                 </nav>
                 <AuthStatus />
@@ -53,7 +55,19 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </header>
           <main className="app-main">{children}</main>
           <footer className="app-footer">
-            {`Copyright ${year} Pickled Citizens | All Rights Reserved`}
+            <div
+              style={{
+                display: "flex",
+                width: "100%",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "1rem",
+                flexWrap: "wrap",
+              }}
+            >
+              <span>{`Copyright ${year} Pickled Citizens | All Rights Reserved`}</span>
+              <AdminFooterLinks />
+            </div>
           </footer>
         </div>
       </body>

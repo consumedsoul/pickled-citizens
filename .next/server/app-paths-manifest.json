@@ -1,7 +1,7 @@
 {
-  "/history/page": "app/history/page.js",
-  "/profile/page": "app/profile/page.js",
-  "/admin/users/page": "app/admin/users/page.js",
   "/sessions/page": "app/sessions/page.js",
-  "/auth/page": "app/auth/page.js"
+  "/leagues/[id]/page": "app/leagues/[id]/page.js",
+  "/auth/page": "app/auth/page.js",
+  "/profile/page": "app/profile/page.js",
+  "/sessions/[id]/page": "app/sessions/[id]/page.js"
 }

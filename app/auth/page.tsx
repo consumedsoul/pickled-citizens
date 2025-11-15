@@ -8,6 +8,7 @@ export default function AuthPage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [gender, setGender] = useState('');
+  const [selfDupr, setSelfDupr] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState<string | null>(null);
 
@@ -16,6 +17,18 @@ export default function AuthPage() {
     if (!email || !firstName.trim() || !lastName.trim() || !gender) {
       setStatus('error');
       setMessage('Email, first name, last name, and gender are required.');
+      return;
+    }
+
+    if (!selfDupr.trim()) {
+      setStatus('error');
+      setMessage('Self-reported DUPR is required.');
+      return;
+    }
+
+    if (!/^\d{1,2}(\.\d{1,2})?$/.test(selfDupr.trim())) {
+      setStatus('error');
+      setMessage('Self-reported DUPR must be a number like 3.75.');
       return;
     }
 
@@ -28,6 +41,7 @@ export default function AuthPage() {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         gender,
+        selfDupr: selfDupr.trim(),
       });
 
       const redirectTo = `${window.location.origin}/auth/complete?${params.toString()}`;
@@ -138,6 +152,40 @@ export default function AuthPage() {
               color: '#e5e7eb',
             }}
           />
+        </label>
+
+        <label style={{ fontSize: '0.8rem' }}>
+          Self-reported DUPR (required, x.xx)
+          <input
+            type="text"
+            value={selfDupr}
+            onChange={(e) => setSelfDupr(e.target.value)}
+            placeholder="e.g. 3.75"
+            style={{
+              marginTop: '0.35rem',
+              width: '100%',
+              padding: '0.45rem 0.6rem',
+              borderRadius: '0.5rem',
+              border: '1px solid #1f2937',
+              background: '#020617',
+              color: '#e5e7eb',
+            }}
+          />
+          <p
+            className="hero-subtitle"
+            style={{ fontSize: '0.75rem', marginTop: '0.35rem' }}
+          >
+            Need help estimating your rating? See{' '}
+            <a
+              href="https://www.pickleheads.com/guides/pickleball-rating"
+              target="_blank"
+              rel="noreferrer"
+              style={{ color: '#60a5fa', textDecoration: 'underline' }}
+            >
+              this guide
+            </a>
+            .
+          </p>
         </label>
 
         <button

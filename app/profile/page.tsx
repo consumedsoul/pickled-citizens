@@ -8,7 +8,6 @@ type Profile = {
   first_name: string | null;
   last_name: string | null;
   gender: string | null;
-  dupr_id: string | null;
   self_reported_dupr: number | null;
 };
 
@@ -30,12 +29,7 @@ export default function ProfilePage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [gender, setGender] = useState('');
-  const [duprId, setDuprId] = useState('');
   const [selfDupr, setSelfDupr] = useState('');
-
-  const [duprScore, setDuprScore] = useState<number | null>(null);
-  const [duprStatus, setDuprStatus] = useState<string | null>(null);
-  const [duprLoading, setDuprLoading] = useState(false);
 
   const [leagues, setLeagues] = useState<League[]>([]);
 
@@ -66,7 +60,7 @@ export default function ProfilePage() {
 
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('first_name, last_name, gender, dupr_id, self_reported_dupr')
+        .select('first_name, last_name, gender, self_reported_dupr')
         .eq('id', user.id)
         .maybeSingle();
 
@@ -79,7 +73,6 @@ export default function ProfilePage() {
         setFirstName(p.first_name ?? '');
         setLastName(p.last_name ?? '');
         setGender(p.gender ?? '');
-        setDuprId(p.dupr_id ?? '');
         setSelfDupr(
           p.self_reported_dupr !== null && p.self_reported_dupr !== undefined
             ? p.self_reported_dupr.toFixed(2)
@@ -111,55 +104,6 @@ export default function ProfilePage() {
     };
   }, [router]);
 
-  useEffect(() => {
-    if (!duprId || duprId.length !== 6) {
-      setDuprScore(null);
-      setDuprStatus(null);
-      return;
-    }
-
-    let active = true;
-
-    async function fetchDupr() {
-      setDuprLoading(true);
-      setDuprStatus(null);
-      setDuprScore(null);
-
-      try {
-        const res = await fetch(`/api/dupr-score?duprId=${encodeURIComponent(duprId)}`);
-        if (!active) return;
-
-        if (!res.ok) {
-          setDuprStatus('Unable to fetch DUPR score (API not configured).');
-          setDuprLoading(false);
-          return;
-        }
-
-        const data = (await res.json()) as { score?: number | null; message?: string };
-        if (data.score != null) {
-          setDuprScore(data.score);
-          setDuprStatus(null);
-        } else {
-          setDuprScore(null);
-          setDuprStatus(data.message ?? 'No DUPR score found for this ID.');
-        }
-      } catch {
-        if (!active) return;
-        setDuprStatus('Error contacting DUPR API.');
-      } finally {
-        if (active) {
-          setDuprLoading(false);
-        }
-      }
-    }
-
-    fetchDupr();
-
-    return () => {
-      active = false;
-    };
-  }, [duprId]);
-
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
@@ -170,12 +114,12 @@ export default function ProfilePage() {
       return;
     }
 
-    if (duprId && duprId.length !== 6) {
-      setError('DUPR ID must be exactly 6 characters if provided.');
+    if (!selfDupr.trim()) {
+      setError('Self-reported DUPR is required.');
       return;
     }
 
-    if (selfDupr && !/^\d{1,2}(\.\d{1,2})?$/.test(selfDupr)) {
+    if (!/^\d{1,2}(\.\d{1,2})?$/.test(selfDupr.trim())) {
       setError('Self-reported DUPR must be a number like 3.75.');
       return;
     }
@@ -193,7 +137,7 @@ export default function ProfilePage() {
       return;
     }
 
-    const selfDuprNumber = selfDupr ? Number(selfDupr) : null;
+    const selfDuprNumber = Number(selfDupr.trim());
 
     const { error: upsertError } = await supabase.from('profiles').upsert({
       id: userData.user.id,
@@ -201,7 +145,6 @@ export default function ProfilePage() {
       first_name: firstName.trim(),
       last_name: lastName.trim(),
       gender,
-      dupr_id: duprId || null,
       self_reported_dupr: selfDuprNumber,
       updated_at: new Date().toISOString(),
     });
@@ -418,45 +361,39 @@ export default function ProfilePage() {
           </select>
         </label>
 
-        <div style={{ display: 'grid', gap: '0.5rem', gridTemplateColumns: '1fr 1fr' }}>
-          <label style={{ fontSize: '0.8rem' }}>
-            DUPR ID (6 characters, optional)
-            <input
-              type="text"
-              value={duprId}
-              onChange={(e) => setDuprId(e.target.value.trim())}
-              maxLength={6}
-              style={{
-                marginTop: '0.35rem',
-                width: '100%',
-                padding: '0.45rem 0.6rem',
-                borderRadius: '0.5rem',
-                border: '1px solid #1f2937',
-                background: '#020617',
-                color: '#e5e7eb',
-              }}
-            />
-          </label>
-
-          <label style={{ fontSize: '0.8rem' }}>
-            Self-reported DUPR (x.xx, optional)
-            <input
-              type="text"
-              value={selfDupr}
-              onChange={(e) => setSelfDupr(e.target.value)}
-              placeholder="e.g. 3.75"
-              style={{
-                marginTop: '0.35rem',
-                width: '100%',
-                padding: '0.45rem 0.6rem',
-                borderRadius: '0.5rem',
-                border: '1px solid #1f2937',
-                background: '#020617',
-                color: '#e5e7eb',
-              }}
-            />
-          </label>
-        </div>
+        <label style={{ fontSize: '0.8rem' }}>
+          Self-reported DUPR (required, x.xx)
+          <input
+            type="text"
+            value={selfDupr}
+            onChange={(e) => setSelfDupr(e.target.value)}
+            placeholder="e.g. 3.75"
+            style={{
+              marginTop: '0.35rem',
+              width: '100%',
+              padding: '0.45rem 0.6rem',
+              borderRadius: '0.5rem',
+              border: '1px solid #1f2937',
+              background: '#020617',
+              color: '#e5e7eb',
+            }}
+          />
+          <p
+            className="hero-subtitle"
+            style={{ fontSize: '0.75rem', marginTop: '0.35rem' }}
+          >
+            Need help estimating your rating? See{' '}
+            <a
+              href="https://www.pickleheads.com/guides/pickleball-rating"
+              target="_blank"
+              rel="noreferrer"
+              style={{ color: '#60a5fa', textDecoration: 'underline' }}
+            >
+              this guide
+            </a>
+            .
+          </p>
+        </label>
 
         <button
           type="submit"
@@ -467,20 +404,6 @@ export default function ProfilePage() {
           {saving ? 'Saving…' : 'Save profile'}
         </button>
       </form>
-
-      <div style={{ marginTop: '1.5rem' }}>
-        <h2 className="section-title">DUPR Score</h2>
-        {duprLoading && <p className="hero-subtitle">Fetching DUPR score…</p>}
-        {!duprLoading && duprId && duprId.length === 6 && duprScore != null && (
-          <p className="hero-subtitle">Current DUPR score: {duprScore.toFixed(2)}</p>
-        )}
-        {!duprLoading && duprId && duprId.length === 6 && duprScore == null && duprStatus && (
-          <p className="hero-subtitle">{duprStatus}</p>
-        )}
-        {!duprLoading && !duprId && (
-          <p className="hero-subtitle">Add your DUPR ID to see your official score.</p>
-        )}
-      </div>
 
       <div style={{ marginTop: '1.5rem' }}>
         <h2 className="section-title">Leagues you belong to</h2>

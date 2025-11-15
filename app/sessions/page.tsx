@@ -102,30 +102,127 @@ export default function SessionsPage() {
 
       setSessionsLoading(true);
 
-      const { data: sessionRows, error: sessionsError } = await supabase
+      const { data: ownedSessionRows, error: ownedSessionsError } = await supabase
         .from("game_sessions")
         .select(
-          "id, league_id, created_at, scheduled_for, player_count, league:leagues(name)"
+          "id, league_id, created_by, created_at, scheduled_for, player_count, league:leagues(name)"
         )
-        .eq("created_by", user.id)
-        .order("created_at", { ascending: false });
+        .eq("created_by", user.id);
 
       if (!active) return;
 
-      if (sessionsError) {
-        setError(sessionsError.message);
+      if (ownedSessionsError) {
+        setError(ownedSessionsError.message);
         setSessions([]);
-      } else {
-        const mapped: SessionSummary[] = (sessionRows ?? []).map((row: any) => ({
+        setSessionsLoading(false);
+        setLoading(false);
+        return;
+      }
+
+      const { data: mpRows, error: mpError } = await supabase
+        .from("match_players")
+        .select("match_id")
+        .eq("user_id", user.id);
+
+      if (!active) return;
+
+      if (mpError) {
+        setError(mpError.message);
+        setSessions([]);
+        setSessionsLoading(false);
+        setLoading(false);
+        return;
+      }
+
+      let participantSessionRows: any[] = [];
+
+      if (mpRows && mpRows.length) {
+        const matchIds = Array.from(
+          new Set((mpRows as any[]).map((row) => row.match_id))
+        );
+
+        if (matchIds.length) {
+          const { data: matchRows, error: matchesError } = await supabase
+            .from("matches")
+            .select("id, session_id")
+            .in("id", matchIds);
+
+          if (!active) return;
+
+          if (matchesError) {
+            setError(matchesError.message);
+            setSessions([]);
+            setSessionsLoading(false);
+            setLoading(false);
+            return;
+          }
+
+          const sessionIds = Array.from(
+            new Set(
+              (matchRows ?? [])
+                .map((m: any) => m.session_id)
+                .filter((id: string | null) => !!id)
+            )
+          );
+
+          if (sessionIds.length) {
+            const { data: participantRows, error: participantError } =
+              await supabase
+                .from("game_sessions")
+                .select(
+                  "id, league_id, created_by, created_at, scheduled_for, player_count, league:leagues(name)"
+                )
+                .in("id", sessionIds);
+
+            if (!active) return;
+
+            if (participantError) {
+              setError(participantError.message);
+              setSessions([]);
+              setSessionsLoading(false);
+              setLoading(false);
+              return;
+            }
+
+            participantSessionRows = participantRows ?? [];
+          }
+        }
+      }
+
+      const allRows = [...(ownedSessionRows ?? []), ...participantSessionRows];
+      const byId = new Map<string, any>();
+      allRows.forEach((row) => {
+        if (!row || !row.id) return;
+        byId.set(row.id, row);
+      });
+
+      const mapped: SessionSummary[] = Array.from(byId.values()).map((row: any) => {
+        const leagueRel: any = row.league;
+        const leagueName =
+          Array.isArray(leagueRel) && leagueRel.length > 0
+            ? leagueRel[0]?.name ?? null
+            : leagueRel?.name ?? null;
+
+        return {
           id: row.id,
           league_id: row.league_id ?? null,
-          league_name: row.league?.name ?? null,
+          league_name: leagueName,
           created_at: row.created_at,
           scheduled_for: row.scheduled_for ?? null,
           player_count: row.player_count,
-        }));
-        setSessions(mapped);
-      }
+        };
+      });
+
+      mapped.sort((a, b) => {
+        const aTime = a.scheduled_for ?? a.created_at;
+        const bTime = b.scheduled_for ?? b.created_at;
+        if (!aTime && !bTime) return 0;
+        if (!aTime) return 1;
+        if (!bTime) return -1;
+        return new Date(bTime).getTime() - new Date(aTime).getTime();
+      });
+
+      setSessions(mapped);
 
       setSessionsLoading(false);
       setLoading(false);
@@ -351,7 +448,14 @@ export default function SessionsPage() {
     if (!value) return "Not scheduled";
     const d = new Date(value);
     if (Number.isNaN(d.getTime())) return "Not scheduled";
-    return d.toLocaleString();
+    return d.toLocaleString(undefined, {
+      weekday: "long",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
   }
 
   async function handleGenerate(event: FormEvent) {
@@ -541,16 +645,29 @@ export default function SessionsPage() {
     );
   }
 
-  if (!leagues.length) {
-    return (
-      <div className="section">
-        <h1 className="section-title">Game sessions</h1>
-        <p className="hero-subtitle">
-          You do not own any leagues yet. Create a league first to schedule sessions.
-        </p>
-      </div>
-    );
-  }
+  const nowTime = new Date().getTime();
+  const enriched = sessions.map((session) => {
+    const effective = session.scheduled_for ?? session.created_at;
+    const time = effective ? new Date(effective).getTime() : Number.NaN;
+    return { session, time };
+  });
+
+  const upcomingSessions = enriched
+    .filter((item) => !Number.isNaN(item.time) && item.time >= nowTime)
+    .sort((a, b) => a.time - b.time)
+    .map((item) => item.session);
+
+  const pastSessions = enriched
+    .filter((item) => Number.isNaN(item.time) || item.time < nowTime)
+    .sort((a, b) => {
+      const aNaN = Number.isNaN(a.time);
+      const bNaN = Number.isNaN(b.time);
+      if (aNaN && bNaN) return 0;
+      if (aNaN) return 1;
+      if (bNaN) return -1;
+      return b.time - a.time;
+    })
+    .map((item) => item.session);
 
   return (
     <div className="section">
@@ -567,8 +684,9 @@ export default function SessionsPage() {
       )}
       {!error && (
         <p className="hero-subtitle">
-          Create a session for one of your leagues, pick 6 / 8 / 10 / 12 players, and
-          generate balanced teams and matchups.
+          {leagues.length
+            ? "Create a session for one of your leagues, pick 6 / 8 / 10 / 12 players, and generate balanced teams and matchups."
+            : "You do not own any leagues yet. You can still view sessions you play in below."}
         </p>
       )}
 
@@ -714,7 +832,7 @@ export default function SessionsPage() {
           disabled={generating || membersLoading || !members.length}
           style={{ justifySelf: "flex-start", marginTop: "0.5rem" }}
         >
-          {generating ? "Creating session 85" : "Create session"}
+          {generating ? "Creating session..." : "Create session"}
         </button>
       </form>
       <div style={{ marginTop: "1.5rem" }}>
@@ -760,7 +878,7 @@ export default function SessionsPage() {
                       disabled={index === 0}
                       style={{ padding: "0.1rem 0.35rem", fontSize: "0.75rem" }}
                     >
-                       5e
+                      ↑
                     </button>
                     <button
                       type="button"
@@ -769,7 +887,7 @@ export default function SessionsPage() {
                       disabled={index === orderedPlayers.length - 1}
                       style={{ padding: "0.1rem 0.35rem", fontSize: "0.75rem" }}
                     >
-                       5f
+                      ↓
                     </button>
                   </div>
                 </li>
@@ -783,7 +901,7 @@ export default function SessionsPage() {
         <h2 className="section-title">Your sessions</h2>
         {sessionsLoading ? (
           <p className="hero-subtitle" style={{ fontSize: "0.85rem" }}>
-            Loading sessions 85
+            Loading sessions...
           </p>
         ) : sessions.length === 0 ? (
           <p className="hero-subtitle" style={{ fontSize: "0.85rem" }}>
@@ -798,44 +916,114 @@ export default function SessionsPage() {
               padding: "0.5rem 0.6rem",
             }}
           >
-            <ul
-              className="section-list"
-              style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}
-            >
-              {sessions.map((session) => (
-                <li
-                  key={session.id}
+            {upcomingSessions.length > 0 && (
+              <div style={{ marginBottom: pastSessions.length ? "0.75rem" : 0 }}>
+                <h3
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: "0.75rem",
-                    padding: "0.4rem 0",
+                    fontSize: "0.8rem",
+                    fontWeight: 600,
+                    margin: 0,
+                    marginBottom: "0.35rem",
+                    color: "#e5e7eb",
                   }}
                 >
-                  <div style={{ fontSize: "0.85rem" }}>
-                    <div style={{ fontWeight: 500 }}>
-                      {session.league_name || "Unknown league"}  b7{" "}
-                      {session.player_count} players
-                    </div>
-                    <div
-                      style={{ color: "#9ca3af", marginTop: "0.1rem" }}
+                  Current / upcoming sessions
+                </h3>
+                <ul
+                  className="section-list"
+                  style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}
+                >
+                  {upcomingSessions.map((session) => (
+                    <li
+                      key={session.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: "0.75rem",
+                        padding: "0.4rem 0",
+                      }}
                     >
-                      {formatDateTime(
-                        session.scheduled_for ?? session.created_at
-                      )}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => router.push(`/sessions/${session.id}`)}
-                  >
-                    View
-                  </button>
-                </li>
-              ))}
-            </ul>
+                      <div style={{ fontSize: "0.85rem" }}>
+                        <div style={{ fontWeight: 500 }}>
+                          {session.league_name || "Unknown league"} -
+                          {" "}
+                          {session.player_count} players
+                        </div>
+                        <div
+                          style={{ color: "#9ca3af", marginTop: "0.1rem" }}
+                        >
+                          {formatDateTime(
+                            session.scheduled_for ?? session.created_at
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={() => router.push(`/sessions/${session.id}`)}
+                      >
+                        View
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {pastSessions.length > 0 && (
+              <div>
+                <h3
+                  style={{
+                    fontSize: "0.8rem",
+                    fontWeight: 600,
+                    margin: 0,
+                    marginBottom: "0.35rem",
+                    color: "#e5e7eb",
+                  }}
+                >
+                  Past sessions
+                </h3>
+                <ul
+                  className="section-list"
+                  style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}
+                >
+                  {pastSessions.map((session) => (
+                    <li
+                      key={session.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: "0.75rem",
+                        padding: "0.4rem 0",
+                      }}
+                    >
+                      <div style={{ fontSize: "0.85rem" }}>
+                        <div style={{ fontWeight: 500 }}>
+                          {session.league_name || "Unknown league"} -
+                          {" "}
+                          {session.player_count} players
+                        </div>
+                        <div
+                          style={{ color: "#9ca3af", marginTop: "0.1rem" }}
+                        >
+                          {formatDateTime(
+                            session.scheduled_for ?? session.created_at
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={() => router.push(`/sessions/${session.id}`)}
+                      >
+                        View
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
       </div>
