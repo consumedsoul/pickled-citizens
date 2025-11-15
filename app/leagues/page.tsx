@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 
 type League = {
@@ -12,6 +13,7 @@ type League = {
 const MAX_LEAGUES = 3;
 
 export default function LeaguesPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [leagues, setLeagues] = useState<League[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -35,18 +37,12 @@ export default function LeaguesPage() {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (!active) return;
 
-      if (userError) {
-        setError(userError.message);
-        setLoading(false);
+      if (userError || !userData.user) {
+        router.replace('/');
         return;
       }
 
       const user = userData.user;
-      if (!user) {
-        setError('You need to be signed in to manage leagues.');
-        setLoading(false);
-        return;
-      }
 
       setUserId(user.id);
 
@@ -72,18 +68,40 @@ export default function LeaguesPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [router]);
 
   async function handleCreate(event: FormEvent) {
     event.preventDefault();
-    if (!userId || !name.trim() || reachedLimit) return;
+    const trimmedName = name.trim();
+    if (!userId || !trimmedName || reachedLimit) return;
 
     setCreating(true);
     setError(null);
 
+    const { data: existingLeagues, error: existingError } = await supabase
+      .from('leagues')
+      .select('id, name')
+      .eq('owner_id', userId);
+
+    if (existingError) {
+      setError(existingError.message);
+      setCreating(false);
+      return;
+    }
+
+    const duplicate = (existingLeagues ?? []).some(
+      (league) => league.name.trim().toLowerCase() === trimmedName.toLowerCase()
+    );
+
+    if (duplicate) {
+      setError('A league with that name already exists.');
+      setCreating(false);
+      return;
+    }
+
     const { data, error } = await supabase
       .from('leagues')
-      .insert({ name: name.trim(), owner_id: userId })
+      .insert({ name: trimmedName, owner_id: userId })
       .select('id, name, created_at')
       .single();
 
@@ -95,6 +113,20 @@ export default function LeaguesPage() {
     } else if (data) {
       setLeagues((prev) => [data, ...prev]);
       setName('');
+
+      const {
+        data: userData,
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (!userError && userData.user) {
+        const ownerEmail = userData.user.email?.toLowerCase() ?? null;
+        await supabase.from('league_members').upsert({
+          league_id: data.id,
+          user_id: userData.user.id,
+          email: ownerEmail,
+        });
+      }
     }
 
     setCreating(false);
@@ -218,17 +250,26 @@ export default function LeaguesPage() {
                 }}
               >
                 <span>{league.name}</span>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => openDeleteDialog(league.id)}
-                  style={{
-                    borderColor: '#b91c1c',
-                    color: '#fecaca',
-                  }}
-                >
-                  Delete
-                </button>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <a
+                    href={`/leagues/${league.id}`}
+                    className="btn-secondary"
+                    style={{ textDecoration: 'none' }}
+                  >
+                    Manage
+                  </a>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => openDeleteDialog(league.id)}
+                    style={{
+                      borderColor: '#b91c1c',
+                      color: '#fecaca',
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
               </li>
             ))}
           </ul>

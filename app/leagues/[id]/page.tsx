@@ -1,0 +1,324 @@
+'use client';
+
+import { useEffect, useState, FormEvent } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabaseClient';
+
+type League = {
+  id: string;
+  name: string;
+  owner_id: string;
+};
+
+type Member = {
+  user_id: string;
+  email: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+};
+
+export default function LeagueMembersPage() {
+  const params = useParams();
+  const router = useRouter();
+  const leagueId = params?.id as string | undefined;
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [league, setLeague] = useState<League | null>(null);
+  const [members, setMembers] = useState<Member[]>([]);
+
+  const [emailInput, setEmailInput] = useState('');
+
+  useEffect(() => {
+    let active = true;
+
+    async function load() {
+      if (!leagueId) return;
+      setLoading(true);
+      setError(null);
+
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (!active) return;
+
+      if (userError || !userData.user) {
+        router.replace('/');
+        return;
+      }
+
+      const user = userData.user;
+
+      const { data: leagueData, error: leagueError } = await supabase
+        .from('leagues')
+        .select('id, name, owner_id')
+        .eq('id', leagueId)
+        .maybeSingle();
+
+      if (!active) return;
+
+      if (leagueError || !leagueData) {
+        setError(leagueError?.message ?? 'League not found.');
+        setLoading(false);
+        return;
+      }
+
+      if (leagueData.owner_id !== user.id) {
+        setError('Only the league owner can manage members.');
+        setLoading(false);
+        return;
+      }
+
+      setLeague(leagueData as League);
+
+      const { data: memberRows, error: membersError } = await supabase
+        .from('league_members')
+        .select('user_id, email')
+        .eq('league_id', leagueId)
+        .order('created_at', { ascending: true });
+
+      if (!active) return;
+
+      if (membersError) {
+        setError(membersError.message);
+      } else if (memberRows) {
+        if (!memberRows.length) {
+          setMembers([]);
+        } else {
+          const userIds = (memberRows as { user_id: string; email: string | null }[]).map(
+            (m) => m.user_id
+          );
+
+          const { data: profileRows, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name, email')
+            .in('id', userIds);
+
+          if (profilesError) {
+            setError(profilesError.message);
+          } else {
+            const membersWithNames: Member[] = (memberRows as any[]).map((m) => {
+              const profile = (profileRows ?? []).find((p) => p.id === m.user_id);
+              return {
+                user_id: m.user_id,
+                email: m.email ?? profile?.email ?? null,
+                first_name: profile?.first_name ?? null,
+                last_name: profile?.last_name ?? null,
+              };
+            });
+            setMembers(membersWithNames);
+          }
+        }
+      }
+
+      setLoading(false);
+    }
+
+    load();
+
+    return () => {
+      active = false;
+    };
+  }, [leagueId, router]);
+
+  async function handleAddMember(event: FormEvent) {
+    event.preventDefault();
+    if (!leagueId) return;
+    const email = emailInput.trim().toLowerCase();
+    if (!email) return;
+
+    setSaving(true);
+    setError(null);
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, email, first_name, last_name')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (profileError || !profile) {
+      setError(
+        profileError?.message ??
+          'No player found with that email. Ask them to sign up and save their profile first.'
+      );
+      setSaving(false);
+      return;
+    }
+
+    const {
+      id: userId,
+      email: profileEmail,
+      first_name,
+      last_name,
+    } = profile as {
+      id: string;
+      email: string | null;
+      first_name: string | null;
+      last_name: string | null;
+    };
+
+    const { data: insertData, error: insertError } = await supabase
+      .from('league_members')
+      .insert({ league_id: leagueId, user_id: userId, email: profileEmail ?? email })
+      .select('user_id, email')
+      .single();
+
+    if (insertError) {
+      setError(insertError.message);
+    } else if (insertData) {
+      const memberToAdd: Member = {
+        user_id: insertData.user_id,
+        email: insertData.email,
+        first_name,
+        last_name,
+      };
+
+      setMembers((prev) => {
+        const exists = prev.some((m) => m.user_id === memberToAdd.user_id);
+        if (exists) return prev;
+        return [...prev, memberToAdd];
+      });
+      setEmailInput('');
+    }
+
+    setSaving(false);
+  }
+
+  async function handleRemoveMember(member: Member) {
+    if (!leagueId) return;
+
+    setSaving(true);
+    setError(null);
+
+    const { error: deleteError } = await supabase
+      .from('league_members')
+      .delete()
+      .eq('league_id', leagueId)
+      .eq('user_id', member.user_id);
+
+    if (deleteError) {
+      setError(deleteError.message);
+      setSaving(false);
+      return;
+    }
+
+    setMembers((prev) => prev.filter((m) => m.user_id !== member.user_id));
+    setSaving(false);
+  }
+
+  if (loading) {
+    return (
+      <div className="section">
+        <h1 className="section-title">League</h1>
+        <p className="hero-subtitle">Loading league members…</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="section">
+        <h1 className="section-title">League</h1>
+        <p className="hero-subtitle" style={{ color: '#fca5a5' }}>
+          {error}
+        </p>
+      </div>
+    );
+  }
+
+  if (!league) {
+    return (
+      <div className="section">
+        <h1 className="section-title">League</h1>
+        <p className="hero-subtitle">League not found.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="section">
+      <h1 className="section-title">{league.name} roster</h1>
+      <p className="hero-subtitle">
+        Add or remove authenticated players from this league by email. Players must have
+        already signed up and saved their profile so their email is stored.
+      </p>
+
+      <form
+        onSubmit={handleAddMember}
+        style={{
+          marginTop: '1rem',
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '0.5rem',
+        }}
+      >
+        <input
+          type="email"
+          placeholder="Player email"
+          value={emailInput}
+          onChange={(e) => setEmailInput(e.target.value)}
+          style={{
+            flex: '1 1 220px',
+            padding: '0.45rem 0.6rem',
+            borderRadius: '0.5rem',
+            border: '1px solid #1f2937',
+            background: '#020617',
+            color: '#e5e7eb',
+          }}
+        />
+        <button
+          type="submit"
+          className="btn-primary"
+          disabled={saving || !emailInput.trim()}
+        >
+          {saving ? 'Saving…' : 'Add player'}
+        </button>
+      </form>
+
+      <div style={{ marginTop: '1.5rem' }}>
+        <h2 className="section-title">Members</h2>
+        {members.length === 0 ? (
+          <p className="hero-subtitle">No members yet.</p>
+        ) : (
+          <ul className="section-list" style={{ listStyle: 'none', paddingLeft: 0 }}>
+            {members.map((member) => (
+              <li
+                key={member.user_id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '0.75rem',
+                  padding: '0.25rem 0',
+                }}
+              >
+                <span>
+                  {(() => {
+                    const fullName = [member.first_name, member.last_name]
+                      .filter(Boolean)
+                      .join(' ');
+                    const email = member.email ?? '';
+                    return fullName && email
+                      ? `${fullName} (${email})`
+                      : email || fullName || member.user_id;
+                  })()}
+                </span>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => handleRemoveMember(member)}
+                  style={{
+                    borderColor: '#b91c1c',
+                    color: '#fecaca',
+                  }}
+                >
+                  Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}

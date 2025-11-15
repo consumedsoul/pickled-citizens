@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 
 type Profile = {
@@ -17,10 +18,14 @@ type League = {
 };
 
 export default function ProfilePage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -49,18 +54,15 @@ export default function ProfilePage() {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (!active) return;
 
-      if (userError) {
-        setError(userError.message);
-        setLoading(false);
+      if (userError || !userData.user) {
+        router.replace('/');
         return;
       }
 
       const user = userData.user;
-      if (!user) {
-        setError('You need to be signed in to view your profile.');
-        setLoading(false);
-        return;
-      }
+
+      setUserId(user.id);
+      setUserEmail(user.email ?? null);
 
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -107,7 +109,7 @@ export default function ProfilePage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     if (!duprId || duprId.length !== 6) {
@@ -195,6 +197,7 @@ export default function ProfilePage() {
 
     const { error: upsertError } = await supabase.from('profiles').upsert({
       id: userData.user.id,
+      email: userData.user.email?.toLowerCase() ?? null,
       first_name: firstName.trim(),
       last_name: lastName.trim(),
       gender,
@@ -209,6 +212,29 @@ export default function ProfilePage() {
       setSuccess('Profile saved.');
     }
 
+    setSaving(false);
+  }
+
+  async function handleLeaveLeague(leagueId: string) {
+    if (!userId) return;
+
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+
+    const { error: leaveError } = await supabase
+      .from('league_members')
+      .delete()
+      .eq('league_id', leagueId)
+      .eq('user_id', userId);
+
+    if (leaveError) {
+      setError(leaveError.message);
+      setSaving(false);
+      return;
+    }
+
+    setLeagues((prev) => prev.filter((league) => league.id !== leagueId));
     setSaving(false);
   }
 
@@ -296,6 +322,11 @@ export default function ProfilePage() {
   return (
     <div className="section" style={{ maxWidth: 640 }}>
       <h1 className="section-title">Profile</h1>
+      {userEmail && (
+        <p className="hero-subtitle" style={{ marginBottom: '0.5rem' }}>
+          Email: {userEmail}
+        </p>
+      )}
       {error && (
         <p className="hero-subtitle" style={{ color: '#fca5a5' }}>
           {error}
@@ -444,7 +475,25 @@ export default function ProfilePage() {
         ) : (
           <ul className="section-list">
             {leagues.map((league) => (
-              <li key={league.id}>{league.name}</li>
+              <li
+                key={league.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '0.75rem',
+                  padding: '0.25rem 0',
+                }}
+              >
+                <span>{league.name}</span>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => handleLeaveLeague(league.id)}
+                >
+                  Leave league
+                </button>
+              </li>
             ))}
           </ul>
         )}

@@ -46,7 +46,7 @@ export function AuthStatus() {
   if (!state.email) {
     return (
       <div style={{ fontSize: '0.8rem' }}>
-        <Link href="/auth">Sign in</Link>
+        <Link href="/auth/signin">Sign in</Link>
       </div>
     );
   }

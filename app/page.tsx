@@ -10,10 +10,10 @@ export default function HomePage() {
         </p>
         <div className="hero-actions">
           <a href="/auth" className="btn-primary">
-            Sign in with email
+            Get started (sign up)
           </a>
-          <a href="/leagues" className="btn-secondary">
-            View leagues
+          <a href="/auth/signin" className="btn-secondary">
+            Sign in
           </a>
         </div>
       </div>

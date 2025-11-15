@@ -5,6 +5,7 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   created_at timestamptz default now(),
   updated_at timestamptz default now(),
+  email text,
   first_name text,
   last_name text,
   gender text,
@@ -27,6 +28,7 @@ create table if not exists public.league_members (
   league_id uuid not null references public.leagues(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
   role text not null default 'player',
+  email text,
   created_at timestamptz default now(),
   primary key (league_id, user_id)
 );
