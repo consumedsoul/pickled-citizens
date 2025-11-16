@@ -9,6 +9,8 @@ export default function AuthPage() {
   const [lastName, setLastName] = useState('');
   const [gender, setGender] = useState('');
   const [selfDupr, setSelfDupr] = useState('');
+  const [password, setPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState<string | null>(null);
 
@@ -29,6 +31,24 @@ export default function AuthPage() {
     if (!/^\d{1,2}(\.\d{1,2})?$/.test(selfDupr.trim())) {
       setStatus('error');
       setMessage('Self-reported DUPR must be a number like 3.75.');
+      return;
+    }
+
+    if (!password || !passwordConfirm) {
+      setStatus('error');
+      setMessage('Password and confirmation are required.');
+      return;
+    }
+
+    if (password !== passwordConfirm) {
+      setStatus('error');
+      setMessage('Passwords do not match.');
+      return;
+    }
+
+    if (password.length < 8) {
+      setStatus('error');
+      setMessage('Password must be at least 8 characters long.');
       return;
     }
 
@@ -68,8 +88,9 @@ export default function AuthPage() {
         process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
       const redirectTo = `${baseUrl}/auth/complete?${params.toString()}`;
 
-      const { error } = await supabase.auth.signInWithOtp({
+      const { error } = await supabase.auth.signUp({
         email: normalizedEmail,
+        password,
         options: {
           emailRedirectTo: redirectTo,
         },
@@ -80,7 +101,7 @@ export default function AuthPage() {
         setMessage(error.message);
       } else {
         setStatus('success');
-        setMessage('Magic link sent. Check your email to finish signing in.');
+        setMessage('Check your email to confirm your account and finish signing up.');
       }
     } catch {
       setStatus('error');
@@ -92,8 +113,8 @@ export default function AuthPage() {
     <div className="section" style={{ maxWidth: 420 }}>
       <h1 className="section-title">Sign up</h1>
       <p className="hero-subtitle" style={{ marginBottom: '1rem' }}>
-        Enter your details and we&apos;ll send you a magic link via Supabase Auth to finish
-        creating your account.
+        Create your Pickled Citizens account with a password. You can also send yourself a
+        magic link instead if you prefer passwordless sign-in.
       </p>
 
       <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '0.75rem' }}>
@@ -178,6 +199,44 @@ export default function AuthPage() {
         </label>
 
         <label style={{ fontSize: '0.8rem' }}>
+          Password (min 8 characters)
+          <input
+            type="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            style={{
+              marginTop: '0.35rem',
+              width: '100%',
+              padding: '0.45rem 0.6rem',
+              borderRadius: '0.5rem',
+              border: '1px solid #1f2937',
+              background: '#020617',
+              color: '#e5e7eb',
+            }}
+          />
+        </label>
+
+        <label style={{ fontSize: '0.8rem' }}>
+          Confirm password
+          <input
+            type="password"
+            required
+            value={passwordConfirm}
+            onChange={(e) => setPasswordConfirm(e.target.value)}
+            style={{
+              marginTop: '0.35rem',
+              width: '100%',
+              padding: '0.45rem 0.6rem',
+              borderRadius: '0.5rem',
+              border: '1px solid #1f2937',
+              background: '#020617',
+              color: '#e5e7eb',
+            }}
+          />
+        </label>
+
+        <label style={{ fontSize: '0.8rem' }}>
           Self-reported DUPR (required, x.xx)
           <input
             type="text"
@@ -217,7 +276,7 @@ export default function AuthPage() {
           disabled={status === 'loading'}
           style={{ justifySelf: 'flex-start' }}
         >
-          {status === 'loading' ? 'Sending link…' : 'Send magic link'}
+          {status === 'loading' ? 'Creating account…' : 'Create account'}
         </button>
       </form>
 
@@ -241,6 +300,16 @@ export default function AuthPage() {
           Sign in with email only
         </a>
         .
+      </p>
+      <p
+        className="hero-subtitle"
+        style={{ marginTop: '0.5rem', fontSize: '0.8rem' }}
+      >
+        Prefer passwordless sign-up? You can use the{' '}
+        <a href="/auth/signin" style={{ textDecoration: 'underline' }}>
+          magic link sign-in
+        </a>{' '}
+        page instead.
       </p>
     </div>
   );

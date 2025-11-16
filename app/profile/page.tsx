@@ -38,6 +38,8 @@ export default function ProfilePage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [password, setPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -454,6 +456,101 @@ export default function ProfilePage() {
             ))}
           </ul>
         )}
+      </div>
+
+      <div
+        style={{
+          marginTop: '2rem',
+          paddingTop: '1rem',
+          borderTop: '1px solid #1f2937',
+        }}
+      >
+        <h2 className="section-title">Password</h2>
+        <p className="hero-subtitle" style={{ fontSize: '0.85rem' }}>
+          Set or change your password. You can still use magic link sign-in if you prefer.
+        </p>
+        <form
+          onSubmit={async (event) => {
+            event.preventDefault();
+            setError(null);
+            setSuccess(null);
+
+            if (!password || !passwordConfirm) {
+              setError('Password and confirmation are required.');
+              return;
+            }
+
+            if (password !== passwordConfirm) {
+              setError('Passwords do not match.');
+              return;
+            }
+
+            if (password.length < 8) {
+              setError('Password must be at least 8 characters long.');
+              return;
+            }
+
+            setSaving(true);
+
+            const { error: updateError } = await supabase.auth.updateUser({
+              password,
+            });
+
+            if (updateError) {
+              setError(updateError.message);
+            } else {
+              setSuccess('Password updated.');
+              setPassword('');
+              setPasswordConfirm('');
+            }
+
+            setSaving(false);
+          }}
+          style={{ display: 'grid', gap: '0.75rem', marginTop: '0.75rem' }}
+        >
+          <label style={{ fontSize: '0.8rem' }}>
+            New password (min 8 characters)
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={{
+                marginTop: '0.35rem',
+                width: '100%',
+                padding: '0.45rem 0.6rem',
+                borderRadius: '0.5rem',
+                border: '1px solid #1f2937',
+                background: '#020617',
+                color: '#e5e7eb',
+              }}
+            />
+          </label>
+          <label style={{ fontSize: '0.8rem' }}>
+            Confirm new password
+            <input
+              type="password"
+              value={passwordConfirm}
+              onChange={(e) => setPasswordConfirm(e.target.value)}
+              style={{
+                marginTop: '0.35rem',
+                width: '100%',
+                padding: '0.45rem 0.6rem',
+                borderRadius: '0.5rem',
+                border: '1px solid #1f2937',
+                background: '#020617',
+                color: '#e5e7eb',
+              }}
+            />
+          </label>
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={saving}
+            style={{ justifySelf: 'flex-start' }}
+          >
+            {saving ? 'Updating…' : 'Update password'}
+          </button>
+        </form>
       </div>
 
       <div
