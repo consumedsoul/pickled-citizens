@@ -93,10 +93,42 @@ export default function LeaguesPage() {
           .eq('user_id', user.id);
 
         if (!membershipError && membershipRows) {
-          const mapped: League[] = (membershipRows as any[])
+          const baseMemberLeagues: League[] = (membershipRows as any[])
             .map((row) => row.league)
             .filter(Boolean);
-          setMemberLeagues(mapped);
+
+          if (!baseMemberLeagues.length) {
+            setMemberLeagues([]);
+          } else {
+            const memberLeagueIds = baseMemberLeagues.map((l) => l.id);
+            const { data: memberCountsRows, error: memberCountsError } =
+              await supabase
+                .from('league_members')
+                .select('league_id')
+                .in('league_id', memberLeagueIds);
+
+            if (memberCountsError) {
+              setMemberLeagues(baseMemberLeagues);
+            } else {
+              const memberCounts = new Map<string, number>();
+              (memberCountsRows ?? []).forEach((row: any) => {
+                const leagueId = row.league_id as string;
+                memberCounts.set(
+                  leagueId,
+                  (memberCounts.get(leagueId) ?? 0) + 1
+                );
+              });
+
+              const leaguesWithCounts: League[] = baseMemberLeagues.map(
+                (league) => ({
+                  ...league,
+                  memberCount: memberCounts.get(league.id) ?? 0,
+                })
+              );
+
+              setMemberLeagues(leaguesWithCounts);
+            }
+          }
         }
       }
 
@@ -304,7 +336,14 @@ export default function LeaguesPage() {
                   padding: '0.25rem 0',
                 }}
               >
-                <span>{league.name}</span>
+                <span>
+                  {league.name}{' '}
+                  {typeof league.memberCount === 'number'
+                    ? `(${league.memberCount} ${
+                        league.memberCount === 1 ? 'member' : 'members'
+                      })`
+                    : ''}
+                </span>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <a
                     href={`/leagues/${league.id}`}
