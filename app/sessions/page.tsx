@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -62,6 +62,17 @@ export default function SessionsPage() {
 
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const sortedMembersForSelect = useMemo(() => {
+    if (!members.length) return [] as Member[];
+    const copy = [...members];
+    copy.sort((a, b) => {
+      const an = `${a.first_name ?? ""} ${a.last_name ?? ""}`.trim() || a.email || a.user_id;
+      const bn = `${b.first_name ?? ""} ${b.last_name ?? ""}`.trim() || b.email || b.user_id;
+      return an.localeCompare(bn);
+    });
+    return copy;
+  }, [members]);
 
   useEffect(() => {
     let active = true;
@@ -948,7 +959,7 @@ export default function SessionsPage() {
                         }}
                       >
                         <option value="">Slot {i + 1}</option>
-                        {members.map((member) => (
+                        {sortedMembersForSelect.map((member) => (
                           <option key={member.user_id} value={member.user_id}>
                             {displayPlayer(member)}
                           </option>
