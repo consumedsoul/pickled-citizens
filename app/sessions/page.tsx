@@ -546,6 +546,7 @@ export default function SessionsPage() {
 
     if (!scheduledFor) {
       setError("Select a date/time for the session.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
 
@@ -874,7 +875,7 @@ export default function SessionsPage() {
               </label>
 
               <label style={{ fontSize: "0.8rem" }}>
-                Date and time
+                Date and time (Required)
                 <input
                   type="datetime-local"
                   value={scheduledFor}
