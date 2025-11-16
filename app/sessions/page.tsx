@@ -609,6 +609,33 @@ export default function SessionsPage() {
         { pairA: [a1, a5], pairB: [b1, b5] },
         { pairA: [a2, a4], pairB: [b2, b4] },
       ];
+    } else if (playerCount === 12 && teamA.length === 6 && teamB.length === 6) {
+      // Special-case 12 players (6 per team): 5 rounds, 3 courts per round.
+      const [a1, a2, a3, a4, a5, a6] = teamA;
+      const [b1, b2, b3, b4, b5, b6] = teamB;
+
+      gamesPlan = [
+        // Round 1
+        { pairA: [a1, a2], pairB: [b1, b2] },
+        { pairA: [a3, a4], pairB: [b3, b4] },
+        { pairA: [a5, a6], pairB: [b5, b6] },
+        // Round 2
+        { pairA: [a1, a3], pairB: [b1, b3] },
+        { pairA: [a2, a5], pairB: [b2, b5] },
+        { pairA: [a4, a6], pairB: [b4, b6] },
+        // Round 3
+        { pairA: [a1, a4], pairB: [b1, b4] },
+        { pairA: [a2, a6], pairB: [b2, b6] },
+        { pairA: [a3, a5], pairB: [b3, b5] },
+        // Round 4
+        { pairA: [a1, a5], pairB: [b1, b5] },
+        { pairA: [a2, a4], pairB: [b2, b4] },
+        { pairA: [a3, a6], pairB: [b3, b6] },
+        // Round 5
+        { pairA: [a1, a6], pairB: [b1, b6] },
+        { pairA: [a2, a3], pairB: [b2, b3] },
+        { pairA: [a4, a5], pairB: [b4, b5] },
+      ];
     } else {
       const pairsA = buildPairs(teamA);
       const pairsB = buildPairs(teamB);
