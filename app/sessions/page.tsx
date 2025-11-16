@@ -62,7 +62,6 @@ export default function SessionsPage() {
 
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -518,39 +517,6 @@ export default function SessionsPage() {
       hour: "numeric",
       minute: "2-digit",
     });
-  }
-
-  async function handleDeleteSession(sessionId: string) {
-    if (!userId) return;
-
-    setError(null);
-    setDeletingSessionId(sessionId);
-
-    try {
-      const { error: deleteError } = await supabase
-        .from("game_sessions")
-        .delete()
-        .eq("id", sessionId)
-        .eq("created_by", userId);
-
-      if (deleteError) {
-        setError(deleteError.message);
-        setDeletingSessionId(null);
-        return;
-      }
-
-      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
-      setSessionResults((prev) => {
-        if (!(sessionId in prev)) return prev;
-        const next = { ...prev };
-        delete next[sessionId];
-        return next;
-      });
-    } catch (e: any) {
-      setError(e?.message ?? "Unable to delete session.");
-    } finally {
-      setDeletingSessionId(null);
-    }
   }
 
   async function handleGenerate(event: FormEvent) {
@@ -1104,21 +1070,6 @@ export default function SessionsPage() {
                         </div>
                       </div>
                       <div style={{ display: "flex", gap: "0.5rem" }}>
-                        {session.created_by === userId && (
-                          <button
-                            type="button"
-                            className="btn-secondary"
-                            onClick={() => handleDeleteSession(session.id)}
-                            disabled={deletingSessionId === session.id}
-                            style={{
-                              opacity: deletingSessionId === session.id ? 0.7 : 1,
-                            }}
-                          >
-                            {deletingSessionId === session.id
-                              ? "Deleting..."
-                              : "Delete"}
-                          </button>
-                        )}
                         <button
                           type="button"
                           className="btn-secondary"
@@ -1203,21 +1154,6 @@ export default function SessionsPage() {
                         })()}
                       </div>
                       <div style={{ display: "flex", gap: "0.5rem" }}>
-                        {session.created_by === userId && (
-                          <button
-                            type="button"
-                            className="btn-secondary"
-                            onClick={() => handleDeleteSession(session.id)}
-                            disabled={deletingSessionId === session.id}
-                            style={{
-                              opacity: deletingSessionId === session.id ? 0.7 : 1,
-                            }}
-                          >
-                            {deletingSessionId === session.id
-                              ? "Deleting..."
-                              : "Delete"}
-                          </button>
-                        )}
                         <button
                           type="button"
                           className="btn-secondary"
