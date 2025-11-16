@@ -2,7 +2,8 @@ import "./globals.css";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import logo from "./images/PKLDCTZN_web_logo.png";
+import menuLogo from "./images/Pickled_Citizens_Logo_Green_Menu.png";
+import favicon from "./images/Pickled_Citizens_Logo_Green_Favicon.png";
 import { AuthStatus } from "@/components/AuthStatus";
 import { AdminFooterLinks } from "@/components/AdminFooterLinks";
 
@@ -11,7 +12,7 @@ export const metadata = {
   description:
     "Lightweight pickleball league tool for scheduling sessions and tracking match history.",
   icons: {
-    icon: logo.src,
+    icon: favicon.src,
   },
 };
 
@@ -25,7 +26,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <div className="app-header-inner">
               <Link href="/" className="app-logo">
                 <Image
-                  src={logo}
+                  src={menuLogo}
                   alt="Pickled Citizens logo"
                   width={40}
                   height={40}

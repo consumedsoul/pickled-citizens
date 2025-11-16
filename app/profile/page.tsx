@@ -332,9 +332,9 @@ export default function ProfilePage() {
                 width: '100%',
                 padding: '0.45rem 0.6rem',
                 borderRadius: '0.5rem',
-                border: '1px solid #1f2937',
-                background: '#020617',
-                color: '#e5e7eb',
+                border: '1px solid #d1d5db',
+                background: '#f9fafb',
+                color: '#111827',
               }}
             />
           </label>
@@ -351,9 +351,9 @@ export default function ProfilePage() {
                 width: '100%',
                 padding: '0.45rem 0.6rem',
                 borderRadius: '0.5rem',
-                border: '1px solid #1f2937',
-                background: '#020617',
-                color: '#e5e7eb',
+                border: '1px solid #d1d5db',
+                background: '#f9fafb',
+                color: '#111827',
               }}
             />
           </label>
@@ -371,9 +371,9 @@ export default function ProfilePage() {
                 width: '100%',
                 padding: '0.45rem 0.6rem',
                 borderRadius: '0.5rem',
-                border: '1px solid #1f2937',
-                background: '#020617',
-                color: '#e5e7eb',
+                border: '1px solid #d1d5db',
+                background: '#f9fafb',
+                color: '#111827',
               }}
             >
               <option value="">Select gender</option>
@@ -395,9 +395,9 @@ export default function ProfilePage() {
               width: '100%',
               padding: '0.45rem 0.6rem',
               borderRadius: '0.5rem',
-              border: '1px solid #1f2937',
-              background: '#020617',
-              color: '#e5e7eb',
+              border: '1px solid #d1d5db',
+              background: '#f9fafb',
+              color: '#111827',
             }}
           />
           <p
@@ -519,9 +519,9 @@ export default function ProfilePage() {
                 width: '100%',
                 padding: '0.45rem 0.6rem',
                 borderRadius: '0.5rem',
-                border: '1px solid #1f2937',
-                background: '#020617',
-                color: '#e5e7eb',
+                border: '1px solid #d1d5db',
+                background: '#f9fafb',
+                color: '#111827',
               }}
             />
           </label>
@@ -536,9 +536,9 @@ export default function ProfilePage() {
                 width: '100%',
                 padding: '0.45rem 0.6rem',
                 borderRadius: '0.5rem',
-                border: '1px solid #1f2937',
-                background: '#020617',
-                color: '#e5e7eb',
+                border: '1px solid #d1d5db',
+                background: '#f9fafb',
+                color: '#111827',
               }}
             />
           </label>
@@ -616,9 +616,9 @@ export default function ProfilePage() {
                 width: '100%',
                 padding: '0.45rem 0.6rem',
                 borderRadius: '0.5rem',
-                border: '1px solid #1f2937',
-                background: '#020617',
-                color: '#e5e7eb',
+                border: '1px solid #d1d5db',
+                background: '#f9fafb',
+                color: '#111827',
               }}
             />
             <div

@@ -860,9 +860,9 @@ export default function SessionsPage() {
                     width: "100%",
                     padding: "0.45rem 0.6rem",
                     borderRadius: "0.5rem",
-                    border: "1px solid #1f2937",
-                    background: "#020617",
-                    color: "#e5e7eb",
+                    border: "1px solid #d1d5db",
+                    background: "#f9fafb",
+                    color: "#111827",
                   }}
                 >
                   {leagues.map((league) => (
@@ -884,9 +884,9 @@ export default function SessionsPage() {
                     width: "100%",
                     padding: "0.45rem 0.6rem",
                     borderRadius: "0.5rem",
-                    border: "1px solid #1f2937",
-                    background: "#020617",
-                    color: "#e5e7eb",
+                    border: "1px solid #d1d5db",
+                    background: "#f9fafb",
+                    color: "#111827",
                   }}
                 />
               </label>
@@ -910,9 +910,9 @@ export default function SessionsPage() {
                     width: "100%",
                     padding: "0.45rem 0.6rem",
                     borderRadius: "0.5rem",
-                    border: "1px solid #1f2937",
-                    background: "#020617",
-                    color: "#e5e7eb",
+                    border: "1px solid #d1d5db",
+                    background: "#f9fafb",
+                    color: "#111827",
                   }}
                 >
                   {PLAYER_COUNTS.map((n) => (
@@ -953,9 +953,9 @@ export default function SessionsPage() {
                         style={{
                           padding: "0.45rem 0.6rem",
                           borderRadius: "0.5rem",
-                          border: "1px solid #1f2937",
-                          background: "#020617",
-                          color: "#e5e7eb",
+                          border: "1px solid #d1d5db",
+                          background: "#f9fafb",
+                          color: "#111827",
                         }}
                       >
                         <option value="">Slot {i + 1}</option>
@@ -1073,7 +1073,7 @@ export default function SessionsPage() {
                     fontWeight: 600,
                     margin: 0,
                     marginBottom: "0.35rem",
-                    color: "#e5e7eb",
+                    color: "#111827",
                   }}
                 >
                   Current / upcoming sessions
@@ -1129,7 +1129,7 @@ export default function SessionsPage() {
                     fontWeight: 600,
                     margin: 0,
                     marginBottom: "0.35rem",
-                    color: "#e5e7eb",
+                    color: "#111827",
                   }}
                 >
                   Past sessions

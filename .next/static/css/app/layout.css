@@ -2,13 +2,14 @@
   !*** css ./node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[11].oneOf[12].use[2]!./node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[11].oneOf[12].use[3]!./app/globals.css ***!
   \*************************************************************************************************************************************************************************************************************************************************************/
 :root {
-  color-scheme: dark;
-  --bg: #020617;
-  --bg-alt: #020617;
-  --border: #1f2937;
-  --text: #e5e7eb;
-  --muted: #9ca3af;
-  --accent: #22c55e;
+  color-scheme: light;
+  /* Light sporty palette */
+  --bg: #f3f4f6; /* page background */
+  --bg-alt: #ffffff; /* cards/sections */
+  --border: #e5e7eb;
+  --text: #111827;
+  --muted: #6b7280;
+  --accent: #16a34a;
 }
 
 *, *::before, *::after {
@@ -18,7 +19,7 @@
 body {
   margin: 0;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
-  background: radial-gradient(circle at top, #111827 0, #020617 60%);
+  background: radial-gradient(circle at top, #ffffff 0, #f3f4f6 60%);
   color: var(--text);
 }
 
@@ -32,7 +33,7 @@ body {
   border-bottom: 1px solid var(--border);
   -webkit-backdrop-filter: blur(10px);
           backdrop-filter: blur(10px);
-  background: linear-gradient(to right, rgba(15, 23, 42, 0.95), rgba(2, 6, 23, 0.95));
+  background: var(--bg-alt);
 }
 
 .app-header-inner {
@@ -124,8 +125,8 @@ body {
 .section {
   margin-top: 2rem;
   border-radius: 0.75rem;
-  border: 1px solid rgba(31, 41, 55, 0.7);
-  background: radial-gradient(circle at top left, rgba(6, 78, 59, 0.12), rgba(15, 23, 42, 0.9));
+  border: 1px solid rgba(209, 213, 219, 0.9);
+  background: var(--bg-alt);
   padding: 1.25rem;
 }
 

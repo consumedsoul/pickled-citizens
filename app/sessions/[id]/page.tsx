@@ -580,27 +580,29 @@ export default function SessionDetailPage() {
                 marginTop: '0.75rem',
                 borderRadius: '0.75rem',
                 overflow: 'hidden',
-                border: '1px solid #1f2937',
+                border: '1px solid #d1d5db',
+                background: '#f9fafb',
               }}
             >
               <div
                 style={{
                   display: 'grid',
                   gridTemplateColumns: '1fr 1fr',
-                  background: '#020617',
+                  background: '#0f172a',
                 }}
               >
                 <div
                   style={{
                     padding: '0.4rem 0.6rem',
-                    background: '#15803d',
-                    color: '#ecfdf5',
+                    background: '#16a34a',
+                    color: '#ffffff',
                     fontWeight: 600,
                     textAlign: 'center',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    borderRight: '1px solid #d1d5db',
                   }}
                 >
                   <span>Team</span>
@@ -609,8 +611,8 @@ export default function SessionDetailPage() {
                 <div
                   style={{
                     padding: '0.4rem 0.6rem',
-                    background: '#1d4ed8',
-                    color: '#dbeafe',
+                    background: '#2563eb',
+                    color: '#ffffff',
                     fontWeight: 600,
                     textAlign: 'center',
                     display: 'flex',
@@ -634,7 +636,8 @@ export default function SessionDetailPage() {
                   style={{
                     display: 'flex',
                     flexDirection: 'column',
-                    background: '#052e16',
+                    background: '#ffffff',
+                    borderRight: '1px solid #d1d5db',
                   }}
                 >
                   <div
@@ -642,7 +645,7 @@ export default function SessionDetailPage() {
                       padding: '0.5rem 0.6rem',
                       fontSize: '2rem',
                       textAlign: 'center',
-                      color: '#bbf7d0',
+                      color: '#166534',
                     }}
                   >
                     {teamStats.team1.wins}
@@ -658,7 +661,7 @@ export default function SessionDetailPage() {
                           justifyContent: 'center',
                           gap: '0.5rem',
                           textAlign: 'center',
-                          color: '#dcfce7',
+                          color: '#166534',
                         }}
                       >
                         <span>{displayPlayerName(p)}</span>
@@ -671,7 +674,7 @@ export default function SessionDetailPage() {
                   style={{
                     display: 'flex',
                     flexDirection: 'column',
-                    background: '#172554',
+                    background: '#ffffff',
                   }}
                 >
                   <div
@@ -679,7 +682,7 @@ export default function SessionDetailPage() {
                       padding: '0.5rem 0.6rem',
                       fontSize: '2rem',
                       textAlign: 'center',
-                      color: '#bfdbfe',
+                      color: '#1d4ed8',
                     }}
                   >
                     {teamStats.team2.wins}
@@ -695,7 +698,7 @@ export default function SessionDetailPage() {
                           justifyContent: 'center',
                           gap: '0.5rem',
                           textAlign: 'center',
-                          color: '#dbeafe',
+                          color: '#1d4ed8',
                         }}
                       >
                         <span>{displayPlayerName(p)}</span>
@@ -720,7 +723,8 @@ export default function SessionDetailPage() {
               style={{
                 marginTop: '0.75rem',
                 borderRadius: '0.75rem',
-                border: '1px solid #1f2937',
+                border: '1px solid #d1d5db',
+                background: '#ffffff',
                 padding: '0.5rem 0.6rem',
               }}
             >
@@ -735,7 +739,7 @@ export default function SessionDetailPage() {
                     style={{
                       fontSize: '0.8rem',
                       fontWeight: 600,
-                      color: '#e5e7eb',
+                      color: '#4b5563',
                       marginBottom: '0.25rem',
                     }}
                   >
@@ -785,10 +789,10 @@ export default function SessionDetailPage() {
                             padding: '0.15rem 0.4rem',
                             fontSize: '0.75rem',
                             background:
-                              match.winner === 1 ? '#15803d' : 'transparent',
+                              match.winner === 1 ? '#16a34a' : '#f9fafb',
                             borderColor:
-                              match.winner === 1 ? '#15803d' : '#4b5563',
-                            color: match.winner === 1 ? '#ecfdf5' : '#e5e7eb',
+                              match.winner === 1 ? '#16a34a' : '#d1d5db',
+                            color: match.winner === 1 ? '#ffffff' : '#4b5563',
                           }}
                         >
                           Win
@@ -796,7 +800,7 @@ export default function SessionDetailPage() {
                         <span
                           style={{
                             fontSize: '0.85rem',
-                            color: '#bbf7d0',
+                            color: '#166534',
                             textAlign: 'center',
                           }}
                         >
@@ -807,7 +811,7 @@ export default function SessionDetailPage() {
                         <span
                           style={{
                             fontSize: '0.75rem',
-                            color: '#9ca3af',
+                            color: '#6b7280',
                             textAlign: 'center',
                           }}
                         >
@@ -816,7 +820,7 @@ export default function SessionDetailPage() {
                         <span
                           style={{
                             fontSize: '0.85rem',
-                            color: '#bfdbfe',
+                            color: '#1d4ed8',
                             textAlign: 'center',
                           }}
                         >
@@ -835,10 +839,10 @@ export default function SessionDetailPage() {
                             padding: '0.15rem 0.4rem',
                             fontSize: '0.75rem',
                             background:
-                              match.winner === 2 ? '#1d4ed8' : 'transparent',
+                              match.winner === 2 ? '#2563eb' : '#f9fafb',
                             borderColor:
-                              match.winner === 2 ? '#1d4ed8' : '#4b5563',
-                            color: match.winner === 2 ? '#dbeafe' : '#e5e7eb',
+                              match.winner === 2 ? '#2563eb' : '#d1d5db',
+                            color: match.winner === 2 ? '#ffffff' : '#4b5563',
                           }}
                         >
                           Win
@@ -864,7 +868,8 @@ export default function SessionDetailPage() {
               style={{
                 marginTop: '0.75rem',
                 borderRadius: '0.75rem',
-                border: '1px solid #1f2937',
+                border: '1px solid #d1d5db',
+                background: '#ffffff',
                 padding: '0.5rem 0.6rem',
               }}
             >
@@ -872,7 +877,18 @@ export default function SessionDetailPage() {
                 className="section-list"
                 style={{ listStyle: 'none', paddingLeft: 0, margin: 0 }}
               >
-                {playerStats.map((ps) => (
+                {playerStats.map((ps) => {
+                  const team1Count = matches.filter((m) =>
+                    m.team1.some((p) => p.id === ps.player.id)
+                  ).length;
+                  const team2Count = matches.filter((m) =>
+                    m.team2.some((p) => p.id === ps.player.id)
+                  ).length;
+                  const isTeam1 = team1Count >= team2Count;
+                  const nameColor = isTeam1 ? '#166534' : '#1d4ed8';
+                  const recordColor = isTeam1 ? '#166534' : '#1d4ed8';
+
+                  return (
                   <li
                     key={ps.player.id}
                     style={{
@@ -884,7 +900,7 @@ export default function SessionDetailPage() {
                     }}
                   >
                     <div>
-                      <div style={{ fontSize: '0.85rem' }}>
+                      <div style={{ fontSize: '0.85rem', color: nameColor }}>
                         {displayPlayerName(ps.player)}
                         {ps.player.self_reported_dupr != null &&
                           !Number.isNaN(ps.player.self_reported_dupr) && (
@@ -895,7 +911,7 @@ export default function SessionDetailPage() {
                     <div
                       style={{
                         fontSize: '0.8rem',
-                        color: '#e5e7eb',
+                        color: recordColor,
                         textAlign: 'right',
                       }}
                     >
@@ -904,7 +920,8 @@ export default function SessionDetailPage() {
                       </div>
                     </div>
                   </li>
-                ))}
+                );
+                })}
               </ul>
             </div>
           )}

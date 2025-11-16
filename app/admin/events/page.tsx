@@ -153,8 +153,8 @@ export default function AdminEventsPage() {
                       alignItems: 'baseline',
                     }}
                   >
-                    <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>{timestamp}</span>
-                    <span style={{ fontSize: '0.8rem', color: '#d1d5db' }}>{summary}</span>
+                    <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{timestamp}</span>
+                    <span style={{ fontSize: '0.8rem', color: '#111827' }}>{summary}</span>
                   </div>
                   {event.payload && (
                     <pre
@@ -163,7 +163,7 @@ export default function AdminEventsPage() {
                         fontSize: '0.75rem',
                         whiteSpace: 'pre-wrap',
                         wordBreak: 'break-word',
-                        color: '#9ca3af',
+                        color: '#4b5563',
                       }}
                     >
                       {JSON.stringify(event.payload, null, 2)}

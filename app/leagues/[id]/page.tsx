@@ -460,9 +460,9 @@ export default function LeagueMembersPage() {
                 flex: '1 1 220px',
                 padding: '0.45rem 0.6rem',
                 borderRadius: '0.5rem',
-                border: '1px solid #1f2937',
-                background: '#020617',
-                color: '#e5e7eb',
+                border: '1px solid #d1d5db',
+                background: '#f9fafb',
+                color: '#111827',
               }}
             />
             <button
@@ -500,9 +500,9 @@ export default function LeagueMembersPage() {
                 flex: '1 1 220px',
                 padding: '0.45rem 0.6rem',
                 borderRadius: '0.5rem',
-                border: '1px solid #1f2937',
-                background: '#020617',
-                color: '#e5e7eb',
+                border: '1px solid #d1d5db',
+                background: '#f9fafb',
+                color: '#111827',
               }}
             />
             <button
@@ -560,8 +560,9 @@ export default function LeagueMembersPage() {
                     className="btn-secondary"
                     onClick={() => handleRemoveMember(member)}
                     style={{
+                      background: '#b91c1c',
                       borderColor: '#b91c1c',
-                      color: '#fecaca',
+                      color: '#fee2e2',
                     }}
                   >
                     Remove
@@ -638,9 +639,9 @@ export default function LeagueMembersPage() {
                     width: '100%',
                     padding: '0.45rem 0.6rem',
                     borderRadius: '0.5rem',
-                    border: '1px solid #1f2937',
-                    background: '#020617',
-                    color: '#e5e7eb',
+                    border: '1px solid #d1d5db',
+                    background: '#f9fafb',
+                    color: '#111827',
                   }}
                 />
                 <div
