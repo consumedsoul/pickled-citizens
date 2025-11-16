@@ -42,7 +42,7 @@ export default function SignInPage() {
         } else {
           setStatus('success');
           setMessage('Signed in. Redirecting…');
-          window.location.href = '/sessions';
+          window.location.href = '/';
         }
       } else {
         const baseUrl =
