@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 
 type AdminEvent = {
@@ -15,14 +15,28 @@ type AdminEvent = {
 
 const PAGE_SIZE = 100;
 
+const EVENT_TYPES = [
+  'user.signup',
+  'league.created',
+  'league.member_added',
+  'session.created',
+  'session.deleted',
+] as const;
+
 export default function AdminEventsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [events, setEvents] = useState<AdminEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  
+  const filterParam = searchParams.get('filter') || 'all';
+  const selectedFilter = filterParam === 'all' || !EVENT_TYPES.includes(filterParam as any) 
+    ? 'all' 
+    : filterParam;
 
   useEffect(() => {
     let active = true;
@@ -51,13 +65,18 @@ export default function AdminEventsPage() {
       const from = page * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
 
-      const { data, error: eventsError, count } = await supabase
+      let query = supabase
         .from('admin_events')
         .select('id, created_at, event_type, user_email, league_id, payload', {
           count: 'exact',
         })
-        .order('created_at', { ascending: false })
-        .range(from, to);
+        .order('created_at', { ascending: false });
+
+      if (selectedFilter !== 'all') {
+        query = query.eq('event_type', selectedFilter);
+      }
+
+      const { data, error: eventsError, count } = await query.range(from, to);
 
       if (!active) return;
 
@@ -78,7 +97,18 @@ export default function AdminEventsPage() {
     return () => {
       active = false;
     };
-  }, [page, router]);
+  }, [page, selectedFilter, router]);
+
+  function setFilter(filter: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (filter === 'all') {
+      params.delete('filter');
+    } else {
+      params.set('filter', filter);
+    }
+    router.push(`/admin/events?${params.toString()}`);
+    setPage(0);
+  }
 
   if (loading) {
     return (
@@ -117,6 +147,57 @@ export default function AdminEventsPage() {
         Internal audit log of key system events. Showing newest first, up to {PAGE_SIZE} per
         page.
       </p>
+
+      <div style={{ marginTop: '1rem' }}>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '0.5rem',
+            alignItems: 'center',
+          }}
+        >
+          <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>Filter:</span>
+          <button
+            type="button"
+            onClick={() => setFilter('all')}
+            style={{
+              fontSize: '0.75rem',
+              padding: '0.35rem 0.6rem',
+              borderRadius: '0.5rem',
+              border: '1px solid #d1d5db',
+              background: selectedFilter === 'all' ? '#10b981' : '#f9fafb',
+              color: selectedFilter === 'all' ? '#ffffff' : '#111827',
+              cursor: 'pointer',
+              fontWeight: selectedFilter === 'all' ? 500 : 400,
+            }}
+          >
+            All
+          </button>
+          {EVENT_TYPES.map((eventType) => {
+            const isSelected = selectedFilter === eventType;
+            return (
+              <button
+                key={eventType}
+                type="button"
+                onClick={() => setFilter(eventType)}
+                style={{
+                  fontSize: '0.75rem',
+                  padding: '0.35rem 0.6rem',
+                  borderRadius: '0.5rem',
+                  border: '1px solid #d1d5db',
+                  background: isSelected ? '#10b981' : '#f9fafb',
+                  color: isSelected ? '#ffffff' : '#111827',
+                  cursor: 'pointer',
+                  fontWeight: isSelected ? 500 : 400,
+                }}
+              >
+                {eventType}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {events.length === 0 ? (
         <p className="hero-subtitle" style={{ marginTop: '1rem' }}>
