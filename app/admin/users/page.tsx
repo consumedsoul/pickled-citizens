@@ -386,9 +386,9 @@ export default function AdminUsersPage() {
                               width: '100%',
                               padding: '0.35rem 0.5rem',
                               borderRadius: '0.5rem',
-                              border: '1px solid #1f2937',
-                              background: '#020617',
-                              color: '#e5e7eb',
+                              border: '1px solid #d1d5db',
+                              background: '#f9fafb',
+                              color: '#111827',
                             }}
                           />
                           <input
@@ -406,9 +406,9 @@ export default function AdminUsersPage() {
                               width: '100%',
                               padding: '0.35rem 0.5rem',
                               borderRadius: '0.5rem',
-                              border: '1px solid #1f2937',
-                              background: '#020617',
-                              color: '#e5e7eb',
+                              border: '1px solid #d1d5db',
+                              background: '#f9fafb',
+                              color: '#111827',
                             }}
                           />
                           <input
@@ -426,9 +426,9 @@ export default function AdminUsersPage() {
                               width: '100%',
                               padding: '0.35rem 0.5rem',
                               borderRadius: '0.5rem',
-                              border: '1px solid #1f2937',
-                              background: '#020617',
-                              color: '#e5e7eb',
+                              border: '1px solid #d1d5db',
+                              background: '#f9fafb',
+                              color: '#111827',
                             }}
                           />
                           <div
