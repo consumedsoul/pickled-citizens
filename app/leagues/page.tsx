@@ -217,7 +217,7 @@ export default function LeaguesPage() {
     return (
       <div className="section">
         <h1 className="section-title">Leagues</h1>
-        <p className="hero-subtitle">Loading your leagues5</p>
+        <p className="hero-subtitle">Loading your leagues...</p>
       </div>
     );
   }

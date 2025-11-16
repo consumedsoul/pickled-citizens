@@ -773,7 +773,7 @@ export default function SessionsPage() {
     return (
       <div className="section">
         <h1 className="section-title">Create session</h1>
-        <p className="hero-subtitle">Loading leagues…</p>
+        <p className="hero-subtitle">Loading your sessions...</p>
       </div>
     );
   }
@@ -1045,7 +1045,7 @@ export default function SessionsPage() {
       )}
 
       <div style={{ marginTop: "1.5rem" }}>
-        <h2 className="section-title">Your sessions</h2>
+        <h2 className="section-title">Sessions</h2>
         {sessionsLoading ? (
           <p className="hero-subtitle" style={{ fontSize: "0.85rem" }}>
             Loading sessions...
