@@ -621,6 +621,28 @@ export default function SessionsPage() {
         { pairA: [a1, a4], pairB: [b1, b4] },
         { pairA: [a2, a3], pairB: [b2, b3] },
       ];
+    } else if (playerCount === 10 && teamA.length === 5 && teamB.length === 5) {
+      // Special-case 10 players (5 per team): 5 rounds, 2 courts per round.
+      const [a1, a2, a3, a4, a5] = teamA;
+      const [b1, b2, b3, b4, b5] = teamB;
+
+      gamesPlan = [
+        // Round 1
+        { pairA: [a1, a2], pairB: [b1, b2] },
+        { pairA: [a3, a4], pairB: [b3, b4] },
+        // Round 2
+        { pairA: [a2, a3], pairB: [b2, b3] },
+        { pairA: [a4, a5], pairB: [b4, b5] },
+        // Round 3
+        { pairA: [a1, a4], pairB: [b1, b4] },
+        { pairA: [a3, a5], pairB: [b3, b5] },
+        // Round 4
+        { pairA: [a1, a3], pairB: [b1, b3] },
+        { pairA: [a2, a5], pairB: [b2, b5] },
+        // Round 5
+        { pairA: [a1, a5], pairB: [b1, b5] },
+        { pairA: [a2, a4], pairB: [b2, b4] },
+      ];
     } else {
       const pairsA = buildPairs(teamA);
       const pairsB = buildPairs(teamB);
