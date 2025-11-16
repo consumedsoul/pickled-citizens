@@ -1,8 +1,0 @@
-{
-  "/profile/page": "app/profile/page.js",
-  "/admin/users/page": "app/admin/users/page.js",
-  "/page": "app/page.js",
-  "/leagues/[id]/page": "app/leagues/[id]/page.js",
-  "/admin/leagues/page": "app/admin/leagues/page.js",
-  "/leagues/page": "app/leagues/page.js"
-}
