@@ -20,7 +20,10 @@ export default function SignInPage() {
     setMessage(null);
 
     try {
-      const redirectTo = `${window.location.origin}/auth/complete`;
+      const baseUrl =
+        process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
+      const redirectTo = `${baseUrl}/auth/complete`;
+
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {

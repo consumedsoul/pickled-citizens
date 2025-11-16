@@ -64,7 +64,10 @@ export default function AuthPage() {
         selfDupr: selfDupr.trim(),
       });
 
-      const redirectTo = `${window.location.origin}/auth/complete?${params.toString()}`;
+      const baseUrl =
+        process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
+      const redirectTo = `${baseUrl}/auth/complete?${params.toString()}`;
+
       const { error } = await supabase.auth.signInWithOtp({
         email: normalizedEmail,
         options: {
