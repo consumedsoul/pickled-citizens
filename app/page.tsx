@@ -1,4 +1,40 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
+
+interface HomeAuthState {
+  loading: boolean;
+  email: string | null;
+}
+
 export default function HomePage() {
+  const [auth, setAuth] = useState<HomeAuthState>({ loading: true, email: null });
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadUser() {
+      const { data } = await supabase.auth.getUser();
+      if (!isMounted) return;
+      setAuth({ loading: false, email: data.user?.email ?? null });
+    }
+
+    loadUser();
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!isMounted) return;
+      setAuth({ loading: false, email: session?.user?.email ?? null });
+    });
+
+    return () => {
+      isMounted = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+
+  const showCtas = !auth.loading && !auth.email;
+
   return (
     <section className="hero">
       <div>
@@ -7,14 +43,16 @@ export default function HomePage() {
           Pickled Citizens is a free, lightweight web app for setting up team
           battle matchups for your league's pickleball sessions.
         </p>
-        <div className="hero-actions">
-          <a href="/auth" className="btn-primary">
-            Get started (sign up)
-          </a>
-          <a href="/auth/signin" className="btn-secondary">
-            Sign in
-          </a>
-        </div>
+        {showCtas && (
+          <div className="hero-actions">
+            <a href="/auth" className="btn-primary">
+              Get started (sign up)
+            </a>
+            <a href="/auth/signin" className="btn-secondary">
+              Sign in
+            </a>
+          </div>
+        )}
       </div>
 
       <div className="section">
