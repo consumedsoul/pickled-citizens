@@ -68,7 +68,9 @@ function formatDateTime(value: string | null) {
 
 function displayPlayerName(player: SessionPlayer) {
   const full = `${player.first_name ?? ''} ${player.last_name ?? ''}`.trim();
-  return full || player.email || player.id;
+  if (full) return full;
+  if (player.email) return player.email;
+  return 'Deleted player';
 }
 
 export default function SessionDetailPage() {
@@ -547,7 +549,7 @@ export default function SessionDetailPage() {
         )}
       </div>
       <p className="hero-subtitle" style={{ marginBottom: '0.5rem' }}>
-        {session.league_name || 'Unknown league'} · {session.player_count} players ·{' '}
+        {session.league_name || 'Deleted league'} · {session.player_count} players ·{' '}
         {formatDateTime(session.scheduled_for ?? session.created_at)}
       </p>
       {!canEdit && (
