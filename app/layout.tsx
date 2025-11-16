@@ -37,13 +37,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                   }}
                 />
               </Link>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "1rem",
-                }}
-              >
+              <div className="app-header-right">
                 <nav className="app-nav">
                   <Link href="/leagues">Leagues</Link>
                   <Link href="/sessions">Sessions</Link>
