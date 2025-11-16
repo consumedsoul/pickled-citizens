@@ -403,9 +403,8 @@ export default function HomePage() {
   return (
     <section className="hero">
       <div>
-        <h1 className="hero-title">Pickled Citizens</h1>
-        <p className="hero-subtitle">
-          Pickled Citizens is a free, lightweight web app for setting up team
+        <p className="hero-subtitle" style={{ maxWidth: "none" }}>
+          <strong>PICKLED CITIZENS</strong> is a free, lightweight web app for setting up team
           battle matchups for your league's pickleball sessions.
         </p>
         {showCtas && (
