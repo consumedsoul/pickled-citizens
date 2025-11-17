@@ -494,11 +494,7 @@ export default function HomePage() {
               </p>
             ) : upcomingSessions.length === 0 ? (
               <p className="hero-subtitle" style={{ fontSize: "0.85rem" }}>
-                No upcoming sessions. Check the{" "}
-                <a href="/sessions" style={{ textDecoration: "underline" }}>
-                  sessions page
-                </a>{" "}
-                to create one.
+                No upcoming sessions.
               </p>
             ) : (
               <div
