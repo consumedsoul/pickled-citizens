@@ -288,7 +288,22 @@ export default function AuthPage() {
             color: status === 'error' ? '#fca5a5' : '#9ca3af',
           }}
         >
-          {message}
+          {status === 'success' && message.includes('Check your email') ? (
+            <span>
+              <span style={{ 
+                backgroundColor: '#fef3c7', 
+                color: '#92400e', 
+                fontWeight: 'bold',
+                padding: '0.2rem 0.4rem',
+                borderRadius: '0.25rem'
+              }}>
+                Check your email
+              </span>{' '}
+              to confirm your account and finish signing up.
+            </span>
+          ) : (
+            message
+          )}
         </p>
       )}
       <p
