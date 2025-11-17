@@ -604,28 +604,30 @@ export default function HomePage() {
         </p>
         <ul className="section-list">
           <li>
-            <strong>Email-based signup &amp; profiles</strong>
-            <br />
-            Magic-link auth via Supabase, with profiles that capture name,
-            gender, and self-reported DUPR.
+            Email signup using magic link or password, plus player name and self-assessed DUPR rating
           </li>
           <li>
-            <strong>League creation &amp; roster management</strong>
-            <br />
-            Create leagues with duplicate-name protection, add authenticated
-            players, and view member details in one place.
+            Create and manage leagues, with a central view of all member details
           </li>
           <li>
-            <strong>Session scheduling &amp; balanced matchups</strong>
-            <br />
-            Schedule sessions for 6, 8, 10, or 12 players and auto-generate
-            balanced doubles matchups using a snaking algorithm.
+            Schedule sessions for 6, 8, 10, or 12 players and auto-generate balanced doubles matchups
           </li>
           <li>
-            <strong>Score entry &amp; player stats</strong>
-            <br />
-            Quickly record results, view team records and per-player win/loss,
-            and maintain session history.
+            Record results and track both team and individual win-loss records over time
+          </li>
+        </ul>
+        <p style={{ marginTop: '1.5rem' }}>
+          <strong>Coming soon</strong>
+        </p>
+        <ul className="section-list">
+          <li>
+            Email notifications for players and league admins
+          </li>
+          <li>
+            League email invitation flow
+          </li>
+          <li>
+            Session-specific invitation flow
           </li>
         </ul>
       </div>
