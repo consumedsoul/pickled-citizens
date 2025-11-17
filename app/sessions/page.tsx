@@ -1182,7 +1182,7 @@ export default function SessionsPage() {
                           return (
                             <div
                               style={{
-                                color: "#bbf7d0",
+                                color: "#14532d",
                                 marginTop: "0.1rem",
                                 fontSize: "0.8rem",
                               }}

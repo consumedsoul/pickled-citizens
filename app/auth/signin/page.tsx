@@ -90,7 +90,7 @@ export default function SignInPage() {
           onClick={() => setMode('password')}
           style={{
             padding: '0.25rem 0.6rem',
-            borderColor: mode === 'password' ? '#22c55e' : '#1f2937',
+            borderColor: mode === 'password' ? '#14532d' : '#1f2937',
           }}
         >
           Password
@@ -101,7 +101,7 @@ export default function SignInPage() {
           onClick={() => setMode('magic')}
           style={{
             padding: '0.25rem 0.6rem',
-            borderColor: mode === 'magic' ? '#22c55e' : '#1f2937',
+            borderColor: mode === 'magic' ? '#14532d' : '#1f2937',
           }}
         >
           Magic link

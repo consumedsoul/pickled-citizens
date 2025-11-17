@@ -594,7 +594,7 @@ export default function SessionDetailPage() {
                 <div
                   style={{
                     padding: '0.4rem 0.6rem',
-                    background: '#16a34a',
+                    background: '#14532d',
                     color: '#ffffff',
                     fontWeight: 600,
                     textAlign: 'center',
@@ -611,7 +611,7 @@ export default function SessionDetailPage() {
                 <div
                   style={{
                     padding: '0.4rem 0.6rem',
-                    background: '#2563eb',
+                    background: '#1e40af',
                     color: '#ffffff',
                     fontWeight: 600,
                     textAlign: 'center',
@@ -645,7 +645,7 @@ export default function SessionDetailPage() {
                       padding: '0.5rem 0.6rem',
                       fontSize: '2rem',
                       textAlign: 'center',
-                      color: '#166534',
+                      color: '#14532d',
                     }}
                   >
                     {teamStats.team1.wins}
@@ -656,12 +656,12 @@ export default function SessionDetailPage() {
                         key={p.id}
                         style={{
                           padding: '0.25rem 0.6rem',
-                          fontSize: '0.85rem',
+                          fontSize: '0.8rem',
                           display: 'flex',
                           justifyContent: 'center',
                           gap: '0.5rem',
                           textAlign: 'center',
-                          color: '#166534',
+                          color: '#14532d',
                         }}
                       >
                         <span>{displayPlayerName(p)}</span>
@@ -682,7 +682,7 @@ export default function SessionDetailPage() {
                       padding: '0.5rem 0.6rem',
                       fontSize: '2rem',
                       textAlign: 'center',
-                      color: '#1d4ed8',
+                      color: '#1e3a8a',
                     }}
                   >
                     {teamStats.team2.wins}
@@ -693,12 +693,12 @@ export default function SessionDetailPage() {
                         key={p.id}
                         style={{
                           padding: '0.25rem 0.6rem',
-                          fontSize: '0.85rem',
+                          fontSize: '0.8rem',
                           display: 'flex',
                           justifyContent: 'center',
                           gap: '0.5rem',
                           textAlign: 'center',
-                          color: '#1d4ed8',
+                          color: '#1e3a8a',
                         }}
                       >
                         <span>{displayPlayerName(p)}</span>
@@ -789,9 +789,9 @@ export default function SessionDetailPage() {
                             padding: '0.15rem 0.4rem',
                             fontSize: '0.75rem',
                             background:
-                              match.winner === 1 ? '#16a34a' : '#f9fafb',
+                              match.winner === 1 ? '#14532d' : '#f9fafb',
                             borderColor:
-                              match.winner === 1 ? '#16a34a' : '#d1d5db',
+                              match.winner === 1 ? '#14532d' : '#d1d5db',
                             color: match.winner === 1 ? '#ffffff' : '#4b5563',
                           }}
                         >
@@ -800,7 +800,7 @@ export default function SessionDetailPage() {
                         <span
                           style={{
                             fontSize: '0.85rem',
-                            color: '#166534',
+                            color: '#14532d',
                             textAlign: 'center',
                           }}
                         >
@@ -820,7 +820,7 @@ export default function SessionDetailPage() {
                         <span
                           style={{
                             fontSize: '0.85rem',
-                            color: '#1d4ed8',
+                            color: '#1e3a8a',
                             textAlign: 'center',
                           }}
                         >
@@ -839,9 +839,9 @@ export default function SessionDetailPage() {
                             padding: '0.15rem 0.4rem',
                             fontSize: '0.75rem',
                             background:
-                              match.winner === 2 ? '#2563eb' : '#f9fafb',
+                              match.winner === 2 ? '#1e40af' : '#f9fafb',
                             borderColor:
-                              match.winner === 2 ? '#2563eb' : '#d1d5db',
+                              match.winner === 2 ? '#1e40af' : '#d1d5db',
                             color: match.winner === 2 ? '#ffffff' : '#4b5563',
                           }}
                         >
@@ -885,8 +885,8 @@ export default function SessionDetailPage() {
                     m.team2.some((p) => p.id === ps.player.id)
                   ).length;
                   const isTeam1 = team1Count >= team2Count;
-                  const nameColor = isTeam1 ? '#166534' : '#1d4ed8';
-                  const recordColor = isTeam1 ? '#166534' : '#1d4ed8';
+                  const nameColor = isTeam1 ? '#14532d' : '#1e3a8a';
+                  const recordColor = isTeam1 ? '#14532d' : '#1e3a8a';
 
                   return (
                   <li
