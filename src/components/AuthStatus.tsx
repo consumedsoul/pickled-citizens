@@ -7,10 +7,19 @@ import { supabase } from '@/lib/supabaseClient';
 interface AuthState {
   loading: boolean;
   email: string | null;
+  userId: string | null;
+  firstName: string | null;
+  lastName: string | null;
 }
 
 export function AuthStatus() {
-  const [state, setState] = useState<AuthState>({ loading: true, email: null });
+  const [state, setState] = useState<AuthState>({ 
+    loading: true, 
+    email: null, 
+    userId: null,
+    firstName: null,
+    lastName: null
+  });
 
   useEffect(() => {
     let isMounted = true;
@@ -18,14 +27,58 @@ export function AuthStatus() {
     async function loadUser() {
       const { data } = await supabase.auth.getUser();
       if (!isMounted) return;
-      setState({ loading: false, email: data.user?.email ?? null });
+      
+      const user = data.user;
+      if (!user) {
+        setState({ loading: false, email: null, userId: null, firstName: null, lastName: null });
+        return;
+      }
+
+      // Load user profile to get first and last name
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('first_name, last_name')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (!isMounted) return;
+      
+      setState({ 
+        loading: false, 
+        email: user.email ?? null, 
+        userId: user.id,
+        firstName: profile?.first_name ?? null,
+        lastName: profile?.last_name ?? null
+      });
     }
 
     loadUser();
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!isMounted) return;
-      setState({ loading: false, email: session?.user?.email ?? null });
+      
+      const user = session?.user;
+      if (!user) {
+        setState({ loading: false, email: null, userId: null, firstName: null, lastName: null });
+        return;
+      }
+
+      // Load user profile to get first and last name
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('first_name, last_name')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (!isMounted) return;
+      
+      setState({ 
+        loading: false, 
+        email: user.email ?? null, 
+        userId: user.id,
+        firstName: profile?.first_name ?? null,
+        lastName: profile?.last_name ?? null
+      });
     });
 
     return () => {
@@ -36,7 +89,20 @@ export function AuthStatus() {
 
   async function handleSignOut() {
     await supabase.auth.signOut();
-    setState({ loading: false, email: null });
+    setState({ loading: false, email: null, userId: null, firstName: null, lastName: null });
+  }
+
+  function getUserInitials() {
+    if (state.firstName && state.lastName) {
+      return `${state.firstName[0]}${state.lastName[0]}`.toUpperCase();
+    }
+    if (state.firstName) {
+      return state.firstName[0].toUpperCase();
+    }
+    if (state.email) {
+      return state.email[0].toUpperCase();
+    }
+    return 'U';
   }
 
   if (state.loading) {
@@ -53,7 +119,32 @@ export function AuthStatus() {
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem' }}>
-      <span style={{ opacity: 0.8 }}>Signed in as {state.email}</span>
+      <Link 
+        href="/profile"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '32px',
+          height: '32px',
+          borderRadius: '50%',
+          backgroundColor: '#263FA9',
+          color: 'white',
+          fontWeight: 'bold',
+          textDecoration: 'none',
+          fontSize: '0.9rem',
+          transition: 'background-color 0.2s'
+        }}
+        onMouseOver={(e) => {
+          e.currentTarget.style.backgroundColor = '#1E2E80';
+        }}
+        onMouseOut={(e) => {
+          e.currentTarget.style.backgroundColor = '#263FA9';
+        }}
+        title="View Profile"
+      >
+        {getUserInitials()}
+      </Link>
       <button
         type="button"
         onClick={handleSignOut}

@@ -534,7 +534,7 @@ export default function HomePage() {
                           className="btn-secondary"
                           onClick={() => router.push(`/sessions/${session.id}`)}
                         >
-                          View
+                          {session.created_by === auth.userId ? "Manage" : "View"}
                         </button>
                       </div>
                     </li>

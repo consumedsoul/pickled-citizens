@@ -5,6 +5,7 @@ import Image from "next/image";
 import menuLogo from "./images/Pickled-Citizens-Logo-Site.png";
 import favicon from "./images/Pickled-Citizens-Logo-Favicon.png";
 import { AuthStatus } from "@/components/AuthStatus";
+import { Navigation } from "@/components/Navigation";
 import { AdminFooterLinks } from "@/components/AdminFooterLinks";
 
 export const metadata = {
@@ -39,11 +40,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 />
               </Link>
               <div className="app-header-right">
-                <nav className="app-nav">
-                  <Link href="/leagues">Leagues</Link>
-                  <Link href="/sessions">Sessions</Link>
-                  <Link href="/profile">Profile</Link>
-                </nav>
+                <Navigation />
                 <AuthStatus />
               </div>
             </div>

@@ -1146,7 +1146,7 @@ export default function SessionsPage() {
                           className="btn-secondary"
                           onClick={() => router.push(`/sessions/${session.id}`)}
                         >
-                          View
+                          {session.created_by === userId ? "Manage" : "View"}
                         </button>
                       </div>
                     </li>
@@ -1230,7 +1230,7 @@ export default function SessionsPage() {
                           className="btn-secondary"
                           onClick={() => router.push(`/sessions/${session.id}`)}
                         >
-                          View
+                          {session.created_by === userId ? "Manage" : "View"}
                         </button>
                       </div>
                     </li>
