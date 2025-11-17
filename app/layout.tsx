@@ -2,8 +2,8 @@ import "./globals.css";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import menuLogo from "./images/Pickled_Citizens_Logo_Green_Menu.png";
-import favicon from "./images/Pickled_Citizens_Logo_Green_Favicon.png";
+import menuLogo from "./images/Pickled-Citizens-Logo-Site.png";
+import favicon from "./images/Pickled-Citizens-Logo-Favicon.png";
 import { AuthStatus } from "@/components/AuthStatus";
 import { AdminFooterLinks } from "@/components/AdminFooterLinks";
 
