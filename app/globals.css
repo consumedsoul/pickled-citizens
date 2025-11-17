@@ -183,4 +183,25 @@ body {
     align-items: center;
     gap: 0.5rem;
   }
+
+  /* Admin users page mobile responsiveness */
+  .app-main .section-list > li {
+    padding: 0.75rem 0 !important;
+  }
+
+  .app-main .section-list > li > div {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 1rem !important;
+  }
+
+  .app-main .section-list > li .user-actions {
+    align-items: stretch !important;
+    width: 100% !important;
+  }
+
+  .app-main .section-list > li .user-actions button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
 }

@@ -432,6 +432,7 @@ export default function AdminUsersPage() {
                             }}
                           />
                           <div
+                            className="user-actions"
                             style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.35rem' }}
                           >
                             <button
@@ -453,6 +454,7 @@ export default function AdminUsersPage() {
                         </form>
                       ) : (
                         <div
+                          className="user-actions"
                           style={{
                             display: 'flex',
                             flexDirection: 'column',
