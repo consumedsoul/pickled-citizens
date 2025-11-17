@@ -172,6 +172,9 @@ export default function HomePage() {
     setLeaguesLoading(false);
     } catch (error) {
       console.error('Failed to load user leagues:', error);
+      if (error instanceof Error && error.message === 'API timeout after 10 seconds') {
+        console.log('🏆 loadUserLeagues: Connection issue - showing empty state');
+      }
       setLeagues([]);
       setLeaguesLoading(false);
     }
@@ -304,6 +307,9 @@ export default function HomePage() {
     setSessionsLoading(false);
     } catch (error) {
       console.error('Failed to load user sessions:', error);
+      if (error instanceof Error && error.message === 'API timeout after 10 seconds') {
+        console.log('📅 loadUserSessions: Connection issue - showing empty state');
+      }
       setSessions([]);
       setSessionsLoading(false);
     }
