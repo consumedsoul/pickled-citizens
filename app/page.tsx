@@ -32,8 +32,14 @@ type League = {
   id: string;
   name: string;
   owner_id: string;
+  created_at: string;
   memberCount?: number;
 };
+
+function formatLeagueName(name: string, createdAt: string) {
+  const year = new Date(createdAt).getFullYear();
+  return `${name} (est. ${year})`;
+}
 
 export default function HomePage() {
   const router = useRouter();
@@ -108,7 +114,7 @@ export default function HomePage() {
     try {
       const { data: membershipRows, error: membershipError } = await supabase
         .from("league_members")
-        .select("league:leagues(id, name, owner_id)")
+        .select("league:leagues(id, name, owner_id, created_at)")
         .eq("user_id", userId);
       
       if (membershipError || !membershipRows) {
@@ -498,7 +504,7 @@ export default function HomePage() {
                     >
                       <div style={{ fontSize: "0.85rem" }}>
                         <div style={{ fontWeight: 500 }}>
-                          {league.name}
+                          {formatLeagueName(league.name, league.created_at)}
                         </div>
                         {typeof league.memberCount === "number" && (
                           <div style={{ color: "#9ca3af", marginTop: "0.1rem" }}>

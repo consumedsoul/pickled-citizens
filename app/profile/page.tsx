@@ -15,7 +15,13 @@ type League = {
   id: string;
   name: string;
   owner_id: string;
+  created_at: string;
 };
+
+function formatLeagueName(name: string, createdAt: string) {
+  const year = new Date(createdAt).getFullYear();
+  return `${name} (est. ${year})`;
+}
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -87,7 +93,7 @@ export default function ProfilePage() {
 
       const { data: memberRows, error: leaguesError } = await supabase
         .from('league_members')
-        .select('league:leagues(id, name, owner_id)')
+        .select('league:leagues(id, name, owner_id, created_at)')
         .eq('user_id', user.id);
 
       if (!active) return;
@@ -447,7 +453,7 @@ export default function ProfilePage() {
                     padding: '0.25rem 0',
                   }}
                 >
-                  <span>{league.name}</span>
+                  <span>{formatLeagueName(league.name, league.created_at)}</span>
                   <button
                     type="button"
                     className="btn-secondary"

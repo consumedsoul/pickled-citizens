@@ -595,33 +595,37 @@ export default function SessionDetailPage() {
                     padding: '0.4rem 0.6rem',
                     background: '#14532d',
                     color: '#ffffff',
-                    fontWeight: 600,
+                    fontWeight: 800,
                     textAlign: 'center',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderRight: '1px solid #d1d5db',
+                    fontFamily: '"Courier New", monospace',
+                    letterSpacing: '0.05em',
                   }}
                 >
-                  <span>Team</span>
-                  <span>Green</span>
+                  <span>TEAM</span>
+                  <span>GREEN</span>
                 </div>
                 <div
                   style={{
                     padding: '0.4rem 0.6rem',
                     background: '#1e40af',
                     color: '#ffffff',
-                    fontWeight: 600,
+                    fontWeight: 800,
                     textAlign: 'center',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    fontFamily: '"Courier New", monospace',
+                    letterSpacing: '0.05em',
                   }}
                 >
-                  <span>Team</span>
-                  <span>Blue</span>
+                  <span>TEAM</span>
+                  <span>BLUE</span>
                 </div>
               </div>
 
@@ -663,7 +667,17 @@ export default function SessionDetailPage() {
                           color: '#14532d',
                         }}
                       >
-                        <span>{displayPlayerName(p)}</span>
+                        <span
+                          style={{
+                            maxWidth: '120px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            display: 'inline-block',
+                          }}
+                        >
+                          {displayPlayerName(p)}
+                        </span>
                       </div>
                     );
                   })}
@@ -700,7 +714,17 @@ export default function SessionDetailPage() {
                           color: '#1e3a8a',
                         }}
                       >
-                        <span>{displayPlayerName(p)}</span>
+                        <span
+                          style={{
+                            maxWidth: '120px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            display: 'inline-block',
+                          }}
+                        >
+                          {displayPlayerName(p)}
+                        </span>
                       </div>
                     );
                   })}
