@@ -135,7 +135,7 @@ export function AuthStatus() {
 
   if (!state.email) {
     return (
-      <div style={{ fontSize: '0.8rem' }}>
+      <div style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
         <Link 
           href="/auth/signin" 
           className="btn-secondary"
