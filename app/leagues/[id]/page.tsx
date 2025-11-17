@@ -538,16 +538,12 @@ export default function LeagueMembersPage() {
                     const fullName = [member.first_name, member.last_name]
                       .filter(Boolean)
                       .join(' ');
-                    const email = member.email ?? '';
-                    const base =
-                      fullName && email
-                        ? `${fullName} (${email})`
-                        : email || fullName || member.user_id;
+                    const base = fullName || member.user_id;
 
                     if (member.self_reported_dupr != null) {
                       const dupr = Number(member.self_reported_dupr);
                       if (!Number.isNaN(dupr)) {
-                        return `${base} ${dupr.toFixed(2)}`;
+                        return `${base} (${dupr.toFixed(2)})`;
                       }
                     }
 

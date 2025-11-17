@@ -69,7 +69,6 @@ function formatDateTime(value: string | null) {
 function displayPlayerName(player: SessionPlayer) {
   const full = `${player.first_name ?? ''} ${player.last_name ?? ''}`.trim();
   if (full) return full;
-  if (player.email) return player.email;
   return 'Deleted player';
 }
 
