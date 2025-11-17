@@ -153,13 +153,14 @@ body {
 
   .app-header-right {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
     width: 100%;
+    gap: 0.5rem;
   }
 
   .app-nav {
     width: 100%;
-    justify-content: flex-start;
+    justify-content: center;
     flex-wrap: wrap;
     row-gap: 0.25rem;
   }
@@ -170,5 +171,16 @@ body {
 
   .session-details-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-footer {
+    text-align: center;
+  }
+
+  .app-footer > div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
   }
 }
