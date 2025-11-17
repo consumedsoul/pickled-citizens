@@ -63,6 +63,13 @@ export default function SessionsPage() {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const sortedLeaguesForSelect = useMemo(() => {
+    if (!leagues.length) return [] as League[];
+    const copy = [...leagues];
+    copy.sort((a, b) => a.name.localeCompare(b.name));
+    return copy;
+  }, [leagues]);
+
   const sortedMembersForSelect = useMemo(() => {
     if (!members.length) return [] as Member[];
     const copy = [...members];
@@ -73,6 +80,17 @@ export default function SessionsPage() {
     });
     return copy;
   }, [members]);
+
+  const getAvailablePlayersForSlot = useMemo(() => {
+    return (slotIndex: number) => {
+      const selectedIds = selectedPlayerIds.filter((id, index) => 
+        id && index !== slotIndex
+      );
+      return sortedMembersForSelect.filter(member => 
+        !selectedIds.includes(member.user_id)
+      );
+    };
+  }, [sortedMembersForSelect, selectedPlayerIds]);
 
   useEffect(() => {
     let active = true;
@@ -111,9 +129,6 @@ export default function SessionsPage() {
 
       const list = (leaguesData ?? []) as League[];
       setLeagues(list);
-      if (list.length > 0) {
-        setSelectedLeagueId((prev) => prev || list[0].id);
-      }
 
       setSessionsLoading(true);
 
@@ -474,6 +489,22 @@ export default function SessionsPage() {
       const dupr = Number(member.self_reported_dupr);
       if (!Number.isNaN(dupr)) {
         return `${base} ${dupr.toFixed(2)}`;
+      }
+    }
+
+    return base;
+  }
+
+  function displayPlayerForDropdown(member: Member) {
+    const fullName = [member.first_name, member.last_name]
+      .filter(Boolean)
+      .join(" ");
+    const base = fullName || member.user_id;
+
+    if (member.self_reported_dupr != null) {
+      const dupr = Number(member.self_reported_dupr);
+      if (!Number.isNaN(dupr)) {
+        return `${base} (${dupr.toFixed(2)})`;
       }
     }
 
@@ -866,7 +897,8 @@ export default function SessionsPage() {
                     color: "#111827",
                   }}
                 >
-                  {leagues.map((league) => (
+                  <option value="">Select League</option>
+                  {sortedLeaguesForSelect.map((league) => (
                     <option key={league.id} value={league.id}>
                       {league.name}
                     </option>
@@ -935,7 +967,7 @@ export default function SessionsPage() {
                 )}
                 {!membersLoading && !members.length && (
                   <p className="hero-subtitle" style={{ fontSize: "0.8rem" }}>
-                    This league has no members yet.
+                    {selectedLeagueId ? "This league has no members yet." : "Please select a league in the drop-down above."}
                   </p>
                 )}
                 {!membersLoading && members.length > 0 && (
@@ -959,10 +991,10 @@ export default function SessionsPage() {
                           color: "#111827",
                         }}
                       >
-                        <option value="">Slot {i + 1}</option>
-                        {sortedMembersForSelect.map((member) => (
+                        <option value="">Select Player {i + 1}</option>
+                        {getAvailablePlayersForSlot(i).map((member) => (
                           <option key={member.user_id} value={member.user_id}>
-                            {displayPlayer(member)}
+                            {displayPlayerForDropdown(member)}
                           </option>
                         ))}
                       </select>
