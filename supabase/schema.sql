@@ -99,3 +99,20 @@ create policy admin_events_insert_authenticated on public.admin_events
 create policy admin_events_select_admin on public.admin_events
   for select
   using ((auth.jwt() ->> 'email') = 'hun@ghkim.com');
+
+-- Function to delete a user from auth.users (admin only)
+create or replace function admin_delete_user(user_id_to_delete uuid)
+returns void
+language plpgsql
+security definer
+as $$
+begin
+  -- Only allow the admin user to delete accounts
+  if (auth.jwt() ->> 'email') <> 'hun@ghkim.com' then
+    raise exception 'Permission denied: admin access required';
+  end if;
+  
+  -- Delete the user from auth.users
+  delete from auth.users where id = user_id_to_delete;
+end;
+$$;
