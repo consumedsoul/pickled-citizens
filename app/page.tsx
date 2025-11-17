@@ -112,12 +112,16 @@ export default function HomePage() {
     setLeaguesLoading(true);
 
     try {
+      console.log("🏆 loadUserLeagues: Making Supabase API call...");
       const { data: membershipRows, error: membershipError } = await supabase
         .from("league_members")
         .select("league:leagues(id, name, owner_id)")
         .eq("user_id", userId);
 
+      console.log("🏆 loadUserLeagues: API response:", { data: membershipRows, error: membershipError });
+      
       if (membershipError || !membershipRows) {
+        console.error("🏆 loadUserLeagues: API error or no data:", membershipError);
         setLeaguesLoading(false);
         return;
       }
@@ -174,6 +178,7 @@ export default function HomePage() {
     setSessionsLoading(true);
 
     try {
+      console.log("📅 loadUserSessions: Making Supabase API call for owned sessions...");
       const { data: ownedSessionRows, error: ownedSessionsError } = await supabase
         .from("game_sessions")
         .select(
@@ -181,7 +186,10 @@ export default function HomePage() {
         )
         .eq("created_by", userId);
 
+      console.log("📅 loadUserSessions: Owned sessions API response:", { data: ownedSessionRows, error: ownedSessionsError });
+      
       if (ownedSessionsError) {
+        console.error("📅 loadUserSessions: Owned sessions API error:", ownedSessionsError);
         setSessionsLoading(false);
         return;
       }
