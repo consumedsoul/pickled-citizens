@@ -92,15 +92,16 @@ export default function HomePage() {
   async function loadUserLeagues(userId: string) {
     setLeaguesLoading(true);
 
-    const { data: membershipRows, error: membershipError } = await supabase
-      .from("league_members")
-      .select("league:leagues(id, name, owner_id)")
-      .eq("user_id", userId);
+    try {
+      const { data: membershipRows, error: membershipError } = await supabase
+        .from("league_members")
+        .select("league:leagues(id, name, owner_id)")
+        .eq("user_id", userId);
 
-    if (membershipError || !membershipRows) {
-      setLeaguesLoading(false);
-      return;
-    }
+      if (membershipError || !membershipRows) {
+        setLeaguesLoading(false);
+        return;
+      }
 
     const baseMemberLeagues: League[] = (membershipRows as any[])
       .map((row) => row.league)
@@ -137,22 +138,28 @@ export default function HomePage() {
 
     setLeagues(leaguesWithCounts);
     setLeaguesLoading(false);
+    } catch (error) {
+      console.error('Failed to load user leagues:', error);
+      setLeagues([]);
+      setLeaguesLoading(false);
+    }
   }
 
   async function loadUserSessions(userId: string) {
     setSessionsLoading(true);
 
-    const { data: ownedSessionRows, error: ownedSessionsError } = await supabase
-      .from("game_sessions")
-      .select(
-        "id, league_id, created_by, created_at, scheduled_for, player_count, league:leagues(name)"
-      )
-      .eq("created_by", userId);
+    try {
+      const { data: ownedSessionRows, error: ownedSessionsError } = await supabase
+        .from("game_sessions")
+        .select(
+          "id, league_id, created_by, created_at, scheduled_for, player_count, league:leagues(name)"
+        )
+        .eq("created_by", userId);
 
-    if (ownedSessionsError) {
-      setSessionsLoading(false);
-      return;
-    }
+      if (ownedSessionsError) {
+        setSessionsLoading(false);
+        return;
+      }
 
     const { data: mpRows, error: mpError } = await supabase
       .from("match_players")
@@ -245,6 +252,11 @@ export default function HomePage() {
 
     setSessions(mapped);
     setSessionsLoading(false);
+    } catch (error) {
+      console.error('Failed to load user sessions:', error);
+      setSessions([]);
+      setSessionsLoading(false);
+    }
   }
 
   async function loadLifetimeStats(userId: string) {
