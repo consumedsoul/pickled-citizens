@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Script from "next/script";
 import { supabase } from "@/lib/supabaseClient";
@@ -37,11 +37,12 @@ type League = {
 
 export default function HomePage() {
   const router = useRouter();
+  const loadedUserIdRef = useRef<string | null>(null);
   const [auth, setAuth] = useState<HomeAuthState>({ loading: true, email: null, userId: null });
-  const [sessions, setSessions] = useState<SessionSummary[]>([]);
-  const [sessionsLoading, setSessionsLoading] = useState(false);
   const [leagues, setLeagues] = useState<League[]>([]);
   const [leaguesLoading, setLeaguesLoading] = useState(false);
+  const [sessions, setSessions] = useState<SessionSummary[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
   const [lifetimeStats, setLifetimeStats] = useState<LifetimeStats>({
     individualWins: 0,
     individualLosses: 0,
@@ -50,15 +51,19 @@ export default function HomePage() {
   });
 
   useEffect(() => {
+    console.log("🔄 useEffect: Running initial setup");
     let isMounted = true;
 
     async function loadUser() {
+      console.log("👤 loadUser: Fetching initial user data");
       const { data } = await supabase.auth.getUser();
       if (!isMounted) return;
       const user = data.user;
+      console.log("👤 loadUser: Setting auth state, user:", user?.id);
       setAuth({ loading: false, email: user?.email ?? null, userId: user?.id ?? null });
 
       if (user) {
+        console.log("📊 loadUser: Loading user leagues, sessions, and stats");
         loadUserLeagues(user.id);
         loadUserSessions(user.id);
         loadLifetimeStats(user.id);
@@ -68,12 +73,14 @@ export default function HomePage() {
     loadUser();
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log("🔐 onAuthStateChange:", _event, "User:", session?.user?.id);
       if (!isMounted) return;
       const user = session?.user;
       const newUserId = user?.id ?? null;
       
       // Only reload data if the user actually changed (login/logout)
       if (auth.userId !== newUserId) {
+        console.log("🔄 onAuthStateChange: User changed from", auth.userId, "to", newUserId, "- reloading data");
         setAuth({ loading: false, email: user?.email ?? null, userId: newUserId });
 
         if (user) {
@@ -85,6 +92,8 @@ export default function HomePage() {
           setSessions([]);
           setLifetimeStats({ individualWins: 0, individualLosses: 0, teamWins: 0, teamLosses: 0 });
         }
+      } else {
+        console.log("⚠️ onAuthStateChange: User unchanged, skipping reload");
       }
     });
 
@@ -95,6 +104,11 @@ export default function HomePage() {
   }, []);
 
   async function loadUserLeagues(userId: string) {
+    if (loadedUserIdRef.current === userId) {
+      console.log("🏆 loadUserLeagues: Skipping - already loaded for user:", userId);
+      return;
+    }
+    console.log("🏆 loadUserLeagues: Starting to load leagues for user:", userId);
     setLeaguesLoading(true);
 
     try {
@@ -142,6 +156,7 @@ export default function HomePage() {
     }));
 
     setLeagues(leaguesWithCounts);
+    loadedUserIdRef.current = userId;
     setLeaguesLoading(false);
     } catch (error) {
       console.error('Failed to load user leagues:', error);
@@ -151,6 +166,11 @@ export default function HomePage() {
   }
 
   async function loadUserSessions(userId: string) {
+    if (loadedUserIdRef.current === userId) {
+      console.log("📅 loadUserSessions: Skipping - already loaded for user:", userId);
+      return;
+    }
+    console.log("📅 loadUserSessions: Starting to load sessions for user:", userId);
     setSessionsLoading(true);
 
     try {
@@ -256,6 +276,7 @@ export default function HomePage() {
     });
 
     setSessions(mapped);
+    loadedUserIdRef.current = userId;
     setSessionsLoading(false);
     } catch (error) {
       console.error('Failed to load user sessions:', error);
