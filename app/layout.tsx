@@ -29,7 +29,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 <Image
                   src={menuLogo}
                   alt="Pickled Citizens logo"
-                  width={40}
                   height={40}
                   priority
                   quality={100}

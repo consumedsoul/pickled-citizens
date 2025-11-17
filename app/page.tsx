@@ -51,23 +51,15 @@ export default function HomePage() {
   });
 
   useEffect(() => {
-    console.log("🔄 useEffect: Running initial setup");
-    
-    // Make supabase available for console debugging
-    (window as any).supabase = supabase;
-    
     let isMounted = true;
 
     async function loadUser() {
-      console.log("👤 loadUser: Fetching initial user data");
       const { data } = await supabase.auth.getUser();
       if (!isMounted) return;
       const user = data.user;
-      console.log("👤 loadUser: Setting auth state, user:", user?.id);
       setAuth({ loading: false, email: user?.email ?? null, userId: user?.id ?? null });
 
       if (user) {
-        console.log("📊 loadUser: Loading user leagues, sessions, and stats");
         loadUserLeagues(user.id);
         loadUserSessions(user.id);
         loadLifetimeStats(user.id);
@@ -83,7 +75,8 @@ export default function HomePage() {
       const newUserId = user?.id ?? null;
       
       // Only reload data if the user actually changed (login/logout)
-      if (auth.userId !== newUserId) {
+      // Also prevent false positives when auth.userId is null but newUserId is valid (component re-mount)
+      if (auth.userId !== newUserId && !(auth.userId === null && newUserId !== null && loadedUserIdRef.current === newUserId)) {
         console.log("🔄 onAuthStateChange: User changed from", auth.userId, "to", newUserId, "- reloading data");
         setAuth({ loading: false, email: user?.email ?? null, userId: newUserId });
 
@@ -95,9 +88,10 @@ export default function HomePage() {
           setLeagues([]);
           setSessions([]);
           setLifetimeStats({ individualWins: 0, individualLosses: 0, teamWins: 0, teamLosses: 0 });
+          loadedUserIdRef.current = null;
         }
       } else {
-        console.log("⚠️ onAuthStateChange: User unchanged, skipping reload");
+        console.log("⚠️ onAuthStateChange: User unchanged or component re-mount, skipping reload");
       }
     });
 

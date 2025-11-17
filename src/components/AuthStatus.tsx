@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -13,6 +13,7 @@ interface AuthState {
 }
 
 export function AuthStatus() {
+  const loadedProfileIdRef = useRef<string | null>(null);
   const [state, setState] = useState<AuthState>({ 
     loading: true, 
     email: null, 
@@ -44,23 +45,40 @@ export function AuthStatus() {
       });
 
       // Then load user profile asynchronously
-      try {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('first_name, last_name')
-          .eq('id', user.id)
-          .maybeSingle();
+      console.log('👤 AuthStatus: Profile fetch check, loadedProfileIdRef:', loadedProfileIdRef.current, 'userId:', user.id);
+      if (loadedProfileIdRef.current !== user.id) {
+        console.log('👤 AuthStatus: Fetching profile for user:', user.id);
+        try {
+          // Add timeout to prevent hanging
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Profile fetch timeout after 3 seconds')), 3000)
+          );
+          
+          const profilePromise = supabase
+            .from('profiles')
+            .select('first_name, last_name')
+            .eq('id', user.id)
+            .maybeSingle();
 
-        if (!isMounted) return;
-        
-        setState(prev => ({ 
-          ...prev,
-          firstName: profile?.first_name ?? null,
-          lastName: profile?.last_name ?? null
-        }));
-      } catch (error) {
-        console.error('Failed to load user profile:', error);
-        // Don't fail - just keep initials as null
+          const { data: profile } = await Promise.race([profilePromise, timeoutPromise]) as any;
+
+          console.log('👤 AuthStatus: Profile response:', profile);
+          if (!isMounted) return;
+          
+          setState(prev => ({ 
+            ...prev,
+            firstName: profile?.first_name ?? null,
+            lastName: profile?.last_name ?? null
+          }));
+          
+          loadedProfileIdRef.current = user.id;
+          console.log('👤 AuthStatus: Profile loaded and cached for user:', user.id);
+        } catch (error) {
+          console.error('👤 AuthStatus: Failed to load user profile:', error);
+          // Don't fail - just keep initials as null
+        }
+      } else {
+        console.log('👤 AuthStatus: Skipping profile fetch - already cached for user:', user.id);
       }
     }
 
@@ -76,32 +94,50 @@ export function AuthStatus() {
       }
 
       // First set basic auth state without waiting for profile
-      setState({ 
+      // Preserve existing profile data if we already have it for this user
+      setState(prev => ({ 
         loading: false, 
         email: user.email ?? null, 
         userId: user.id,
-        firstName: null,
-        lastName: null
-      });
+        firstName: (prev.userId === user.id) ? prev.firstName : null,
+        lastName: (prev.userId === user.id) ? prev.lastName : null
+      }));
 
       // Then load user profile asynchronously
-      try {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('first_name, last_name')
-          .eq('id', user.id)
-          .maybeSingle();
+      console.log('👤 AuthStatus: onAuthStateChange profile check, loadedProfileIdRef:', loadedProfileIdRef.current, 'userId:', user.id);
+      if (loadedProfileIdRef.current !== user.id) {
+        console.log('👤 AuthStatus: onAuthStateChange fetching profile for user:', user.id);
+        try {
+          // Add timeout to prevent hanging
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Profile fetch timeout after 3 seconds')), 3000)
+          );
+          
+          const profilePromise = supabase
+            .from('profiles')
+            .select('first_name, last_name')
+            .eq('id', user.id)
+            .maybeSingle();
 
-        if (!isMounted) return;
-        
-        setState(prev => ({ 
-          ...prev,
-          firstName: profile?.first_name ?? null,
-          lastName: profile?.last_name ?? null
-        }));
-      } catch (error) {
-        console.error('Failed to load user profile:', error);
-        // Don't fail - just keep initials as null
+          const { data: profile } = await Promise.race([profilePromise, timeoutPromise]) as any;
+
+          console.log('👤 AuthStatus: onAuthStateChange profile response:', profile);
+          if (!isMounted) return;
+          
+          setState(prev => ({ 
+            ...prev,
+            firstName: profile?.first_name ?? null,
+            lastName: profile?.last_name ?? null
+          }));
+          
+          loadedProfileIdRef.current = user.id;
+          console.log('👤 AuthStatus: onAuthStateChange profile loaded and cached for user:', user.id);
+        } catch (error) {
+          console.error('👤 AuthStatus: onAuthStateChange failed to load user profile:', error);
+          // Don't fail - just keep initials as null
+        }
+      } else {
+        console.log('👤 AuthStatus: onAuthStateChange skipping profile fetch - already cached for user:', user.id);
       }
     });
 
