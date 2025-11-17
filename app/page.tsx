@@ -26,6 +26,7 @@ type LifetimeStats = {
   individualLosses: number;
   teamWins: number;
   teamLosses: number;
+  teamTies: number;
 };
 
 type League = {
@@ -54,6 +55,7 @@ export default function HomePage() {
     individualLosses: 0,
     teamWins: 0,
     teamLosses: 0,
+    teamTies: 0,
   });
 
   useEffect(() => {
@@ -91,7 +93,7 @@ export default function HomePage() {
         } else {
           setLeagues([]);
           setSessions([]);
-          setLifetimeStats({ individualWins: 0, individualLosses: 0, teamWins: 0, teamLosses: 0 });
+          setLifetimeStats({ individualWins: 0, individualLosses: 0, teamWins: 0, teamLosses: 0, teamTies: 0 });
           loadedUserIdRef.current = null;
         }
       } else {
@@ -290,10 +292,10 @@ export default function HomePage() {
   }
 
   async function loadLifetimeStats(userId: string) {
-    // Get all matches where user participated
+    // Get all matches where user participated (for individual stats)
     const { data: mpRows, error: mpError } = await supabase
       .from("match_players")
-      .select("match_id, team")
+      .select("match_id, team, matches!inner(session_id)")
       .eq("user_id", userId);
 
     if (mpError || !mpRows || !mpRows.length) {
@@ -304,7 +306,20 @@ export default function HomePage() {
       new Set((mpRows as any[]).map((row) => row.match_id))
     );
 
-    // Get match results for those matches
+    // Get all session IDs where user participated
+    const sessionIds = Array.from(
+      new Set((mpRows as any[]).map((row) => row.matches.session_id))
+    );
+
+    // Get ALL matches in those sessions (for complete team scores)
+    const { data: allMatchRows, error: allMatchError } = await supabase
+      .from("matches")
+      .select(
+        "id, session_id, result:match_results(team1_score, team2_score)"
+      )
+      .in("session_id", sessionIds);
+
+    // Get user's matches (for individual stats)
     const { data: matchRows, error: matchError } = await supabase
       .from("matches")
       .select(
@@ -312,7 +327,7 @@ export default function HomePage() {
       )
       .in("id", matchIds);
 
-    if (matchError || !matchRows) {
+    if (matchError || !matchRows || allMatchError || !allMatchRows) {
       return;
     }
 
@@ -322,11 +337,19 @@ export default function HomePage() {
       userTeamMap.set(row.match_id, row.team);
     });
 
+    // Build a map of session_id -> user's team (user is always on the same team in a session)
+    const sessionTeamMap = new Map<string, number>();
+    (mpRows as any[]).forEach((row) => {
+      sessionTeamMap.set(row.matches.session_id, row.team);
+    });
+
     let individualWins = 0;
     let individualLosses = 0;
-    const teamWinsBySession = new Map<string, number>();
-    const teamLossesBySession = new Map<string, number>();
 
+    // Aggregate match scores by session for team stats
+    const sessionScores = new Map<string, { team1Score: number; team2Score: number; userTeam: number }>();
+
+    // Process user's matches for individual stats
     (matchRows as any[]).forEach((row) => {
       const sessionId = row.session_id as string | null;
       if (!sessionId) return;
@@ -351,7 +374,8 @@ export default function HomePage() {
       const userTeam = userTeamMap.get(row.id);
       if (!userTeam) return;
 
-      // Individual stats
+      
+      // Individual stats (personal win/loss record)
       if (userTeam === 1) {
         if (result.team1_score > result.team2_score) {
           individualWins++;
@@ -365,42 +389,66 @@ export default function HomePage() {
           individualLosses++;
         }
       }
-
-      // Team stats (aggregate by session)
-      if (result.team1_score > result.team2_score) {
-        if (userTeam === 1) {
-          teamWinsBySession.set(sessionId, (teamWinsBySession.get(sessionId) ?? 0) + 1);
-        } else {
-          teamLossesBySession.set(sessionId, (teamLossesBySession.get(sessionId) ?? 0) + 1);
-        }
-      } else if (result.team2_score > result.team1_score) {
-        if (userTeam === 2) {
-          teamWinsBySession.set(sessionId, (teamWinsBySession.get(sessionId) ?? 0) + 1);
-        } else {
-          teamLossesBySession.set(sessionId, (teamLossesBySession.get(sessionId) ?? 0) + 1);
-        }
-      }
     });
 
-    // Count sessions where user's team won vs lost
+    // Process ALL matches in sessions for complete team scores
+    (allMatchRows as any[]).forEach((row) => {
+      const sessionId = row.session_id as string | null;
+      if (!sessionId) return;
+
+      const rawResult = (row as any).result as
+        | { team1_score: number | null; team2_score: number | null }[]
+        | { team1_score: number | null; team2_score: number | null }
+        | null
+        | undefined;
+
+      let result: { team1_score: number | null; team2_score: number | null } | null = null;
+      if (rawResult) {
+        if (Array.isArray(rawResult)) {
+          result = rawResult[0] ?? null;
+        } else {
+          result = rawResult;
+        }
+      }
+
+      if (!result || result.team1_score == null || result.team2_score == null) return;
+
+      const userTeam = sessionTeamMap.get(sessionId);
+      if (!userTeam) return;
+
+      
+      // Aggregate scores for team stats (includes all team members' matches)
+      if (!sessionScores.has(sessionId)) {
+        sessionScores.set(sessionId, { team1Score: 0, team2Score: 0, userTeam });
+      }
+      
+      const sessionScore = sessionScores.get(sessionId)!;
+      sessionScore.team1Score += result.team1_score;
+      sessionScore.team2Score += result.team2_score;
+    });
+
+    // Calculate team stats from aggregated session scores
     let teamWins = 0;
     let teamLosses = 0;
+    let teamTies = 0;
 
-    const allSessionIds = new Set([
-      ...teamWinsBySession.keys(),
-      ...teamLossesBySession.keys(),
-    ]);
-
-    allSessionIds.forEach((sessionId) => {
-      const wins = teamWinsBySession.get(sessionId) ?? 0;
-      const losses = teamLossesBySession.get(sessionId) ?? 0;
-
-      if (wins > losses) {
-        teamWins++;
-      } else if (losses > wins) {
-        teamLosses++;
+    sessionScores.forEach((scores, sessionId) => {
+      if (scores.team1Score > scores.team2Score) {
+        if (scores.userTeam === 1) {
+          teamWins++;
+        } else {
+          teamLosses++;
+        }
+      } else if (scores.team2Score > scores.team1Score) {
+        if (scores.userTeam === 2) {
+          teamWins++;
+        } else {
+          teamLosses++;
+        }
+      } else {
+        // It's a tie
+        teamTies++;
       }
-      // Ties don't count
     });
 
     setLifetimeStats({
@@ -408,6 +456,7 @@ export default function HomePage() {
       individualLosses,
       teamWins,
       teamLosses,
+      teamTies,
     });
   }
 
@@ -636,10 +685,10 @@ export default function HomePage() {
                   👥 Team Record
                 </div>
                 <div style={{ fontSize: "1.5rem", fontWeight: 600 }}>
-                  {lifetimeStats.teamWins}-{lifetimeStats.teamLosses}
+                  {lifetimeStats.teamWins}-{lifetimeStats.teamLosses}-{lifetimeStats.teamTies}
                 </div>
                 <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "0.25rem" }}>
-                  {lifetimeStats.teamWins + lifetimeStats.teamLosses} sessions
+                  {lifetimeStats.teamWins + lifetimeStats.teamLosses + lifetimeStats.teamTies} sessions
                 </div>
               </div>
             </div>
