@@ -184,7 +184,23 @@ export default function SignInPage() {
             color: status === 'error' ? '#fca5a5' : '#9ca3af',
           }}
         >
-          {message}
+          {status === 'success' && message.includes('Check your email') ? (
+            <span>
+              Magic link sent.{' '}
+              <span style={{ 
+                backgroundColor: '#fef3c7', 
+                color: '#92400e', 
+                fontWeight: 'bold',
+                padding: '0.2rem 0.4rem',
+                borderRadius: '0.25rem'
+              }}>
+                Check your email
+              </span>{' '}
+              to finish signing in.
+            </span>
+          ) : (
+            message
+          )}
         </p>
       )}
     </div>
