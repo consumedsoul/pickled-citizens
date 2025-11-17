@@ -517,57 +517,107 @@ export default function LeagueMembersPage() {
       )}
 
       <div style={{ marginTop: '1.5rem' }}>
-        <h2 className="section-title">Members</h2>
-        {members.length === 0 ? (
-          <p className="hero-subtitle">No members yet.</p>
-        ) : (
-          <ul className="section-list" style={{ listStyle: 'none', paddingLeft: 0 }}>
-            {members.map((member) => (
-              <li
-                key={member.user_id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '0.75rem',
-                  padding: '0.25rem 0',
-                }}
-              >
-                <span>
-                  {(() => {
-                    const fullName = [member.first_name, member.last_name]
-                      .filter(Boolean)
-                      .join(' ');
-                    const base = fullName || member.user_id;
+        {(() => {
+          const leagueAdmin = members.find(member => member.user_id === league?.owner_id);
+          const regularMembers = members.filter(member => member.user_id !== league?.owner_id);
+          
+          return (
+            <>
+              {/* League Admin Section */}
+              <div>
+                <h2 className="section-title">League Admin</h2>
+                {leagueAdmin ? (
+                  <ul className="section-list" style={{ listStyle: 'none', paddingLeft: 0 }}>
+                    <li
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '0.75rem',
+                        padding: '0.25rem 0',
+                      }}
+                    >
+                      <span>
+                        {(() => {
+                          const fullName = [leagueAdmin.first_name, leagueAdmin.last_name]
+                            .filter(Boolean)
+                            .join(' ');
+                          const base = fullName || leagueAdmin.user_id;
 
-                    if (member.self_reported_dupr != null) {
-                      const dupr = Number(member.self_reported_dupr);
-                      if (!Number.isNaN(dupr)) {
-                        return `${base} (${dupr.toFixed(2)})`;
-                      }
-                    }
+                          if (leagueAdmin.self_reported_dupr != null) {
+                            const dupr = Number(leagueAdmin.self_reported_dupr);
+                            if (!Number.isNaN(dupr)) {
+                              return `${base} (${dupr.toFixed(2)})`;
+                            }
+                          }
 
-                    return base;
-                  })()}
-                </span>
-                {isOwner && (
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => handleRemoveMember(member)}
-                    style={{
-                      background: '#b91c1c',
-                      borderColor: '#b91c1c',
-                      color: '#fee2e2',
-                    }}
-                  >
-                    Remove
-                  </button>
+                          return base;
+                        })()}
+                      </span>
+                    </li>
+                  </ul>
+                ) : (
+                  <p className="hero-subtitle">No league admin found.</p>
                 )}
-              </li>
-            ))}
-          </ul>
-        )}
+              </div>
+
+              {/* Regular Members Section */}
+              <div style={{ marginTop: '2rem' }}>
+                <h2 className="section-title">Members</h2>
+                {regularMembers.length === 0 ? (
+                  <p className="hero-subtitle">No members yet.</p>
+                ) : (
+                  <ul className="section-list" style={{ listStyle: 'none', paddingLeft: 0 }}>
+                    {regularMembers.map((member) => (
+                      <li
+                        key={member.user_id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '0.75rem',
+                          padding: '0.25rem 0',
+                        }}
+                      >
+                        <span>
+                          {(() => {
+                            const fullName = [member.first_name, member.last_name]
+                              .filter(Boolean)
+                              .join(' ');
+                            const base = fullName || member.user_id;
+
+                            if (member.self_reported_dupr != null) {
+                              const dupr = Number(member.self_reported_dupr);
+                              if (!Number.isNaN(dupr)) {
+                                return `${base} (${dupr.toFixed(2)})`;
+                              }
+                            }
+
+                            return base;
+                          })()}
+                        </span>
+                        {isOwner && (
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            onClick={() => handleRemoveMember(member)}
+                            style={{
+                              background: '#b91c1c',
+                              borderColor: '#b91c1c',
+                              color: '#fee2e2',
+                            }}
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </>
+          );
+        })()}
       </div>
 
       {isOwner && (
