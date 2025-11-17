@@ -2,9 +2,26 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabaseClient';
 
 export function Navigation() {
   const pathname = usePathname();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    // Check initial auth state
+    supabase.auth.getUser().then(({ data }) => {
+      setIsAuthenticated(!!data.user);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session?.user);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   function getLinkStyle(href: string) {
     const isActive = 
@@ -32,6 +49,11 @@ export function Navigation() {
       <Link href="/sessions" style={getLinkStyle('/sessions')}>
         Sessions
       </Link>
+      {isAuthenticated && (
+        <Link href="/profile" style={getLinkStyle('/profile')}>
+          Profile
+        </Link>
+      )}
     </nav>
   );
 }
