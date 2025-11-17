@@ -45,9 +45,7 @@ export function AuthStatus() {
       });
 
       // Then load user profile asynchronously
-      console.log('👤 AuthStatus: Profile fetch check, loadedProfileIdRef:', loadedProfileIdRef.current, 'userId:', user.id);
       if (loadedProfileIdRef.current !== user.id) {
-        console.log('👤 AuthStatus: Fetching profile for user:', user.id);
         try {
           const { data: profile } = await supabase
             .from('profiles')
@@ -55,7 +53,6 @@ export function AuthStatus() {
             .eq('id', user.id)
             .maybeSingle();
 
-          console.log('👤 AuthStatus: Profile response:', profile);
           if (!isMounted) return;
           
           setState(prev => ({ 
@@ -65,13 +62,10 @@ export function AuthStatus() {
           }));
           
           loadedProfileIdRef.current = user.id;
-          console.log('👤 AuthStatus: Profile loaded and cached for user:', user.id);
         } catch (error) {
           console.error('👤 AuthStatus: Failed to load user profile:', error);
           // Don't fail - just keep initials as null
         }
-      } else {
-        console.log('👤 AuthStatus: Skipping profile fetch - already cached for user:', user.id);
       }
     }
 
@@ -97,9 +91,7 @@ export function AuthStatus() {
       }));
 
       // Then load user profile asynchronously
-      console.log('👤 AuthStatus: onAuthStateChange profile check, loadedProfileIdRef:', loadedProfileIdRef.current, 'userId:', user.id);
       if (loadedProfileIdRef.current !== user.id) {
-        console.log('👤 AuthStatus: onAuthStateChange fetching profile for user:', user.id);
         try {
           const { data: profile } = await supabase
             .from('profiles')
@@ -107,7 +99,6 @@ export function AuthStatus() {
             .eq('id', user.id)
             .maybeSingle();
 
-          console.log('👤 AuthStatus: onAuthStateChange profile response:', profile);
           if (!isMounted) return;
           
           setState(prev => ({ 
@@ -117,13 +108,10 @@ export function AuthStatus() {
           }));
           
           loadedProfileIdRef.current = user.id;
-          console.log('👤 AuthStatus: onAuthStateChange profile loaded and cached for user:', user.id);
         } catch (error) {
           console.error('👤 AuthStatus: onAuthStateChange failed to load user profile:', error);
           // Don't fail - just keep initials as null
         }
-      } else {
-        console.log('👤 AuthStatus: onAuthStateChange skipping profile fetch - already cached for user:', user.id);
       }
     });
 

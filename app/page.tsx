@@ -69,7 +69,6 @@ export default function HomePage() {
     loadUser();
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log("🔐 onAuthStateChange:", _event, "User:", session?.user?.id);
       if (!isMounted) return;
       const user = session?.user;
       const newUserId = user?.id ?? null;
