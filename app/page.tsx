@@ -685,7 +685,7 @@ export default function HomePage() {
           <img
             src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
             alt="Buy Me A Coffee"
-            style={{ height: '50px', width: '180px' }}
+            style={{ height: '38px', width: '135px' }}
           />
         </a>
       </div>
