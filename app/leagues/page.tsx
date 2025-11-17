@@ -299,7 +299,7 @@ export default function LeaguesPage() {
                 }}
               >
                 <span>
-                  {league.name}{' '}
+                  🏆 {league.name}{' '}
                   {typeof league.memberCount === 'number'
                     ? `(${league.memberCount} ${
                         league.memberCount === 1 ? 'member' : 'members'
@@ -337,7 +337,7 @@ export default function LeaguesPage() {
                 }}
               >
                 <span>
-                  {league.name}{' '}
+                  🏆 {league.name}{' '}
                   {typeof league.memberCount === 'number'
                     ? `(${league.memberCount} ${
                         league.memberCount === 1 ? 'member' : 'members'

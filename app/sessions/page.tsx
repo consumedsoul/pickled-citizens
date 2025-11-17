@@ -1126,8 +1126,8 @@ export default function SessionsPage() {
                       }}
                     >
                       <div style={{ fontSize: "0.85rem" }}>
-                        <div style={{ fontWeight: 500 }}>
-                          {session.league_name || "Unknown league"} -
+                        <div style={{ fontWeight: 600, color: "#1f2937" }}>
+                          🗓️ {session.league_name || "Unknown league"} -
                           {" "}
                           {session.player_count} players
                         </div>
@@ -1182,8 +1182,8 @@ export default function SessionsPage() {
                       }}
                     >
                       <div style={{ fontSize: "0.85rem" }}>
-                        <div style={{ fontWeight: 500 }}>
-                          {session.league_name || "Unknown league"} -
+                        <div style={{ fontWeight: 600, color: "#1f2937" }}>
+                          🗓️ {session.league_name || "Unknown league"} -
                           {" "}
                           {session.player_count} players
                         </div>

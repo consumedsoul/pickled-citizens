@@ -439,7 +439,7 @@ export default function LeagueMembersPage() {
 
   return (
     <div className="section">
-      <h1 className="section-title">{league.name} roster</h1>
+      <h1 className="section-title">{league.name} - League Details</h1>
       {isOwner && (
         <>
           <form
@@ -547,11 +547,11 @@ export default function LeagueMembersPage() {
                           if (leagueAdmin.self_reported_dupr != null) {
                             const dupr = Number(leagueAdmin.self_reported_dupr);
                             if (!Number.isNaN(dupr)) {
-                              return `${base} (${dupr.toFixed(2)})`;
+                              return `👑 ${base} (${dupr.toFixed(2)})`;
                             }
                           }
 
-                          return base;
+                          return `👑 ${base}`;
                         })()}
                       </span>
                     </li>
@@ -589,11 +589,11 @@ export default function LeagueMembersPage() {
                             if (member.self_reported_dupr != null) {
                               const dupr = Number(member.self_reported_dupr);
                               if (!Number.isNaN(dupr)) {
-                                return `${base} (${dupr.toFixed(2)})`;
+                                return `👤 ${base} (${dupr.toFixed(2)})`;
                               }
                             }
 
-                            return base;
+                            return `👤 ${base}`;
                           })()}
                         </span>
                         {isOwner && (

@@ -503,8 +503,8 @@ export default function HomePage() {
                       }}
                     >
                       <div style={{ fontSize: "0.85rem" }}>
-                        <div style={{ fontWeight: 500 }}>
-                          {formatLeagueName(league.name, league.created_at)}
+                        <div style={{ fontWeight: 600, color: "#1f2937" }}>
+                          🏆 {formatLeagueName(league.name, league.created_at)}
                         </div>
                         {typeof league.memberCount === "number" && (
                           <div style={{ color: "#9ca3af", marginTop: "0.1rem" }}>
@@ -563,8 +563,8 @@ export default function HomePage() {
                       }}
                     >
                       <div style={{ fontSize: "0.85rem" }}>
-                        <div style={{ fontWeight: 500 }}>
-                          {session.league_name || "Unknown league"} - {session.player_count} players
+                        <div style={{ fontWeight: 600, color: "#1f2937" }}>
+                          🗓️ {session.league_name || "Unknown league"} - {session.player_count} players
                         </div>
                         <div style={{ color: "#9ca3af", marginTop: "0.1rem" }}>
                           {formatDateTime(session.scheduled_for ?? session.created_at)}
@@ -615,8 +615,8 @@ export default function HomePage() {
                   padding: "1rem",
                 }}
               >
-                <div style={{ fontSize: "0.8rem", color: "#9ca3af", marginBottom: "0.25rem" }}>
-                  Individual Record
+                <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "#1f2937", marginBottom: "0.25rem" }}>
+                  👤 Individual Record
                 </div>
                 <div style={{ fontSize: "1.5rem", fontWeight: 600 }}>
                   {lifetimeStats.individualWins}-{lifetimeStats.individualLosses}
@@ -632,8 +632,8 @@ export default function HomePage() {
                   padding: "1rem",
                 }}
               >
-                <div style={{ fontSize: "0.8rem", color: "#9ca3af", marginBottom: "0.25rem" }}>
-                  Team Record
+                <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "#1f2937", marginBottom: "0.25rem" }}>
+                  👥 Team Record
                 </div>
                 <div style={{ fontSize: "1.5rem", fontWeight: 600 }}>
                   {lifetimeStats.teamWins}-{lifetimeStats.teamLosses}
