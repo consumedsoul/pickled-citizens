@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Script from "next/script";
 import { supabase } from "@/lib/supabaseClient";
 
 interface HomeAuthState {
@@ -627,6 +628,20 @@ export default function HomePage() {
             and maintain session history.
           </li>
         </ul>
+      </div>
+
+      <div style={{ textAlign: 'center', marginTop: '2rem', paddingBottom: '1rem' }}>
+        <a
+          href="https://www.buymeacoffee.com/hunkim"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <img
+            src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
+            alt="Buy Me A Coffee"
+            style={{ height: '50px', width: '180px' }}
+          />
+        </a>
       </div>
     </section>
   );
