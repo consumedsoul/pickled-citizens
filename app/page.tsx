@@ -546,6 +546,18 @@ export default function HomePage() {
                 </ul>
               </div>
             )}
+            <div style={{ marginTop: "0.75rem", textAlign: "center" }}>
+              <a 
+                href="/sessions" 
+                style={{ 
+                  fontSize: "0.85rem", 
+                  textDecoration: "underline",
+                  color: "inherit"
+                }}
+              >
+                View past sessions
+              </a>
+            </div>
           </div>
 
           <div className="section">
