@@ -37,8 +37,7 @@ Lightweight web app for running casual pickleball leagues: create leagues, invit
 - **Admin tools**
   - Restricted to a **configured super-admin user** via RLS and UI checks.
   - `/admin/events`: System event log (e.g., league created, session created, user signup).
-  - `/admin/users`: User management (view, edit, delete profiles).
-  - Footer shows `Logs` and `Users` links only for the super-admin.
+  - Footer shows `Logs` and `Leagues` links only for the super-admin.
 
 - **Branding & UX**
   - Custom logo in the header using `next/image` for crisp rendering.
@@ -71,7 +70,6 @@ Lightweight web app for running casual pickleball leagues: create leagues, invit
   - `sessions/` – create sessions and show session history.
   - `sessions/[id]/` – individual session detail page (teams, matchups, results).
   - `admin/events/` – admin event log (super-admin only).
-  - `admin/users/` – admin user management (super-admin only).
 
 - `src/components/`
   - `AuthStatus.tsx` – header auth indicator + sign in/out.
@@ -179,8 +177,7 @@ The self-reported DUPR field is **required**, with validation and a helper link 
 ### Admin views
 
 - `Logs` (footer link → `/admin/events`): paginated list of `admin_events`.
-- `Users` (footer link → `/admin/users`): list + edit/delete for user profiles.
-- Both are guarded by RLS and client-side checks so only the super-admin can see them.
+- Admin views are guarded by RLS and client-side checks so only the super-admin can see them.
 
 ---
 
