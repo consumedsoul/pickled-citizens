@@ -70,16 +70,21 @@ export default function HomePage() {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!isMounted) return;
       const user = session?.user;
-      setAuth({ loading: false, email: user?.email ?? null, userId: user?.id ?? null });
+      const newUserId = user?.id ?? null;
+      
+      // Only reload data if the user actually changed (login/logout)
+      if (auth.userId !== newUserId) {
+        setAuth({ loading: false, email: user?.email ?? null, userId: newUserId });
 
-      if (user) {
-        loadUserLeagues(user.id);
-        loadUserSessions(user.id);
-        loadLifetimeStats(user.id);
-      } else {
-        setLeagues([]);
-        setSessions([]);
-        setLifetimeStats({ individualWins: 0, individualLosses: 0, teamWins: 0, teamLosses: 0 });
+        if (user) {
+          loadUserLeagues(user.id);
+          loadUserSessions(user.id);
+          loadLifetimeStats(user.id);
+        } else {
+          setLeagues([]);
+          setSessions([]);
+          setLifetimeStats({ individualWins: 0, individualLosses: 0, teamWins: 0, teamLosses: 0 });
+        }
       }
     });
 
