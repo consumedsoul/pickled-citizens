@@ -34,22 +34,34 @@ export function AuthStatus() {
         return;
       }
 
-      // Load user profile to get first and last name
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('first_name, last_name')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (!isMounted) return;
-      
+      // First set basic auth state without waiting for profile
       setState({ 
         loading: false, 
         email: user.email ?? null, 
         userId: user.id,
-        firstName: profile?.first_name ?? null,
-        lastName: profile?.last_name ?? null
+        firstName: null,
+        lastName: null
       });
+
+      // Then load user profile asynchronously
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('first_name, last_name')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (!isMounted) return;
+        
+        setState(prev => ({ 
+          ...prev,
+          firstName: profile?.first_name ?? null,
+          lastName: profile?.last_name ?? null
+        }));
+      } catch (error) {
+        console.error('Failed to load user profile:', error);
+        // Don't fail - just keep initials as null
+      }
     }
 
     loadUser();
@@ -63,22 +75,34 @@ export function AuthStatus() {
         return;
       }
 
-      // Load user profile to get first and last name
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('first_name, last_name')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (!isMounted) return;
-      
+      // First set basic auth state without waiting for profile
       setState({ 
         loading: false, 
         email: user.email ?? null, 
         userId: user.id,
-        firstName: profile?.first_name ?? null,
-        lastName: profile?.last_name ?? null
+        firstName: null,
+        lastName: null
       });
+
+      // Then load user profile asynchronously
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('first_name, last_name')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (!isMounted) return;
+        
+        setState(prev => ({ 
+          ...prev,
+          firstName: profile?.first_name ?? null,
+          lastName: profile?.last_name ?? null
+        }));
+      } catch (error) {
+        console.error('Failed to load user profile:', error);
+        // Don't fail - just keep initials as null
+      }
     });
 
     return () => {
