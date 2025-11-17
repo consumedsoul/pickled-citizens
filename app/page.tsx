@@ -112,17 +112,10 @@ export default function HomePage() {
     try {
       console.log("🏆 loadUserLeagues: Making Supabase API call...");
       
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('API timeout after 3 seconds')), 3000)
-      );
-      
-      const apiPromise = supabase
+      const { data: membershipRows, error: membershipError } = await supabase
         .from("league_members")
         .select("league:leagues(id, name, owner_id)")
         .eq("user_id", userId);
-
-      const { data: membershipRows, error: membershipError } = await Promise.race([apiPromise, timeoutPromise]) as any;
 
       console.log("🏆 loadUserLeagues: API response:", { data: membershipRows, error: membershipError });
       
@@ -189,19 +182,12 @@ export default function HomePage() {
     try {
       console.log("📅 loadUserSessions: Making Supabase API call for owned sessions...");
       
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('API timeout after 3 seconds')), 3000)
-      );
-      
-      const apiPromise = supabase
+      const { data: ownedSessionRows, error: ownedSessionsError } = await supabase
         .from("game_sessions")
         .select(
           "id, league_id, created_by, created_at, scheduled_for, player_count, league:leagues(name)"
         )
         .eq("created_by", userId);
-
-      const { data: ownedSessionRows, error: ownedSessionsError } = await Promise.race([apiPromise, timeoutPromise]) as any;
 
       console.log("📅 loadUserSessions: Owned sessions API response:", { data: ownedSessionRows, error: ownedSessionsError });
       

@@ -49,18 +49,11 @@ export function AuthStatus() {
       if (loadedProfileIdRef.current !== user.id) {
         console.log('👤 AuthStatus: Fetching profile for user:', user.id);
         try {
-          // Add timeout to prevent hanging
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Profile fetch timeout after 3 seconds')), 3000)
-          );
-          
-          const profilePromise = supabase
+          const { data: profile } = await supabase
             .from('profiles')
             .select('first_name, last_name')
             .eq('id', user.id)
             .maybeSingle();
-
-          const { data: profile } = await Promise.race([profilePromise, timeoutPromise]) as any;
 
           console.log('👤 AuthStatus: Profile response:', profile);
           if (!isMounted) return;
@@ -108,18 +101,11 @@ export function AuthStatus() {
       if (loadedProfileIdRef.current !== user.id) {
         console.log('👤 AuthStatus: onAuthStateChange fetching profile for user:', user.id);
         try {
-          // Add timeout to prevent hanging
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Profile fetch timeout after 3 seconds')), 3000)
-          );
-          
-          const profilePromise = supabase
+          const { data: profile } = await supabase
             .from('profiles')
             .select('first_name, last_name')
             .eq('id', user.id)
             .maybeSingle();
-
-          const { data: profile } = await Promise.race([profilePromise, timeoutPromise]) as any;
 
           console.log('👤 AuthStatus: onAuthStateChange profile response:', profile);
           if (!isMounted) return;
