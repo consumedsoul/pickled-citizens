@@ -52,6 +52,10 @@ export default function HomePage() {
 
   useEffect(() => {
     console.log("🔄 useEffect: Running initial setup");
+    
+    // Make supabase available for console debugging
+    (window as any).supabase = supabase;
+    
     let isMounted = true;
 
     async function loadUser() {
@@ -116,7 +120,7 @@ export default function HomePage() {
       
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('API timeout after 10 seconds')), 10000)
+        setTimeout(() => reject(new Error('API timeout after 3 seconds')), 3000)
       );
       
       const apiPromise = supabase
@@ -172,7 +176,7 @@ export default function HomePage() {
     setLeaguesLoading(false);
     } catch (error) {
       console.error('Failed to load user leagues:', error);
-      if (error instanceof Error && error.message === 'API timeout after 10 seconds') {
+      if (error instanceof Error && error.message === 'API timeout after 3 seconds') {
         console.log('🏆 loadUserLeagues: Connection issue - showing empty state');
       }
       setLeagues([]);
@@ -193,7 +197,7 @@ export default function HomePage() {
       
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('API timeout after 10 seconds')), 10000)
+        setTimeout(() => reject(new Error('API timeout after 3 seconds')), 3000)
       );
       
       const apiPromise = supabase
@@ -307,7 +311,7 @@ export default function HomePage() {
     setSessionsLoading(false);
     } catch (error) {
       console.error('Failed to load user sessions:', error);
-      if (error instanceof Error && error.message === 'API timeout after 10 seconds') {
+      if (error instanceof Error && error.message === 'API timeout after 3 seconds') {
         console.log('📅 loadUserSessions: Connection issue - showing empty state');
       }
       setSessions([]);
