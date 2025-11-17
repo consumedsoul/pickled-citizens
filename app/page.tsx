@@ -76,8 +76,7 @@ export default function HomePage() {
       // Only reload data if the user actually changed (login/logout)
       // Also prevent false positives when auth.userId is null but newUserId is valid (component re-mount)
       if (auth.userId !== newUserId && !(auth.userId === null && newUserId !== null && loadedUserIdRef.current === newUserId)) {
-        console.log("🔄 onAuthStateChange: User changed from", auth.userId, "to", newUserId, "- reloading data");
-        setAuth({ loading: false, email: user?.email ?? null, userId: newUserId });
+                setAuth({ loading: false, email: user?.email ?? null, userId: newUserId });
 
         if (user) {
           loadUserLeagues(user.id);
@@ -102,25 +101,18 @@ export default function HomePage() {
 
   async function loadUserLeagues(userId: string) {
     if (loadedUserIdRef.current === userId) {
-      console.log("🏆 loadUserLeagues: Skipping - already loaded for user:", userId);
       return;
     }
-    console.log("🏆 loadUserLeagues: Starting to load leagues for user:", userId);
-    setLeaguesLoading(true);
+        setLeaguesLoading(true);
 
     try {
-      console.log("🏆 loadUserLeagues: Making Supabase API call...");
-      
       const { data: membershipRows, error: membershipError } = await supabase
         .from("league_members")
         .select("league:leagues(id, name, owner_id)")
         .eq("user_id", userId);
-
-      console.log("🏆 loadUserLeagues: API response:", { data: membershipRows, error: membershipError });
       
       if (membershipError || !membershipRows) {
-        console.error("🏆 loadUserLeagues: API error or no data:", membershipError);
-        setLeaguesLoading(false);
+                setLeaguesLoading(false);
         return;
       }
 
@@ -172,27 +164,20 @@ export default function HomePage() {
 
   async function loadUserSessions(userId: string) {
     if (loadedUserIdRef.current === userId) {
-      console.log("📅 loadUserSessions: Skipping - already loaded for user:", userId);
       return;
     }
-    console.log("📅 loadUserSessions: Starting to load sessions for user:", userId);
-    setSessionsLoading(true);
+        setSessionsLoading(true);
 
     try {
-      console.log("📅 loadUserSessions: Making Supabase API call for owned sessions...");
-      
       const { data: ownedSessionRows, error: ownedSessionsError } = await supabase
         .from("game_sessions")
         .select(
           "id, league_id, created_by, created_at, scheduled_for, player_count, league:leagues(name)"
         )
         .eq("created_by", userId);
-
-      console.log("📅 loadUserSessions: Owned sessions API response:", { data: ownedSessionRows, error: ownedSessionsError });
       
       if (ownedSessionsError) {
-        console.error("📅 loadUserSessions: Owned sessions API error:", ownedSessionsError);
-        setSessionsLoading(false);
+                setSessionsLoading(false);
         return;
       }
 
