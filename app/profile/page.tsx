@@ -14,6 +14,7 @@ type Profile = {
 type League = {
   id: string;
   name: string;
+  owner_id: string;
 };
 
 export default function ProfilePage() {
@@ -86,7 +87,7 @@ export default function ProfilePage() {
 
       const { data: memberRows, error: leaguesError } = await supabase
         .from('league_members')
-        .select('league:leagues(id, name)')
+        .select('league:leagues(id, name, owner_id)')
         .eq('user_id', user.id);
 
       if (!active) return;
@@ -433,27 +434,33 @@ export default function ProfilePage() {
           <p className="hero-subtitle">You are not in any leagues yet.</p>
         ) : (
           <ul className="section-list">
-            {leagues.map((league) => (
-              <li
-                key={league.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '0.75rem',
-                  padding: '0.25rem 0',
-                }}
-              >
-                <span>{league.name}</span>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => openLeaveLeagueDialog(league.id)}
+            {leagues.map((league) => {
+              const isOwner = league.owner_id === userId;
+              return (
+                <li
+                  key={league.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '0.75rem',
+                    padding: '0.25rem 0',
+                  }}
                 >
-                  Leave league
-                </button>
-              </li>
-            ))}
+                  <span>{league.name}</span>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => isOwner 
+                      ? router.push(`/leagues/${league.id}`)
+                      : openLeaveLeagueDialog(league.id)
+                    }
+                  >
+                    {isOwner ? 'Manage' : 'Leave league'}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
