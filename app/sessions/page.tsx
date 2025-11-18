@@ -628,6 +628,15 @@ export default function SessionsPage() {
         // Round 3
         { pairA: [a1, a4], pairB: [b1, b4] },
         { pairA: [a2, a3], pairB: [b2, b3] },
+        // Round 4 (repeat Round 1 matchups)
+        { pairA: [a1, a2], pairB: [b1, b2] },
+        { pairA: [a3, a4], pairB: [b3, b4] },
+        // Round 5 (repeat Round 2 matchups)
+        { pairA: [a1, a3], pairB: [b1, b3] },
+        { pairA: [a2, a4], pairB: [b2, b4] },
+        // Round 6 (repeat Round 3 matchups)
+        { pairA: [a1, a4], pairB: [b1, b4] },
+        { pairA: [a2, a3], pairB: [b2, b3] },
       ];
     } else if (playerCount === 10 && teamA.length === 5 && teamB.length === 5) {
       // Special-case 10 players (5 per team): 5 rounds, 2 courts per round.
