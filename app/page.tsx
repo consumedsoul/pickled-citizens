@@ -81,11 +81,12 @@ export default function HomePage() {
       const user = session?.user;
       const newUserId = user?.id ?? null;
       
+      // Always update auth state when it changes
+      setAuth({ loading: false, email: user?.email ?? null, userId: newUserId });
+
       // Only reload data if the user actually changed (login/logout)
       // Also prevent false positives when auth.userId is null but newUserId is valid (component re-mount)
       if (auth.userId !== newUserId && !(auth.userId === null && newUserId !== null && loadedUserIdRef.current === newUserId)) {
-                setAuth({ loading: false, email: user?.email ?? null, userId: newUserId });
-
         if (user) {
           loadUserLeagues(user.id);
           loadUserSessions(user.id);
@@ -96,8 +97,12 @@ export default function HomePage() {
           setLifetimeStats({ individualWins: 0, individualLosses: 0, teamWins: 0, teamLosses: 0, teamTies: 0 });
           loadedUserIdRef.current = null;
         }
-      } else {
-        console.log("⚠️ onAuthStateChange: User unchanged or component re-mount, skipping reload");
+      } else if (!user && auth.userId !== null) {
+        // Handle logout case specifically - clear data even if userId check fails
+        setLeagues([]);
+        setSessions([]);
+        setLifetimeStats({ individualWins: 0, individualLosses: 0, teamWins: 0, teamLosses: 0, teamTies: 0 });
+        loadedUserIdRef.current = null;
       }
     });
 

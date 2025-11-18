@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 
 interface AuthState {
@@ -11,6 +12,7 @@ interface AuthState {
 }
 
 export function AuthStatus() {
+  const router = useRouter();
   const [state, setState] = useState<AuthState>({ 
     loading: true, 
     email: null, 
@@ -64,6 +66,7 @@ export function AuthStatus() {
   async function handleSignOut() {
     await supabase.auth.signOut();
     setState({ loading: false, email: null, userId: null });
+    router.push('/');
   }
 
   if (state.loading) {
