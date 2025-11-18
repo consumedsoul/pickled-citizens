@@ -27,11 +27,33 @@ create table if not exists public.leagues (
 create table if not exists public.league_members (
   league_id uuid not null references public.leagues(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
-  role text not null default 'player',
+  role text not null default 'player' check (role in ('player', 'admin')),
   email text,
   created_at timestamptz default now(),
   primary key (league_id, user_id)
 );
+
+-- Migration: Ensure all leagues have at least one admin
+-- This promotes existing owners to admin role in league_members
+do $$
+begin
+  -- Update existing league_members to set owner as admin if they exist
+  update public.league_members 
+  set role = 'admin' 
+  where user_id in (
+    select owner_id from public.leagues 
+    where id = league_id
+  );
+  
+  -- Insert admin records for owners who aren't already in league_members
+  insert into public.league_members (league_id, user_id, role)
+  select id, owner_id, 'admin'
+  from public.leagues
+  where not exists (
+    select 1 from public.league_members 
+    where league_id = leagues.id and user_id = leagues.owner_id
+  );
+end $$;
 
 -- Player invites
 create table if not exists public.league_invites (

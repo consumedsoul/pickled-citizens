@@ -16,6 +16,7 @@ type Member = {
   first_name?: string | null;
   last_name?: string | null;
   self_reported_dupr?: number | null;
+  role: 'player' | 'admin';
 };
 
 export default function LeagueMembersPage() {
@@ -39,6 +40,10 @@ export default function LeagueMembersPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteLeagueError, setDeleteLeagueError] = useState<string | null>(null);
+
+  const [roleUpdating, setRoleUpdating] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -57,6 +62,7 @@ export default function LeagueMembersPage() {
       }
 
       const user = userData.user;
+      setCurrentUserId(user.id);
       const emailLower = user.email?.toLowerCase() ?? '';
       const isSuperAdmin = emailLower === 'hun@ghkim.com';
 
@@ -76,13 +82,13 @@ export default function LeagueMembersPage() {
 
       setLeague(leagueData as League);
       const owner = leagueData.owner_id === user.id;
-      const canManage = owner || isSuperAdmin;
-      setIsOwner(canManage);
+      const initialCanManage = owner || isSuperAdmin;
+      setIsOwner(initialCanManage);
       setRenameInput(leagueData.name);
 
       const { data: memberRows, error: membersError } = await supabase
         .from('league_members')
-        .select('user_id, email')
+        .select('user_id, email, role')
         .eq('league_id', leagueId)
         .order('created_at', { ascending: true });
 
@@ -94,8 +100,14 @@ export default function LeagueMembersPage() {
         return;
       }
 
-      const rows = (memberRows ?? []) as { user_id: string; email: string | null }[];
+      const rows = (memberRows ?? []) as { 
+        user_id: string; 
+        email: string | null; 
+        role: 'player' | 'admin';
+      }[];
+      
       const isMember = rows.some((m) => m.user_id === user.id);
+      const isAdmin = rows.some((m) => m.user_id === user.id && m.role === 'admin');
 
       if (!owner && !isMember && !isSuperAdmin) {
         setError('You are not a member of this league.');
@@ -103,17 +115,21 @@ export default function LeagueMembersPage() {
         return;
       }
 
+      // Update admin status based on role, not just ownership
+      const finalCanManage = isAdmin || owner || isSuperAdmin;
+      setIsOwner(finalCanManage);
+
       if (!rows.length) {
         setMembers([]);
         setLoading(false);
         return;
       }
 
+      // Fetch profile data separately
       const userIds = rows.map((m) => m.user_id);
-
       const { data: profileRows, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name, email, self_reported_dupr')
+        .select('id, first_name, last_name, self_reported_dupr')
         .in('id', userIds);
 
       if (!active) return;
@@ -128,13 +144,14 @@ export default function LeagueMembersPage() {
         const profile = (profileRows ?? []).find((p) => p.id === m.user_id);
         return {
           user_id: m.user_id,
-          email: m.email ?? profile?.email ?? null,
+          email: m.email ?? null,
           first_name: profile?.first_name ?? null,
           last_name: profile?.last_name ?? null,
           self_reported_dupr:
             profile && profile.self_reported_dupr != null
               ? Number(profile.self_reported_dupr)
               : null,
+          role: m.role,
         };
       });
 
@@ -271,6 +288,7 @@ export default function LeagueMembersPage() {
         last_name,
         self_reported_dupr:
           self_reported_dupr != null ? Number(self_reported_dupr) : null,
+        role: 'player',
       };
 
       setMembers((prev) => {
@@ -318,15 +336,25 @@ export default function LeagueMembersPage() {
   }
 
   function openDeleteDialog() {
+    // Check if current user is the sole admin
+    const admins = members.filter(member => member.role === 'admin');
+    const isCurrentUserAdmin = admins.some(admin => admin.user_id === currentUserId);
+    
+    if (isCurrentUserAdmin && admins.length === 1) {
+      setDeleteLeagueError('You are the sole admin of this league. Please promote another member to admin before deleting the league.');
+      return;
+    }
+    
     setDeleteOpen(true);
     setDeleteConfirm('');
-    setError(null);
+    setDeleteLeagueError(null);
   }
 
   function closeDeleteDialog() {
     setDeleteOpen(false);
     setDeleteConfirm('');
     setDeleteLoading(false);
+    setDeleteLeagueError(null);
   }
 
   async function handleDeleteLeague() {
@@ -406,6 +434,97 @@ export default function LeagueMembersPage() {
     }
 
     setSaving(false);
+  }
+
+  async function handlePromoteToAdmin(member: Member) {
+    if (!leagueId) return;
+
+    setRoleUpdating(true);
+    setError(null);
+
+    const { error: updateError } = await supabase
+      .from('league_members')
+      .update({ role: 'admin' })
+      .eq('league_id', leagueId)
+      .eq('user_id', member.user_id);
+
+    if (updateError) {
+      setError(updateError.message);
+      setRoleUpdating(false);
+      return;
+    }
+
+    // Update local state
+    setMembers(prev => prev.map(m => 
+      m.user_id === member.user_id ? { ...m, role: 'admin' } : m
+    ));
+
+    // Log admin event
+    const { data: currentUser } = await supabase.auth.getUser();
+    if (currentUser?.user) {
+      await supabase.from('admin_events').insert({
+        event_type: 'league.member_promoted',
+        user_id: currentUser.user.id,
+        user_email: currentUser.user.email?.toLowerCase() ?? null,
+        league_id: leagueId,
+        payload: {
+          league_name: league?.name ?? null,
+          promoted_user_id: member.user_id,
+          promoted_email: member.email,
+        },
+      });
+    }
+
+    setRoleUpdating(false);
+  }
+
+  async function handleDemoteToMember(member: Member) {
+    if (!leagueId) return;
+
+    // Check if this is the last admin
+    const adminCount = members.filter(m => m.role === 'admin').length;
+    if (adminCount <= 1) {
+      setError('Cannot demote the last admin. Please promote another member first.');
+      return;
+    }
+
+    setRoleUpdating(true);
+    setError(null);
+
+    const { error: updateError } = await supabase
+      .from('league_members')
+      .update({ role: 'player' })
+      .eq('league_id', leagueId)
+      .eq('user_id', member.user_id);
+
+    if (updateError) {
+      setError(updateError.message);
+      setRoleUpdating(false);
+      return;
+    }
+
+    // Update local state
+    setMembers(prev => prev.map(m => 
+      m.user_id === member.user_id ? { ...m, role: 'player' } : m
+    ));
+
+    // Log admin event
+    const { data: currentUser } = await supabase.auth.getUser();
+    if (currentUser?.user) {
+      await supabase.from('admin_events').insert({
+        event_type: 'league.member_demoted',
+        user_id: currentUser.user.id,
+        user_email: currentUser.user.email?.toLowerCase() ?? null,
+        league_id: leagueId,
+        payload: {
+          league_name: league?.name ?? null,
+          demoted_user_id: member.user_id,
+          demoted_email: member.email,
+        },
+      });
+    }
+
+    setRoleUpdating(false);
   }
 
   if (loading) {
@@ -518,52 +637,74 @@ export default function LeagueMembersPage() {
 
       <div style={{ marginTop: '1.5rem' }}>
         {(() => {
-          const leagueAdmin = members.find(member => member.user_id === league?.owner_id);
-          const regularMembers = members.filter(member => member.user_id !== league?.owner_id);
+          const admins = members.filter(member => member.role === 'admin');
+          const regularMembers = members.filter(member => member.role === 'player');
           
           return (
             <>
-              {/* League Admin Section */}
+              {/* League Admins Section */}
               <div>
-                <h2 className="section-title">League Admin</h2>
-                {leagueAdmin ? (
-                  <ul className="section-list" style={{ listStyle: 'none', paddingLeft: 0 }}>
-                    <li
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '0.75rem',
-                        padding: '0.25rem 0',
-                      }}
-                    >
-                      <span>
-                        {(() => {
-                          const fullName = [leagueAdmin.first_name, leagueAdmin.last_name]
-                            .filter(Boolean)
-                            .join(' ');
-                          const base = fullName || leagueAdmin.user_id;
-
-                          if (leagueAdmin.self_reported_dupr != null) {
-                            const dupr = Number(leagueAdmin.self_reported_dupr);
-                            if (!Number.isNaN(dupr)) {
-                              return `👑 ${base} (${dupr.toFixed(2)})`;
-                            }
-                          }
-
-                          return `👑 ${base}`;
-                        })()}
-                      </span>
-                    </li>
-                  </ul>
+                <h2 className="section-title">
+                  League Admin{admins.length !== 1 ? 's' : ''} ({admins.length})
+                </h2>
+                {admins.length === 0 ? (
+                  <p className="hero-subtitle">No league admins found.</p>
                 ) : (
-                  <p className="hero-subtitle">No league admin found.</p>
+                  <ul className="section-list" style={{ listStyle: 'none', paddingLeft: 0 }}>
+                    {admins.map((admin) => (
+                      <li
+                        key={admin.user_id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '0.75rem',
+                          padding: '0.25rem 0',
+                        }}
+                      >
+                        <span>
+                          {(() => {
+                            const fullName = [admin.first_name, admin.last_name]
+                              .filter(Boolean)
+                              .join(' ');
+                            const base = fullName || admin.user_id;
+
+                            if (admin.self_reported_dupr != null) {
+                              const dupr = Number(admin.self_reported_dupr);
+                              if (!Number.isNaN(dupr)) {
+                                return `👑 ${base} (${dupr.toFixed(2)})`;
+                              }
+                            }
+
+                            return `👑 ${base}`;
+                          })()}
+                        </span>
+                        {isOwner && admin.user_id !== currentUserId && (
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            onClick={() => handleDemoteToMember(admin)}
+                            disabled={roleUpdating || admins.length <= 1}
+                            style={{
+                              background: '#f59e0b',
+                              borderColor: '#f59e0b',
+                              color: '#ffffff',
+                              opacity: (roleUpdating || admins.length <= 1) ? 0.5 : 1,
+                            }}
+                            title={admins.length <= 1 ? "Cannot demote the last admin" : "Make member"}
+                          >
+                            Make Member
+                          </button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </div>
 
               {/* Regular Members Section */}
               <div style={{ marginTop: '2rem' }}>
-                <h2 className="section-title">Members</h2>
+                <h2 className="section-title">Members ({regularMembers.length})</h2>
                 {regularMembers.length === 0 ? (
                   <p className="hero-subtitle">No members yet.</p>
                 ) : (
@@ -597,18 +738,29 @@ export default function LeagueMembersPage() {
                           })()}
                         </span>
                         {isOwner && (
-                          <button
-                            type="button"
-                            className="btn-secondary"
-                            onClick={() => handleRemoveMember(member)}
-                            style={{
-                              background: '#b91c1c',
-                              borderColor: '#b91c1c',
-                              color: '#fee2e2',
-                            }}
-                          >
-                            Remove
-                          </button>
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button
+                              type="button"
+                              className="btn-primary"
+                              onClick={() => handlePromoteToAdmin(member)}
+                              disabled={roleUpdating}
+                              title="Make admin"
+                            >
+                              Make Admin
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-secondary"
+                              onClick={() => handleRemoveMember(member)}
+                              style={{
+                                background: '#b91c1c',
+                                borderColor: '#b91c1c',
+                                color: '#fee2e2',
+                              }}
+                            >
+                              Remove
+                            </button>
+                          </div>
                         )}
                       </li>
                     ))}
@@ -647,6 +799,23 @@ export default function LeagueMembersPage() {
             >
               Delete league
             </button>
+            
+            {deleteLeagueError && (
+              <div
+                style={{
+                  marginTop: '0.75rem',
+                  padding: '0.75rem',
+                  background: '#991b1b',
+                  border: '1px solid #b91c1c',
+                  borderRadius: '0.5rem',
+                  color: '#fee2e2',
+                  fontSize: '0.875rem',
+                  lineHeight: '1.4',
+                }}
+              >
+                {deleteLeagueError}
+              </div>
+            )}
           </div>
 
           {deleteOpen && (

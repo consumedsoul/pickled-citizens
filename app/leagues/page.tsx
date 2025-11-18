@@ -182,34 +182,46 @@ export default function LeaguesPage() {
         ? 'You have reached the maximum of 3 leagues.'
         : error.message;
       setError(message);
-    } else if (data) {
-      const leagueWithCount: League = { ...data, memberCount: 1 };
-      setLeagues((prev) => [leagueWithCount, ...prev]);
-      setName('');
-
-      const {
-        data: userData,
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (!userError && userData.user) {
-        const ownerEmail = userData.user.email?.toLowerCase() ?? null;
-        await supabase.from('league_members').upsert({
-          league_id: data.id,
-          user_id: userData.user.id,
-          email: ownerEmail,
-        });
-
-        await supabase.from('admin_events').insert({
-          event_type: 'league.created',
-          user_id: userData.user.id,
-          user_email: ownerEmail,
-          league_id: data.id,
-          payload: { league_name: data.name },
-        });
-      }
+      setCreating(false);
+      return;
     }
 
+    // Add the creator as an admin in league_members
+    const { error: memberError } = await supabase
+      .from('league_members')
+      .insert({ 
+        league_id: data.id, 
+        user_id: userId, 
+        role: 'admin',
+        email: (await supabase.auth.getUser()).data.user?.email || ''
+      });
+
+    if (memberError) {
+      setError(`Failed to add admin: ${memberError.message}`);
+      setCreating(false);
+      return;
+    }
+
+    const leagueWithCount: League = { ...data, memberCount: 1 };
+    setLeagues((prev) => [leagueWithCount, ...prev]);
+    setName('');
+
+    // Log admin event
+    const {
+      data: userData,
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (!userError && userData.user) {
+      const ownerEmail = userData.user.email?.toLowerCase() ?? null;
+      await supabase.from('admin_events').insert({
+        event_type: 'league.created',
+        user_id: userData.user.id,
+        user_email: ownerEmail,
+        league_id: data.id,
+        payload: { league_name: trimmedName },
+      });
+    }
     setCreating(false);
   }
 

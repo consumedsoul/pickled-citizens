@@ -45,6 +45,7 @@ export default function ProfilePage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
 
@@ -222,17 +223,67 @@ export default function ProfilePage() {
     setSaving(false);
   }
 
-  function openDeleteDialog() {
+  async function openDeleteDialog() {
+    setDeleteError(null);
+    
+    // Check if user is admin of any leagues before allowing deletion
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !userData.user) {
+      setDeleteError('Failed to verify user status. Please try again.');
+      return;
+    }
+
+    const { data: adminMemberships, error: adminError } = await supabase
+      .from('league_members')
+      .select('league:leagues(id, name)')
+      .eq('user_id', userData.user.id)
+      .eq('role', 'admin');
+
+    if (adminError) {
+      setDeleteError('Failed to check league admin status. Please try again.');
+      return;
+    }
+
+    // Check if user is the sole admin of any leagues
+    const memberships = adminMemberships as unknown as { league: { id: string; name: string } }[] || [];
+    const leaguesToCheck = memberships.map(m => m.league.id);
+    const soleAdminLeagues: { id: string; name: string }[] = [];
+
+    for (const leagueId of leaguesToCheck) {
+      const { data: adminCount, error: countError } = await supabase
+        .from('league_members')
+        .select('user_id')
+        .eq('league_id', leagueId)
+        .eq('role', 'admin');
+
+      if (!countError && adminCount && adminCount.length === 1) {
+        const league = memberships.find(m => m.league.id === leagueId)?.league;
+        if (league) {
+          soleAdminLeagues.push(league);
+        }
+      }
+    }
+
+    if (soleAdminLeagues.length > 0) {
+      const leagueNames = soleAdminLeagues.map(l => l.name).join(', ');
+      setDeleteError(
+        `Cannot delete account: You are the sole admin of ${soleAdminLeagues.length} league(s): ${leagueNames}. ` +
+        `Please promote another member to admin in these leagues before deleting your account.`
+      );
+      return;
+    }
+
+    // If no issues, open the delete confirmation dialog
     setDeleteOpen(true);
     setDeleteConfirm('');
-    setError(null);
-    setSuccess(null);
   }
 
   function closeDeleteDialog() {
     setDeleteOpen(false);
     setDeleteConfirm('');
     setDeleteLoading(false);
+    setDeleteError(null);
   }
 
   async function handleDeleteAccount() {
@@ -254,28 +305,6 @@ export default function ProfilePage() {
     }
 
     const user = userData.user;
-
-    // Check if user owns any leagues before allowing deletion
-    const { data: ownedLeagues, error: leaguesError } = await supabase
-      .from('leagues')
-      .select('id, name')
-      .eq('owner_id', user.id);
-
-    if (leaguesError) {
-      setError('Failed to check league ownership. Please try again.');
-      setDeleteLoading(false);
-      return;
-    }
-
-    if (ownedLeagues && ownedLeagues.length > 0) {
-      const leagueNames = ownedLeagues.map(l => l.name).join(', ');
-      setError(
-        `Cannot delete account: You are the owner of ${ownedLeagues.length} league(s): ${leagueNames}. ` +
-        `Please transfer ownership to another member before deleting your account.`
-      );
-      setDeleteLoading(false);
-      return;
-    }
 
     // Best-effort cleanup of user-related data.
     // Depending on your RLS policies, some of these may require
@@ -626,6 +655,23 @@ export default function ProfilePage() {
         >
           Delete account
         </button>
+        
+        {deleteError && (
+          <div
+            style={{
+              marginTop: '0.75rem',
+              padding: '0.75rem',
+              background: '#991b1b',
+              border: '1px solid #b91c1c',
+              borderRadius: '0.5rem',
+              color: '#fee2e2',
+              fontSize: '0.875rem',
+              lineHeight: '1.4',
+            }}
+          >
+            {deleteError}
+          </div>
+        )}
       </div>
 
       {deleteOpen && (
