@@ -255,6 +255,28 @@ export default function ProfilePage() {
 
     const user = userData.user;
 
+    // Check if user owns any leagues before allowing deletion
+    const { data: ownedLeagues, error: leaguesError } = await supabase
+      .from('leagues')
+      .select('id, name')
+      .eq('owner_id', user.id);
+
+    if (leaguesError) {
+      setError('Failed to check league ownership. Please try again.');
+      setDeleteLoading(false);
+      return;
+    }
+
+    if (ownedLeagues && ownedLeagues.length > 0) {
+      const leagueNames = ownedLeagues.map(l => l.name).join(', ');
+      setError(
+        `Cannot delete account: You are the owner of ${ownedLeagues.length} league(s): ${leagueNames}. ` +
+        `Please transfer ownership to another member before deleting your account.`
+      );
+      setDeleteLoading(false);
+      return;
+    }
+
     // Best-effort cleanup of user-related data.
     // Depending on your RLS policies, some of these may require
     // additional delete policies to succeed.
