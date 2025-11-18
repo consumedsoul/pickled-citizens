@@ -277,16 +277,17 @@ export default function ProfilePage() {
       }
     }
 
+    // TODO: Temporarily disabled - need to run admin function migration
     // Delete the actual auth user account
-    const { error: deleteError } = await supabase.rpc('admin_delete_user', {
-      user_id_to_delete: user.id
-    });
+    // const { error: deleteError } = await supabase.rpc('admin_delete_user', {
+    //   user_id_to_delete: user.id
+    // });
 
-    if (deleteError) {
-      setError(`Failed to delete auth account: ${deleteError.message}`);
-      setDeleteLoading(false);
-      return;
-    }
+    // if (deleteError) {
+    //   setError(`Failed to delete auth account: ${deleteError.message}`);
+    //   setDeleteLoading(false);
+    //   return;
+    // }
 
     // Sign out after successful deletion
     await supabase.auth.signOut();
