@@ -291,8 +291,8 @@ export default function ProfilePage() {
     // Sign out after successful deletion
     await supabase.auth.signOut();
 
-    // Redirect back to home after account data is removed.
-    window.location.href = '/';
+    // Redirect to account deleted confirmation page
+    window.location.href = '/account-deleted';
   }
 
   if (loading) {
