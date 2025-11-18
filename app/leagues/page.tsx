@@ -45,91 +45,75 @@ export default function LeaguesPage() {
 
       setUserId(user.id);
 
-      const { data, error } = await supabase
-        .from('leagues')
-        .select('id, name, created_at, owner_id')
-        .eq('owner_id', user.id)
-        .order('created_at', { ascending: false });
+      // Get all leagues where user is a member with their role
+      const { data: membershipData, error: membershipError } = await supabase
+        .from('league_members')
+        .select('league_id, role')
+        .eq('user_id', user.id);
 
       if (!active) return;
 
-      if (error) {
-        setError(error.message);
+      if (membershipError) {
+        setError(membershipError.message);
       } else {
-        const baseLeagues = data ?? [];
+        const memberships = (membershipData as any[]) || [];
+        
+        // Get all league IDs to fetch league details and member counts
+        const leagueIds = memberships.map(m => m.league_id);
+        
+        // Get league details
+        const { data: leaguesData, error: leaguesError } = await supabase
+          .from('leagues')
+          .select('id, name, owner_id')
+          .in('id', leagueIds);
 
-        if (!baseLeagues.length) {
-          setLeagues([]);
-        } else {
-          const leagueIds = baseLeagues.map((l) => l.id);
+        if (!active) return;
 
-          const { data: memberRows, error: membersError } = await supabase
-            .from('league_members')
-            .select('league_id')
-            .in('league_id', leagueIds);
-
-          if (membersError) {
-            setError(membersError.message);
-            setLeagues(baseLeagues);
-          } else {
-            const counts = new Map<string, number>();
-            (memberRows ?? []).forEach((row: any) => {
-              const leagueId = row.league_id as string;
-              counts.set(leagueId, (counts.get(leagueId) ?? 0) + 1);
-            });
-
-            const leaguesWithCounts: League[] = baseLeagues.map((league) => ({
-              ...league,
-              memberCount: counts.get(league.id) ?? 0,
-            }));
-
-            setLeagues(leaguesWithCounts);
-          }
+        if (leaguesError) {
+          setError(leaguesError.message);
+          return;
         }
 
-        const { data: membershipRows, error: membershipError } = await supabase
+        // Get member counts for all leagues
+        const { data: memberCountsData, error: countsError } = await supabase
           .from('league_members')
-          .select('league:leagues(id, name, owner_id)')
-          .eq('user_id', user.id);
+          .select('league_id')
+          .in('league_id', leagueIds);
 
-        if (!membershipError && membershipRows) {
-          const baseMemberLeagues: League[] = (membershipRows as any[])
-            .map((row) => row.league)
-            .filter(Boolean);
+        if (!active) return;
 
-          if (!baseMemberLeagues.length) {
-            setMemberLeagues([]);
-          } else {
-            const memberLeagueIds = baseMemberLeagues.map((l) => l.id);
-            const { data: memberCountsRows, error: memberCountsError } =
-              await supabase
-                .from('league_members')
-                .select('league_id')
-                .in('league_id', memberLeagueIds);
-
-            if (memberCountsError) {
-              setMemberLeagues(baseMemberLeagues);
-            } else {
-              const memberCounts = new Map<string, number>();
-              (memberCountsRows ?? []).forEach((row: any) => {
-                const leagueId = row.league_id as string;
-                memberCounts.set(
-                  leagueId,
-                  (memberCounts.get(leagueId) ?? 0) + 1
-                );
-              });
-
-              const leaguesWithCounts: League[] = baseMemberLeagues.map(
-                (league) => ({
-                  ...league,
-                  memberCount: memberCounts.get(league.id) ?? 0,
-                })
-              );
-
-              setMemberLeagues(leaguesWithCounts);
-            }
-          }
+        const memberCounts = new Map<string, number>();
+        if (!countsError && memberCountsData) {
+          (memberCountsData as any[]).forEach((row: any) => {
+            const leagueId = row.league_id as string;
+            memberCounts.set(leagueId, (memberCounts.get(leagueId) ?? 0) + 1);
+          });
         }
+
+        // Process leagues and separate by role
+        const leagues = (leaguesData as any[]) || [];
+        const allLeagues: League[] = leagues.map((league: any) => ({
+          id: league.id,
+          name: league.name,
+          created_at: '', // Will be set later if needed
+          owner_id: league.owner_id,
+          memberCount: memberCounts.get(league.id) ?? 0,
+        }));
+
+        // Separate into admin and regular member leagues
+        const adminLeagues = allLeagues.filter(league => 
+          memberships.some(m => m.league_id === league.id && m.role === 'admin')
+        );
+        const memberLeagues = allLeagues.filter(league => 
+          memberships.some(m => m.league_id === league.id && m.role === 'player')
+        );
+
+        // Sort each group alphabetically by name (case-insensitive)
+        adminLeagues.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+        memberLeagues.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+
+        setLeagues(adminLeagues);
+        setMemberLeagues(memberLeagues);
       }
 
       setLoading(false);
@@ -294,9 +278,9 @@ export default function LeaguesPage() {
       </form>
 
       <div style={{ marginTop: '1.5rem' }}>
-        <h2 className="section-title">Leagues you manage ({MAX_LEAGUES} max)</h2>
+        <h2 className="section-title">Leagues you manage</h2>
         {leagues.length === 0 ? (
-          <p className="hero-subtitle">You don't have any leagues yet.</p>
+          <p className="hero-subtitle">You don't manage any leagues yet.</p>
         ) : (
           <ul className="section-list" style={{ listStyle: 'none', paddingLeft: 0 }}>
             {leagues.map((league) => (
@@ -311,7 +295,7 @@ export default function LeaguesPage() {
                 }}
               >
                 <span>
-                  🏆 {league.name}{' '}
+                  👑 {league.name}{' '}
                   {typeof league.memberCount === 'number'
                     ? `(${league.memberCount} ${
                         league.memberCount === 1 ? 'member' : 'members'
@@ -349,7 +333,7 @@ export default function LeaguesPage() {
                 }}
               >
                 <span>
-                  🏆 {league.name}{' '}
+                  👤 {league.name}{' '}
                   {typeof league.memberCount === 'number'
                     ? `(${league.memberCount} ${
                         league.memberCount === 1 ? 'member' : 'members'

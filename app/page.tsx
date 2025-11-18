@@ -114,52 +114,78 @@ export default function HomePage() {
         setLeaguesLoading(true);
 
     try {
-      const { data: membershipRows, error: membershipError } = await supabase
+      // Get all leagues where user is a member with their role
+      const { data: membershipData, error: membershipError } = await supabase
         .from("league_members")
-        .select("league:leagues(id, name, owner_id, created_at)")
+        .select("league_id, role")
         .eq("user_id", userId);
       
-      if (membershipError || !membershipRows) {
+      if (membershipError || !membershipData) {
                 setLeaguesLoading(false);
         return;
       }
 
-    const baseMemberLeagues: League[] = (membershipRows as any[])
-      .map((row) => row.league)
-      .filter(Boolean);
+      const memberships = (membershipData as any[]) || [];
+      
+      // Get all league IDs to fetch league details and member counts
+      const leagueIds = memberships.map(m => m.league_id);
+      
+      // Get league details
+      const { data: leaguesData, error: leaguesError } = await supabase
+        .from("leagues")
+        .select("id, name, owner_id, created_at")
+        .in("id", leagueIds);
 
-    if (!baseMemberLeagues.length) {
-      setLeagues([]);
+      if (leaguesError || !leaguesData) {
+        setLeaguesLoading(false);
+        return;
+      }
+
+      // Get member counts for all leagues
+      const { data: memberCountsData, error: countsError } = await supabase
+        .from("league_members")
+        .select("league_id")
+        .in("league_id", leagueIds);
+
+      if (countsError) {
+        setLeaguesLoading(false);
+        return;
+      }
+
+      const memberCounts = new Map<string, number>();
+      (memberCountsData as any[]).forEach((row: any) => {
+        const leagueId = row.league_id as string;
+        memberCounts.set(leagueId, (memberCounts.get(leagueId) ?? 0) + 1);
+      });
+
+      // Process leagues and separate by role
+      const leagues = (leaguesData as any[]) || [];
+      const allLeagues: League[] = leagues.map((league: any) => ({
+        id: league.id,
+        name: league.name,
+        created_at: league.created_at,
+        owner_id: league.owner_id,
+        memberCount: memberCounts.get(league.id) ?? 0,
+      }));
+
+      // Separate into admin and regular member leagues
+      const adminLeagues = allLeagues.filter(league => 
+        memberships.some(m => m.league_id === league.id && m.role === 'admin')
+      );
+      const memberLeagues = allLeagues.filter(league => 
+        memberships.some(m => m.league_id === league.id && m.role === 'player')
+      );
+
+      // Sort each group alphabetically by name (case-insensitive)
+      adminLeagues.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+      memberLeagues.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+
+      // Combine: admin leagues first, then member leagues
+      const sortedLeagues = [...adminLeagues, ...memberLeagues];
+
+      setLeagues(sortedLeagues);
+      loadedUserIdRef.current = userId;
       setLeaguesLoading(false);
-      return;
-    }
-
-    const memberLeagueIds = baseMemberLeagues.map((l) => l.id);
-    const { data: memberCountsRows, error: memberCountsError } = await supabase
-      .from("league_members")
-      .select("league_id")
-      .in("league_id", memberLeagueIds);
-
-    if (memberCountsError) {
-      setLeagues(baseMemberLeagues);
-      setLeaguesLoading(false);
-      return;
-    }
-
-    const memberCounts = new Map<string, number>();
-    (memberCountsRows ?? []).forEach((row: any) => {
-      const leagueId = row.league_id as string;
-      memberCounts.set(leagueId, (memberCounts.get(leagueId) ?? 0) + 1);
-    });
-
-    const leaguesWithCounts: League[] = baseMemberLeagues.map((league) => ({
-      ...league,
-      memberCount: memberCounts.get(league.id) ?? 0,
-    }));
-
-    setLeagues(leaguesWithCounts);
-    loadedUserIdRef.current = userId;
-    setLeaguesLoading(false);
     } catch (error) {
       console.error('Failed to load user leagues:', error);
       if (error instanceof Error && error.message === 'API timeout after 3 seconds') {
