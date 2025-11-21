@@ -680,21 +680,23 @@ export default function LeagueMembersPage() {
                           })()}
                         </span>
                         {isOwner && admin.user_id !== currentUserId && (
-                          <button
-                            type="button"
-                            className="btn-secondary"
-                            onClick={() => handleDemoteToMember(admin)}
-                            disabled={roleUpdating || admins.length <= 1}
-                            style={{
-                              background: '#f59e0b',
-                              borderColor: '#f59e0b',
-                              color: '#ffffff',
-                              opacity: (roleUpdating || admins.length <= 1) ? 0.5 : 1,
-                            }}
-                            title={admins.length <= 1 ? "Cannot demote the last admin" : "Make member"}
-                          >
-                            Make Member
-                          </button>
+                          <div className="admin-actions">
+                            <button
+                              type="button"
+                              className="btn-secondary"
+                              onClick={() => handleDemoteToMember(admin)}
+                              disabled={roleUpdating || admins.length <= 1}
+                              style={{
+                                background: '#f59e0b',
+                                borderColor: '#f59e0b',
+                                color: '#ffffff',
+                                opacity: (roleUpdating || admins.length <= 1) ? 0.5 : 1,
+                              }}
+                              title={admins.length <= 1 ? "Cannot demote the last admin" : "Make member"}
+                            >
+                              Make Member
+                            </button>
+                          </div>
                         )}
                       </li>
                     ))}
@@ -738,7 +740,7 @@ export default function LeagueMembersPage() {
                           })()}
                         </span>
                         {isOwner && (
-                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <div className="member-actions" style={{ display: 'flex', gap: '0.5rem' }}>
                             <button
                               type="button"
                               className="btn-primary"

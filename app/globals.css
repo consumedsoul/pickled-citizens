@@ -204,4 +204,22 @@ body {
     width: 100% !important;
     justify-content: center !important;
   }
+
+  /* League details page mobile responsiveness */
+  .app-main .section-list > li {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.75rem !important;
+  }
+
+  .app-main .section-list > li .member-actions,
+  .app-main .section-list > li .admin-actions {
+    flex-direction: row !important;
+    gap: 0.5rem !important;
+  }
+
+  .app-main .section-list > li .member-actions button,
+  .app-main .section-list > li .admin-actions button {
+    justify-content: center !important;
+  }
 }
