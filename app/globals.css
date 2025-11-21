@@ -207,8 +207,9 @@ body {
 
   /* League details page mobile responsiveness */
   .app-main .section-list > li {
-    flex-direction: column !important;
-    align-items: flex-start !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
     gap: 0.75rem !important;
   }
 
@@ -221,5 +222,28 @@ body {
   .app-main .section-list > li .member-actions button,
   .app-main .section-list > li .admin-actions button {
     justify-content: center !important;
+  }
+
+  /* Show mobile emoji buttons on small screens, hide desktop buttons */
+  .app-main .section-list > li .member-actions-mobile {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 0.25rem !important;
+  }
+
+  .app-main .section-list > li .member-actions-desktop {
+    display: none !important;
+  }
+}
+
+/* Desktop styles for league details page */
+@media (min-width: 769px) {
+  .app-main .section-list > li .member-actions-mobile {
+    display: none !important;
+  }
+
+  .app-main .section-list > li .member-actions-desktop {
+    display: flex !important;
   }
 }

@@ -401,6 +401,10 @@ export default function LeagueMembersPage() {
   async function handleRemoveMember(member: Member) {
     if (!leagueId) return;
 
+    // Add confirmation prompt
+    const confirmed = window.confirm(`Are you sure you want to remove ${member.first_name || member.email || member.user_id} from the league?`);
+    if (!confirmed) return;
+
     setSaving(true);
     setError(null);
 
@@ -438,6 +442,10 @@ export default function LeagueMembersPage() {
 
   async function handlePromoteToAdmin(member: Member) {
     if (!leagueId) return;
+
+    // Add confirmation prompt
+    const confirmed = window.confirm(`Are you sure you want to make ${member.first_name || member.email || member.user_id} an admin?`);
+    if (!confirmed) return;
 
     setRoleUpdating(true);
     setError(null);
@@ -740,29 +748,64 @@ export default function LeagueMembersPage() {
                           })()}
                         </span>
                         {isOwner && (
-                          <div className="member-actions" style={{ display: 'flex', gap: '0.5rem' }}>
-                            <button
-                              type="button"
-                              className="btn-primary"
-                              onClick={() => handlePromoteToAdmin(member)}
-                              disabled={roleUpdating}
-                              title="Make admin"
-                            >
-                              Make Admin
-                            </button>
-                            <button
-                              type="button"
-                              className="btn-secondary"
-                              onClick={() => handleRemoveMember(member)}
-                              style={{
-                                background: '#b91c1c',
-                                borderColor: '#b91c1c',
-                                color: '#fee2e2',
-                              }}
-                            >
-                              Remove
-                            </button>
-                          </div>
+                          <>
+                            <div className="member-actions-mobile" style={{ display: 'flex', gap: '0.5rem' }}>
+                              <button
+                                type="button"
+                                className="btn-primary"
+                                onClick={() => handlePromoteToAdmin(member)}
+                                disabled={roleUpdating}
+                                title="Make admin"
+                                style={{
+                                  padding: '0.25rem 0.5rem',
+                                  fontSize: '0.875rem',
+                                  minWidth: 'auto',
+                                }}
+                              >
+                                👑
+                              </button>
+                              <button
+                                type="button"
+                                className="btn-secondary"
+                                onClick={() => handleRemoveMember(member)}
+                                disabled={saving}
+                                title="Remove"
+                                style={{
+                                  background: '#b91c1c',
+                                  borderColor: '#b91c1c',
+                                  color: '#fee2e2',
+                                  padding: '0.25rem 0.5rem',
+                                  fontSize: '0.875rem',
+                                  minWidth: 'auto',
+                                }}
+                              >
+                                ❌
+                              </button>
+                            </div>
+                            <div className="member-actions-desktop" style={{ display: 'flex', gap: '0.5rem' }}>
+                              <button
+                                type="button"
+                                className="btn-primary"
+                                onClick={() => handlePromoteToAdmin(member)}
+                                disabled={roleUpdating}
+                                title="Make admin"
+                              >
+                                Make Admin
+                              </button>
+                              <button
+                                type="button"
+                                className="btn-secondary"
+                                onClick={() => handleRemoveMember(member)}
+                                style={{
+                                  background: '#b91c1c',
+                                  borderColor: '#b91c1c',
+                                  color: '#fee2e2',
+                                }}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </>
                         )}
                       </li>
                     ))}
