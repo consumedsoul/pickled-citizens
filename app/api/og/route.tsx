@@ -6,27 +6,8 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     
-    const leagueName = searchParams.get('league') || 'Pickleball League';
-    const playerCount = searchParams.get('players') || '8';
-    const dateTime = searchParams.get('datetime') || '';
-
-    // Format date to be more concise
-    const formatDateTimeForOG = (dateStr: string) => {
-      try {
-        const date = new Date(dateStr);
-        return date.toLocaleString('en-US', {
-          weekday: 'short',
-          month: 'short', 
-          day: 'numeric',
-          hour: 'numeric',
-          minute: '2-digit',
-        });
-      } catch {
-        return dateStr;
-      }
-    };
-
-    const formattedDateTime = dateTime ? formatDateTimeForOG(dateTime) : '';
+    const title = searchParams.get('title') || 'Pickled Citizens';
+    const description = searchParams.get('description') || 'Pickleball Team Battle Management Tool';
 
     return new ImageResponse(
       (
@@ -74,27 +55,17 @@ export async function GET(request: Request) {
               marginBottom: '20px',
             }}
           >
-            {leagueName}
+            {title}
           </div>
 
           <div
             style={{
               fontSize: '24px',
               color: '#e2e8f0',
-              marginBottom: '16px',
-            }}
-          >
-            {playerCount} Players
-          </div>
-
-          <div
-            style={{
-              fontSize: '20px',
-              color: '#94a3b8',
               marginBottom: '40px',
             }}
           >
-            {formattedDateTime}
+            {description}
           </div>
 
           <div

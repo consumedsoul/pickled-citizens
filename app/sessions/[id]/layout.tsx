@@ -1,5 +1,21 @@
 import { Metadata } from 'next';
 
+// Helper function to format date for OG image
+const formatDateTimeForTitle = (value: string | null) => {
+  if (!value) return 'Not scheduled';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return 'Not scheduled';
+  return d.toLocaleString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: 'America/Los_Angeles',
+    hour12: true,
+  }).replace(',', '').replace(/:\d{2}\s/, ' ');
+};
+
 interface SessionLayoutProps {
   children: React.ReactNode;
   params: {
@@ -24,11 +40,8 @@ export async function generateMetadata({ params }: SessionLayoutProps): Promise<
       
       // Build OG image URL with session-specific parameters
       const ogImageUrl = new URL('https://pickledcitizens.com/api/og');
-      ogImageUrl.searchParams.set('title', sessionData.league_name || 'Pickleball Session');
-      ogImageUrl.searchParams.set('description', `${sessionData.player_count} Players`);
-      ogImageUrl.searchParams.set('league', sessionData.league_name || '');
-      ogImageUrl.searchParams.set('players', `${sessionData.player_count} Players`);
-      ogImageUrl.searchParams.set('datetime', sessionData.scheduled_for); // Use raw date for formatting
+      ogImageUrl.searchParams.set('title', sessionData.title || `${sessionData.league_name || 'Pickleball Session'} - ${sessionData.player_count} Players`);
+      ogImageUrl.searchParams.set('description', `${sessionData.player_count} Players - ${formatDateTimeForTitle(sessionData.scheduled_for)}`);
       
       return {
         title,
