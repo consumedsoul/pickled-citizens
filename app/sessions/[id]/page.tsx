@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import { Metadata } from 'next';
 
 type SessionPlayer = {
   id: string;
@@ -63,6 +64,21 @@ function formatDateTime(value: string | null) {
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+  });
+}
+
+function formatDateTimeForMeta(value: string | null) {
+  if (!value) return 'Not scheduled';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return 'Not scheduled';
+  return d.toLocaleString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZoneName: 'short',
   });
 }
 

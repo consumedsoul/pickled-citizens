@@ -9,11 +9,33 @@ import { Navigation } from "@/components/Navigation";
 import { AdminFooterLinks } from "@/components/AdminFooterLinks";
 
 export const metadata = {
-  title: "Pickled Citizens",
+  title: "Pickled Citizens - Pickleball League Management",
   description:
-    "Lightweight pickleball league tool for scheduling sessions and tracking match history.",
+    "Lightweight pickleball league tool for scheduling sessions, tracking match history, and managing player rankings. Create leagues, organize games, and track your DUPR ratings.",
   icons: {
     icon: favicon.src,
+  },
+  openGraph: {
+    title: "Pickled Citizens - Pickleball League Management",
+    description: "Lightweight pickleball league tool for scheduling sessions, tracking match history, and managing player rankings. Create leagues, organize games, and track your DUPR ratings.",
+    url: "https://pickledcitizens.com",
+    siteName: "Pickled Citizens",
+    images: [
+      {
+        url: "https://pickledcitizens.com/api/og?title=Pickled%20Citizens&description=Pickleball%20League%20Management",
+        width: 1200,
+        height: 630,
+        alt: "Pickled Citizens - Pickleball League Management",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Pickled Citizens - Pickleball League Management",
+    description: "Lightweight pickleball league tool for scheduling sessions, tracking match history, and managing player rankings. Create leagues, organize games, and track your DUPR ratings.",
+    images: ["https://pickledcitizens.com/api/og?title=Pickled%20Citizens&description=Pickleball%20League%20Management"],
   },
 };
 
