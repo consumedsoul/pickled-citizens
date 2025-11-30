@@ -6,7 +6,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     
-    const leagueName = searchParams.get('league') || '';
+    const leagueName = searchParams.get('league') || 'Pickleball League';
     const playerCount = searchParams.get('players') || '8';
     const dateTime = searchParams.get('datetime') || '';
 
@@ -27,7 +27,6 @@ export async function GET(request: Request) {
     };
 
     const formattedDateTime = dateTime ? formatDateTimeForOG(dateTime) : '';
-    const title = leagueName || 'Pickleball League Management';
 
     return new ImageResponse(
       (
@@ -75,7 +74,7 @@ export async function GET(request: Request) {
               marginBottom: '20px',
             }}
           >
-            {title}
+            {leagueName}
           </div>
 
           <div
@@ -88,17 +87,15 @@ export async function GET(request: Request) {
             {playerCount} Players
           </div>
 
-          {formattedDateTime && (
-            <div
-              style={{
-                fontSize: '20px',
-                color: '#94a3b8',
-                marginBottom: '40px',
-              }}
-            >
-              {formattedDateTime}
-            </div>
-          )}
+          <div
+            style={{
+              fontSize: '20px',
+              color: '#94a3b8',
+              marginBottom: '40px',
+            }}
+          >
+            {formattedDateTime}
+          </div>
 
           <div
             style={{

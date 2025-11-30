@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { supabase } from '@/lib/supabaseClient';
 
 export async function GET(
   request: NextRequest,
@@ -7,18 +8,44 @@ export async function GET(
   try {
     const sessionId = params.id;
 
-    // For testing purposes, return mock data
-    // In production, this would fetch from Supabase
-    const mockSessionData = {
-      id: sessionId,
-      league_name: 'Weekend Warriors League',
-      player_count: 8,
-      formatted_date: 'Sat, Jun 15, 2024, 2:00 PM',
-      scheduled_for: '2024-06-15T21:00:00.000Z',
-      created_at: '2024-06-01T12:00:00.000Z',
+    // Fetch real session data from Supabase
+    const { data: sessionRow, error: sessionError } = await supabase
+      .from('game_sessions')
+      .select(
+        'id, league_id, created_by, created_at, scheduled_for, player_count, league:leagues(name)'
+      )
+      .eq('id', sessionId)
+      .single();
+
+    if (sessionError || !sessionRow) {
+      console.error('Session fetch error:', sessionError);
+      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+    }
+
+    // Format date for metadata
+    const formatDateTimeForMeta = (value: string | null) => {
+      if (!value) return 'Not scheduled';
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return 'Not scheduled';
+      return d.toLocaleString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      });
     };
 
-    return NextResponse.json(mockSessionData);
+    const sessionData = {
+      id: sessionRow.id,
+      league_name: sessionRow.league?.name || 'Pickleball Session',
+      player_count: sessionRow.player_count || 0,
+      formatted_date: formatDateTimeForMeta(sessionRow.scheduled_for),
+      scheduled_for: sessionRow.scheduled_for,
+      created_at: sessionRow.created_at,
+    };
+
+    return NextResponse.json(sessionData);
 
   } catch (error) {
     console.error('Error fetching session metadata:', error);
