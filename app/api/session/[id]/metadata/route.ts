@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseClient';
 
+// Define types for the Supabase response
+type SessionRow = {
+  id: string;
+  league_id: string | null;
+  created_by: string;
+  created_at: string;
+  scheduled_for: string | null;
+  player_count: number;
+  league: {
+    name: string;
+  } | null;
+};
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -15,7 +28,7 @@ export async function GET(
         'id, league_id, created_by, created_at, scheduled_for, player_count, league:leagues(name)'
       )
       .eq('id', sessionId)
-      .single();
+      .single() as { data: SessionRow | null, error: any };
 
     if (sessionError || !sessionRow) {
       console.error('Session fetch error:', sessionError);
