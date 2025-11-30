@@ -11,9 +11,9 @@ export async function GET(
     // In production, this would fetch from Supabase
     const mockSessionData = {
       id: sessionId,
-      league_name: 'Summer Pickleball League',
+      league_name: 'Weekend Warriors League',
       player_count: 8,
-      formatted_date: 'Saturday, June 15, 2024 at 2:00 PM PDT',
+      formatted_date: 'Sat, Jun 15, 2024, 2:00 PM',
       scheduled_for: '2024-06-15T21:00:00.000Z',
       created_at: '2024-06-01T12:00:00.000Z',
     };

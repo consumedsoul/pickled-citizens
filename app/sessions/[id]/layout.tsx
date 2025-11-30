@@ -25,10 +25,10 @@ export async function generateMetadata({ params }: SessionLayoutProps): Promise<
       // Build OG image URL with session-specific parameters
       const ogImageUrl = new URL('https://pickledcitizens.com/api/og');
       ogImageUrl.searchParams.set('title', sessionData.league_name || 'Pickleball Session');
-      ogImageUrl.searchParams.set('description', `${sessionData.player_count} Players • ${sessionData.formatted_date}`);
+      ogImageUrl.searchParams.set('description', `${sessionData.player_count} Players`);
       ogImageUrl.searchParams.set('league', sessionData.league_name || '');
       ogImageUrl.searchParams.set('players', `${sessionData.player_count} Players`);
-      ogImageUrl.searchParams.set('datetime', sessionData.formatted_date);
+      ogImageUrl.searchParams.set('datetime', sessionData.scheduled_for); // Use raw date for formatting
       
       return {
         title,
