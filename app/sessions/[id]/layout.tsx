@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: SessionLayoutProps): Promise<
       const description = sessionData.description || `Join ${sessionData.player_count} players for a pickleball session${sessionData.league_name ? ` in ${sessionData.league_name}` : ''}. Scheduled for ${sessionData.formatted_date}.`;
       
       // Use static OG image for now until dynamic generation is fixed
-      const ogImageUrl = "/images/og-image.png";
+      const ogImageUrl = "https://pickledcitizens.com/images/og-image.png";
       
       return {
         title,
