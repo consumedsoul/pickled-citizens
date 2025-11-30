@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     };
 
     const formattedDateTime = dateTime ? formatDateTimeForOG(dateTime) : '';
-    const showSessionDetails = leagueName || playerCount || formattedDateTime;
+    const title = leagueName || 'Pickleball League Management';
 
     return new ImageResponse(
       (
@@ -67,32 +67,28 @@ export async function GET(request: Request) {
             Pickled Citizens
           </div>
 
-          {showSessionDetails && (
-            <div
-              style={{
-                fontSize: '32px',
-                fontWeight: '700',
-                color: '#10b981',
-                marginBottom: '20px',
-              }}
-            >
-              {leagueName || 'Pickleball Session'}
-            </div>
-          )}
+          <div
+            style={{
+              fontSize: '32px',
+              fontWeight: '700',
+              color: '#10b981',
+              marginBottom: '20px',
+            }}
+          >
+            {title}
+          </div>
 
-          {showSessionDetails && (
-            <div
-              style={{
-                fontSize: '24px',
-                color: '#e2e8f0',
-                marginBottom: '16px',
-              }}
-            >
-              {playerCount} Players
-            </div>
-          )}
+          <div
+            style={{
+              fontSize: '24px',
+              color: '#e2e8f0',
+              marginBottom: '16px',
+            }}
+          >
+            {playerCount} Players
+          </div>
 
-          {showSessionDetails && formattedDateTime && (
+          {formattedDateTime && (
             <div
               style={{
                 fontSize: '20px',
@@ -101,18 +97,6 @@ export async function GET(request: Request) {
               }}
             >
               {formattedDateTime}
-            </div>
-          )}
-
-          {!showSessionDetails && (
-            <div
-              style={{
-                fontSize: '24px',
-                color: '#cbd5e1',
-                marginBottom: '40px',
-              }}
-            >
-              Pickleball League Management
             </div>
           )}
 
