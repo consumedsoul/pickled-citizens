@@ -38,8 +38,8 @@ export async function generateMetadata({ params }: SessionLayoutProps): Promise<
       const title = sessionData.title || `${sessionData.league_name || 'Pickleball Session'} - ${sessionData.player_count} Players`;
       const description = sessionData.description || `Join ${sessionData.player_count} players for a pickleball session${sessionData.league_name ? ` in ${sessionData.league_name}` : ''}. Scheduled for ${sessionData.formatted_date}.`;
       
-      // Use static OG image for now until dynamic generation is fixed
-      const ogImageUrl = "https://pickledcitizens.com/images/og-image.png";
+      // Remove OG image for now until static file serving is fixed
+      // Social platforms will auto-select from page content
       
       return {
         title,
@@ -49,14 +49,6 @@ export async function generateMetadata({ params }: SessionLayoutProps): Promise<
           description,
           url: `https://pickledcitizens.com/sessions/${sessionId}`,
           siteName: 'Pickled Citizens',
-          images: [
-            {
-              url: ogImageUrl.toString(),
-              width: 1200,
-              height: 630,
-              alt: title,
-            },
-          ],
           locale: 'en_US',
           type: 'website',
         },
@@ -64,7 +56,6 @@ export async function generateMetadata({ params }: SessionLayoutProps): Promise<
           card: 'summary_large_image',
           title,
           description,
-          images: [ogImageUrl.toString()],
         },
       };
     }

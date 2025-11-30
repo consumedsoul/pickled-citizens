@@ -20,14 +20,6 @@ export const metadata = {
     description: "Lightweight pickleball league tool for scheduling sessions, tracking match history, and managing player rankings. Create leagues, organize games, and track your DUPR ratings.",
     url: "https://pickledcitizens.com",
     siteName: "Pickled Citizens",
-    images: [
-      {
-        url: "https://pickledcitizens.com/images/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "Pickled Citizens - Pickleball Team Battle Management Tool",
-      },
-    ],
     locale: "en_US",
     type: "website",
   },
@@ -35,7 +27,6 @@ export const metadata = {
     card: "summary_large_image",
     title: "Pickled Citizens - Pickleball Team Battle Management Tool",
     description: "Lightweight pickleball league tool for scheduling sessions, tracking match history, and managing player rankings. Create leagues, organize games, and track your DUPR ratings.",
-    images: ["https://pickledcitizens.com/images/og-image.png"],
   },
 };
 
