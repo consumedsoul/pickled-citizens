@@ -23,14 +23,14 @@ export async function GET(request: Request) {
             color: 'white',
             fontFamily: 'Arial, sans-serif',
             textAlign: 'center',
-            padding: '60px',
+            padding: '40px',
           }}
         >          
           <div
             style={{
-              fontSize: '48px',
+              fontSize: '60px',
               fontWeight: 'bold',
-              marginBottom: '30px',
+              marginBottom: '20px',
               color: '#10b981',
             }}
           >
@@ -39,9 +39,9 @@ export async function GET(request: Request) {
           
           <div
             style={{
-              fontSize: '36px',
+              fontSize: '24px',
               fontWeight: 'bold',
-              marginBottom: '40px',
+              marginBottom: '30px',
             }}
           >
             Pickled Citizens
@@ -49,10 +49,10 @@ export async function GET(request: Request) {
 
           <div
             style={{
-              fontSize: '32px',
+              fontSize: '28px',
               fontWeight: '700',
               color: '#10b981',
-              marginBottom: '20px',
+              marginBottom: '15px',
             }}
           >
             {title}
@@ -60,9 +60,9 @@ export async function GET(request: Request) {
 
           <div
             style={{
-              fontSize: '24px',
+              fontSize: '18px',
               color: '#e2e8f0',
-              marginBottom: '40px',
+              marginBottom: '30px',
             }}
           >
             {description}
@@ -72,9 +72,9 @@ export async function GET(request: Request) {
             style={{
               backgroundColor: '#10b981',
               color: 'white',
-              padding: '16px 32px',
-              borderRadius: '8px',
-              fontSize: '20px',
+              padding: '12px 24px',
+              borderRadius: '6px',
+              fontSize: '16px',
               fontWeight: '600',
             }}
           >
@@ -88,8 +88,8 @@ export async function GET(request: Request) {
       }
     );
   } catch (e: any) {
-    console.log(`${e.message}`);
-    return new Response(`Failed to generate the image`, {
+    console.log(`OG Image Error: ${e.message}`);
+    return new Response(`Failed to generate the image: ${e.message}`, {
       status: 500,
     });
   }
