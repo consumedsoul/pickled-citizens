@@ -35,7 +35,7 @@ export async function GET(
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
-    // Format date for metadata
+    // Format date for metadata - fix timezone and format
     const formatDateTimeForMeta = (value: string | null) => {
       if (!value) return 'Not scheduled';
       const d = new Date(value);
@@ -46,7 +46,25 @@ export async function GET(
         day: 'numeric',
         hour: 'numeric',
         minute: '2-digit',
+        timeZone: 'America/Los_Angeles', // Force Pacific timezone
+        hour12: true,
       });
+    };
+
+    // Format for title ( more concise
+    const formatDateTimeForTitle = (value: string | null) => {
+      if (!value) return 'Not scheduled';
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return 'Not scheduled';
+      return d.toLocaleString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZone: 'America/Los_Angeles', // Force Pacific timezone
+        hour12: true,
+      }).replace(',', '').replace(/:\d{2}\s/, ' ');
     };
 
     const sessionData = {
@@ -54,6 +72,8 @@ export async function GET(
       league_name: sessionRow.league?.name || 'Pickleball Session',
       player_count: sessionRow.player_count || 0,
       formatted_date: formatDateTimeForMeta(sessionRow.scheduled_for),
+      title: `${sessionRow.league?.name || 'Pickleball Session'} - ${sessionRow.player_count || 0} Players - ${formatDateTimeForTitle(sessionRow.scheduled_for)}`,
+      description: `${sessionRow.league?.name || 'Pickleball Session'} team battle scheduled for ${formatDateTimeForTitle(sessionRow.scheduled_for)}.`,
       scheduled_for: sessionRow.scheduled_for,
       created_at: sessionRow.created_at,
     };

@@ -19,8 +19,8 @@ export async function generateMetadata({ params }: SessionLayoutProps): Promise<
     if (response.ok) {
       const sessionData = await response.json();
       
-      const title = `${sessionData.league_name || 'Pickleball Session'} - ${sessionData.player_count} Players`;
-      const description = `Join ${sessionData.player_count} players for a pickleball session${sessionData.league_name ? ` in ${sessionData.league_name}` : ''}. Scheduled for ${sessionData.formatted_date}.`;
+      const title = sessionData.title || `${sessionData.league_name || 'Pickleball Session'} - ${sessionData.player_count} Players`;
+      const description = sessionData.description || `Join ${sessionData.player_count} players for a pickleball session${sessionData.league_name ? ` in ${sessionData.league_name}` : ''}. Scheduled for ${sessionData.formatted_date}.`;
       
       // Build OG image URL with session-specific parameters
       const ogImageUrl = new URL('https://pickledcitizens.com/api/og');
