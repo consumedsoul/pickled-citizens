@@ -9,23 +9,23 @@ import { Navigation } from "@/components/Navigation";
 import { AdminFooterLinks } from "@/components/AdminFooterLinks";
 
 export const metadata = {
-  title: "Pickled Citizens - Pickleball League Management",
+  title: "Pickled Citizens - Pickleball Team Battle Management Tool",
   description:
     "Lightweight pickleball league tool for scheduling sessions, tracking match history, and managing player rankings. Create leagues, organize games, and track your DUPR ratings.",
   icons: {
     icon: favicon.src,
   },
   openGraph: {
-    title: "Pickled Citizens - Pickleball League Management",
+    title: "Pickled Citizens - Pickleball Team Battle Management Tool",
     description: "Lightweight pickleball league tool for scheduling sessions, tracking match history, and managing player rankings. Create leagues, organize games, and track your DUPR ratings.",
     url: "https://pickledcitizens.com",
     siteName: "Pickled Citizens",
     images: [
       {
-        url: "https://pickledcitizens.com/api/og?title=Pickled%20Citizens&description=Pickleball%20League%20Management",
+        url: "https://pickledcitizens.com/api/og?title=Pickled%20Citizens&description=Pickleball%20Team%20Battle%20Management%20Tool",
         width: 1200,
         height: 630,
-        alt: "Pickled Citizens - Pickleball League Management",
+        alt: "Pickled Citizens - Pickleball Team Battle Management Tool",
       },
     ],
     locale: "en_US",
@@ -33,9 +33,9 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Pickled Citizens - Pickleball League Management",
+    title: "Pickled Citizens - Pickleball Team Battle Management Tool",
     description: "Lightweight pickleball league tool for scheduling sessions, tracking match history, and managing player rankings. Create leagues, organize games, and track your DUPR ratings.",
-    images: ["https://pickledcitizens.com/api/og?title=Pickled%20Citizens&description=Pickleball%20League%20Management"],
+    images: ["https://pickledcitizens.com/api/og?title=Pickled%20Citizens&description=Pickleball%20Team%20Battle%20Management%20Tool"],
   },
 };
 
