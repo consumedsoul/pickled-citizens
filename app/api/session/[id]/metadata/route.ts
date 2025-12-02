@@ -32,6 +32,8 @@ export async function GET(
 
     if (sessionError || !sessionRow) {
       console.error('Session fetch error:', sessionError);
+      console.error('Session ID being queried:', sessionId);
+      console.error('Using service role:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 

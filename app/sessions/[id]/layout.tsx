@@ -51,6 +51,7 @@ export async function generateMetadata({ params }: SessionLayoutProps): Promise<
           siteName: 'Pickled Citizens',
           locale: 'en_US',
           type: 'website',
+          images: [], // Explicitly empty array to satisfy Facebook without showing images
         },
         twitter: {
           card: 'summary',
@@ -74,6 +75,7 @@ export async function generateMetadata({ params }: SessionLayoutProps): Promise<
       siteName: 'Pickled Citizens',
       locale: 'en_US',
       type: 'website',
+      images: [], // Explicitly empty array to satisfy Facebook without showing images
     },
     twitter: {
       card: 'summary',
