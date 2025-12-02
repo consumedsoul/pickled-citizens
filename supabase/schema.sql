@@ -138,3 +138,384 @@ begin
   delete from auth.users where id = user_id_to_delete;
 end;
 $$;
+
+-- SIMPLE RLS POLICIES: Block anonymous access, allow authenticated users
+
+-- Profiles: Authenticated users can read all, only edit own
+alter table public.profiles enable row level security;
+create policy profiles_read_authenticated on public.profiles
+  for select
+  using (auth.role() = 'authenticated');
+create policy profiles_write_own on public.profiles
+  for insert
+  with check (auth.uid() = id);
+create policy profiles_update_own on public.profiles
+  for update
+  using (auth.uid() = id);
+
+-- Leagues: Authenticated users can read all, only owners can write
+alter table public.leagues enable row level security;
+create policy leagues_read_authenticated on public.leagues
+  for select
+  using (auth.role() = 'authenticated');
+create policy leagues_write_owner on public.leagues
+  for all
+  using (auth.uid() = owner_id)
+  with check (auth.uid() = owner_id);
+
+-- League members: Authenticated users can read all, only league admins can write
+alter table public.league_members enable row level security;
+create policy league_members_read_authenticated on public.league_members
+  for select
+  using (auth.role() = 'authenticated');
+create policy league_members_write_admin on public.league_members
+  for all
+  using (
+    auth.uid() in (
+      select owner_id from public.leagues where id = league_id
+    )
+  )
+  with check (
+    auth.uid() in (
+      select owner_id from public.leagues where id = league_id
+    )
+  );
+
+-- League invites: Authenticated users can read all, only league admins can write
+alter table public.league_invites enable row level security;
+create policy league_invites_read_authenticated on public.league_invites
+  for select
+  using (auth.role() = 'authenticated');
+create policy league_invites_write_admin on public.league_invites
+  for all
+  using (
+    auth.uid() in (
+      select owner_id from public.leagues where id = league_id
+    )
+  )
+  with check (
+    auth.uid() in (
+      select owner_id from public.leagues where id = league_id
+    )
+  );
+
+-- Game sessions: Authenticated users can read all, only creators/league owners can write
+alter table public.game_sessions enable row level security;
+create policy game_sessions_read_authenticated on public.game_sessions
+  for select
+  using (auth.role() = 'authenticated');
+create policy game_sessions_write_owner on public.game_sessions
+  for all
+  using (
+    created_by = auth.uid() or
+    auth.uid() in (
+      select owner_id from public.leagues where id = league_id
+    )
+  )
+  with check (
+    created_by = auth.uid() or
+    auth.uid() in (
+      select owner_id from public.leagues where id = league_id
+    )
+  );
+
+-- Matches: Authenticated users can read all, only session/league owners can write
+alter table public.matches enable row level security;
+create policy matches_read_authenticated on public.matches
+  for select
+  using (auth.role() = 'authenticated');
+create policy matches_write_owner on public.matches
+  for all
+  using (
+    auth.uid() in (
+      select created_by from public.game_sessions where id = session_id
+    ) or
+    auth.uid() in (
+      select owner_id from public.leagues where id = (
+        select league_id from public.game_sessions where id = session_id
+      )
+    )
+  )
+  with check (
+    auth.uid() in (
+      select created_by from public.game_sessions where id = session_id
+    ) or
+    auth.uid() in (
+      select owner_id from public.leagues where id = (
+        select league_id from public.game_sessions where id = session_id
+      )
+    )
+  );
+
+-- Match players: Authenticated users can read all, only session/league owners can write
+alter table public.match_players enable row level security;
+create policy match_players_read_authenticated on public.match_players
+  for select
+  using (auth.role() = 'authenticated');
+create policy match_players_write_owner on public.match_players
+  for all
+  using (
+    auth.uid() in (
+      select created_by from public.game_sessions where id = (
+        select session_id from public.matches where id = match_id
+      )
+    ) or
+    auth.uid() in (
+      select owner_id from public.leagues where id = (
+        select league_id from public.game_sessions where id = (
+          select session_id from public.matches where id = match_id
+        )
+      )
+    )
+  )
+  with check (
+    auth.uid() in (
+      select created_by from public.game_sessions where id = (
+        select session_id from public.matches where id = match_id
+      )
+    ) or
+    auth.uid() in (
+      select owner_id from public.leagues where id = (
+        select league_id from public.game_sessions where id = (
+          select session_id from public.matches where id = match_id
+        )
+      )
+    )
+  );
+
+-- Match results: Authenticated users can read all, only session/league owners can write
+alter table public.match_results enable row level security;
+create policy match_results_read_authenticated on public.match_results
+  for select
+  using (auth.role() = 'authenticated');
+create policy match_results_write_owner on public.match_results
+  for all
+  using (
+    auth.uid() in (
+      select created_by from public.game_sessions where id = (
+        select session_id from public.matches where id = match_id
+      )
+    ) or
+    auth.uid() in (
+      select owner_id from public.leagues where id = (
+        select league_id from public.game_sessions where id = (
+          select session_id from public.matches where id = match_id
+        )
+      )
+    )
+  )
+  with check (
+    auth.uid() in (
+      select created_by from public.game_sessions where id = (
+        select session_id from public.matches where id = match_id
+      )
+    ) or
+    auth.uid() in (
+      select owner_id from public.leagues where id = (
+        select league_id from public.game_sessions where id = (
+          select session_id from public.matches where id = match_id
+        )
+      )
+    )
+  );
+
+-- Leagues: Users can see all leagues, but only owners can manage
+alter table public.leagues enable row level security;
+create policy leagues_select_all_authenticated on public.leagues
+  for select
+  using (auth.role() = 'authenticated');
+create policy leagues_manage_owner on public.leagues
+  for insert
+  with check (owner_id = auth.uid());
+create policy leagues_update_owner on public.leagues
+  for update
+  using (owner_id = auth.uid());
+create policy leagues_delete_owner on public.leagues
+  for delete
+  using (owner_id = auth.uid());
+
+-- League members: Users can see all members (for league context), but only admins can manage
+alter table public.league_members enable row level security;
+create policy league_members_select_all_authenticated on public.league_members
+  for select
+  using (auth.role() = 'authenticated');
+create policy league_members_manage_admin on public.league_members
+  for insert
+  with check (
+    auth.uid() in (
+      select owner_id from public.leagues where id = league_id
+    )
+  );
+create policy league_members_update_admin on public.league_members
+  for update
+  using (
+    auth.uid() in (
+      select owner_id from public.leagues where id = league_id
+    )
+  );
+create policy league_members_delete_admin on public.league_members
+  for delete
+  using (
+    auth.uid() in (
+      select owner_id from public.leagues where id = league_id
+    ) or user_id = auth.uid()
+  );
+
+-- League invites: Users can see invites they sent or for leagues they admin
+alter table public.league_invites enable row level security;
+create policy league_invites_select_own on public.league_invites
+  for select
+  using (
+    invited_by = auth.uid() or 
+    league_id in (select league_id from public.league_members where user_id = auth.uid() and role = 'admin') or
+    league_id in (select id from public.leagues where owner_id = auth.uid())
+  );
+create policy league_invites_manage_admin on public.league_invites
+  for all
+  using (
+    league_id in (select id from public.leagues where owner_id = auth.uid())
+  )
+  with check (
+    league_id in (select id from public.leagues where owner_id = auth.uid())
+  );
+
+-- Game sessions: Users can see all sessions, but only creators or league owners can manage
+alter table public.game_sessions enable row level security;
+create policy game_sessions_select_all_authenticated on public.game_sessions
+  for select
+  using (auth.role() = 'authenticated');
+create policy game_sessions_insert_owner on public.game_sessions
+  for insert
+  with check (
+    created_by = auth.uid() or
+    league_id in (select id from public.leagues where owner_id = auth.uid())
+  );
+create policy game_sessions_update_owner on public.game_sessions
+  for update
+  using (
+    created_by = auth.uid() or
+    league_id in (select id from public.leagues where owner_id = auth.uid())
+  );
+create policy game_sessions_delete_owner on public.game_sessions
+  for delete
+  using (
+    created_by = auth.uid() or
+    league_id in (select id from public.leagues where owner_id = auth.uid())
+  );
+
+-- Matches: Users can see all matches, but only session creators or league owners can manage
+alter table public.matches enable row level security;
+create policy matches_select_all_authenticated on public.matches
+  for select
+  using (auth.role() = 'authenticated');
+create policy matches_insert_owner on public.matches
+  for insert
+  with check (
+    session_id in (
+      select id from public.game_sessions 
+      where created_by = auth.uid() or
+      league_id in (select id from public.leagues where owner_id = auth.uid())
+    )
+  );
+create policy matches_update_owner on public.matches
+  for update
+  using (
+    session_id in (
+      select id from public.game_sessions 
+      where created_by = auth.uid() or
+      league_id in (select id from public.leagues where owner_id = auth.uid())
+    )
+  );
+create policy matches_delete_owner on public.matches
+  for delete
+  using (
+    session_id in (
+      select id from public.game_sessions 
+      where created_by = auth.uid() or
+      league_id in (select id from public.leagues where owner_id = auth.uid())
+    )
+  );
+
+-- Match players: Users can see all match players, but only match/session owners can manage
+alter table public.match_players enable row level security;
+create policy match_players_select_all_authenticated on public.match_players
+  for select
+  using (auth.role() = 'authenticated');
+create policy match_players_insert_owner on public.match_players
+  for insert
+  with check (
+    match_id in (
+      select id from public.matches 
+      where session_id in (
+        select id from public.game_sessions 
+        where created_by = auth.uid() or
+        league_id in (select id from public.leagues where owner_id = auth.uid())
+      )
+    )
+  );
+create policy match_players_update_owner on public.match_players
+  for update
+  using (
+    match_id in (
+      select id from public.matches 
+      where session_id in (
+        select id from public.game_sessions 
+        where created_by = auth.uid() or
+        league_id in (select id from public.leagues where owner_id = auth.uid())
+      )
+    )
+  );
+create policy match_players_delete_owner on public.match_players
+  for delete
+  using (
+    match_id in (
+      select id from public.matches 
+      where session_id in (
+        select id from public.game_sessions 
+        where created_by = auth.uid() or
+        league_id in (select id from public.leagues where owner_id = auth.uid())
+      )
+    )
+  );
+
+-- Match results: Users can see all match results, but only match/session owners can manage
+alter table public.match_results enable row level security;
+create policy match_results_select_all_authenticated on public.match_results
+  for select
+  using (auth.role() = 'authenticated');
+create policy match_results_insert_owner on public.match_results
+  for insert
+  with check (
+    match_id in (
+      select id from public.matches 
+      where session_id in (
+        select id from public.game_sessions 
+        where created_by = auth.uid() or
+        league_id in (select id from public.leagues where owner_id = auth.uid())
+      )
+    )
+  );
+create policy match_results_update_owner on public.match_results
+  for update
+  using (
+    match_id in (
+      select id from public.matches 
+      where session_id in (
+        select id from public.game_sessions 
+        where created_by = auth.uid() or
+        league_id in (select id from public.leagues where owner_id = auth.uid())
+      )
+    )
+  );
+create policy match_results_delete_owner on public.match_results
+  for delete
+  using (
+    match_id in (
+      select id from public.matches 
+      where session_id in (
+        select id from public.game_sessions 
+        where created_by = auth.uid() or
+        league_id in (select id from public.leagues where owner_id = auth.uid())
+      )
+    )
+  );
