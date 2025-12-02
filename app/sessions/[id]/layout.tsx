@@ -35,11 +35,11 @@ export async function generateMetadata({ params }: SessionLayoutProps): Promise<
     if (response.ok) {
       const sessionData = await response.json();
       
-      const title = sessionData.title || `${sessionData.league_name || 'Pickleball Session'} - ${sessionData.player_count} Players`;
-      const description = sessionData.description || `Join ${sessionData.player_count} players for a pickleball session${sessionData.league_name ? ` in ${sessionData.league_name}` : ''}. Scheduled for ${sessionData.formatted_date}.`;
+      const title = 'Pickleball Session - Pickled Citizens';
+      const description = `${sessionData.league_name || 'Pickleball Session'} | ${sessionData.player_count} Players | ${formatDateTimeForTitle(sessionData.scheduled_for)}`;
       
-      // Remove OG image for now until static file serving is fixed
-      // Social platforms will auto-select from page content
+      // Remove OG image for social previews
+      // Social platforms will not show images without explicit og:image tags
       
       return {
         title,
@@ -53,7 +53,7 @@ export async function generateMetadata({ params }: SessionLayoutProps): Promise<
           type: 'website',
         },
         twitter: {
-          card: 'summary_large_image',
+          card: 'summary',
           title,
           description,
         },
@@ -63,35 +63,22 @@ export async function generateMetadata({ params }: SessionLayoutProps): Promise<
     console.error('Failed to fetch session metadata:', error);
   }
   
-  // Fallback metadata
-  const fallbackOgUrl = new URL('https://pickledcitizens.com/api/og');
-  fallbackOgUrl.searchParams.set('title', 'Pickleball Session');
-  fallbackOgUrl.searchParams.set('description', 'Join a pickleball session and track your match results');
-  
+  // Fallback metadata - no images, updated description format
   return {
     title: 'Pickleball Session - Pickled Citizens',
-    description: 'Join a pickleball session and track your match results.',
+    description: 'Pickleball Session | 0 Players | Not scheduled',
     openGraph: {
       title: 'Pickleball Session - Pickled Citizens',
-      description: 'Join a pickleball session and track your match results.',
+      description: 'Pickleball Session | 0 Players | Not scheduled',
       url: `https://pickledcitizens.com/sessions/${sessionId}`,
       siteName: 'Pickled Citizens',
-      images: [
-        {
-          url: fallbackOgUrl.toString(),
-          width: 1200,
-          height: 630,
-          alt: 'Pickleball Session - Pickled Citizens',
-        },
-      ],
       locale: 'en_US',
       type: 'website',
     },
     twitter: {
-      card: 'summary_large_image',
+      card: 'summary',
       title: 'Pickleball Session - Pickled Citizens',
-      description: 'Join a pickleball session and track your match results.',
-      images: [fallbackOgUrl.toString()],
+      description: 'Pickleball Session | 0 Players | Not scheduled',
     },
   };
 }
