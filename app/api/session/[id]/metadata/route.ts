@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
+import { supabaseServiceRole } from '@/lib/supabaseClient';
 
 // Define types for the Supabase response
 type SessionRow = {
@@ -22,7 +22,7 @@ export async function GET(
     const sessionId = params.id;
 
     // Fetch real session data from Supabase
-    const { data: sessionRow, error: sessionError } = await supabase
+    const { data: sessionRow, error: sessionError } = await supabaseServiceRole
       .from('game_sessions')
       .select(
         'id, league_id, created_by, created_at, scheduled_for, player_count, league:leagues(name)'
