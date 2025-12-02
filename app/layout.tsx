@@ -24,7 +24,7 @@ export const metadata = {
     type: "website",
     images: [
       {
-        url: 'https://pickledcitizens.com/images/Pickled-Citizens-Logo-Site.png',
+        url: 'https://pickledcitizens.com/images/Pickled-Citizens-Logo-Social.png',
         width: 1200,
         height: 630,
         alt: 'Pickled Citizens Logo',
@@ -35,7 +35,7 @@ export const metadata = {
     card: "summary_large_image",
     title: "Pickled Citizens - Pickleball Team Battle Management Tool",
     description: "Lightweight pickleball league tool for scheduling sessions, tracking match history, and managing player rankings. Create leagues, organize games, and track your DUPR ratings.",
-    images: ['https://pickledcitizens.com/images/Pickled-Citizens-Logo-Site.png'],
+    images: ['https://pickledcitizens.com/images/Pickled-Citizens-Logo-Social.png'],
   },
 };
 
