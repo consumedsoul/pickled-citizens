@@ -51,11 +51,20 @@ export async function generateMetadata({ params }: SessionLayoutProps): Promise<
           siteName: 'Pickled Citizens',
           locale: 'en_US',
           type: 'website',
+          images: [
+            {
+              url: 'https://pickledcitizens.com/images/Pickled%20Citizens%20Logo.png',
+              width: 1200,
+              height: 630,
+              alt: 'Pickled Citizens Logo',
+            },
+          ],
         },
         twitter: {
-          card: 'summary',
+          card: 'summary_large_image',
           title,
           description,
+          images: ['https://pickledcitizens.com/images/Pickled%20Citizens%20Logo.png'],
         },
       };
     }
@@ -63,7 +72,7 @@ export async function generateMetadata({ params }: SessionLayoutProps): Promise<
     console.error('Failed to fetch session metadata:', error);
   }
   
-  // Fallback metadata - no images, updated description format
+  // Fallback metadata - with logo and updated description format
   return {
     title: 'Pickleball Session - Pickled Citizens',
     description: 'Pickleball Session | 0 Players | Not scheduled',
@@ -74,11 +83,20 @@ export async function generateMetadata({ params }: SessionLayoutProps): Promise<
       siteName: 'Pickled Citizens',
       locale: 'en_US',
       type: 'website',
+      images: [
+        {
+          url: 'https://pickledcitizens.com/images/Pickled%20Citizens%20Logo.png',
+          width: 1200,
+          height: 630,
+          alt: 'Pickled Citizens Logo',
+        },
+      ],
     },
     twitter: {
-      card: 'summary',
+      card: 'summary_large_image',
       title: 'Pickleball Session - Pickled Citizens',
       description: 'Pickleball Session | 0 Players | Not scheduled',
+      images: ['https://pickledcitizens.com/images/Pickled%20Citizens%20Logo.png'],
     },
   };
 }
