@@ -53,7 +53,7 @@ export async function generateMetadata({ params }: SessionLayoutProps): Promise<
           type: 'website',
           images: [
             {
-              url: 'https://pickledcitizens.com/images/Pickled%20Citizens%20Logo.png',
+              url: 'https://pickledcitizens.com/images/Pickled-Citizens-Logo-Site.png',
               width: 1200,
               height: 630,
               alt: 'Pickled Citizens Logo',
@@ -64,7 +64,7 @@ export async function generateMetadata({ params }: SessionLayoutProps): Promise<
           card: 'summary_large_image',
           title,
           description,
-          images: ['https://pickledcitizens.com/images/Pickled%20Citizens%20Logo.png'],
+          images: ['https://pickledcitizens.com/images/Pickled-Citizens-Logo-Site.png'],
         },
       };
     }
@@ -85,7 +85,7 @@ export async function generateMetadata({ params }: SessionLayoutProps): Promise<
       type: 'website',
       images: [
         {
-          url: 'https://pickledcitizens.com/images/Pickled%20Citizens%20Logo.png',
+          url: 'https://pickledcitizens.com/images/Pickled-Citizens-Logo-Site.png',
           width: 1200,
           height: 630,
           alt: 'Pickled Citizens Logo',
@@ -96,7 +96,7 @@ export async function generateMetadata({ params }: SessionLayoutProps): Promise<
       card: 'summary_large_image',
       title: 'Pickleball Session - Pickled Citizens',
       description: 'Pickleball Session | 0 Players | Not scheduled',
-      images: ['https://pickledcitizens.com/images/Pickled%20Citizens%20Logo.png'],
+      images: ['https://pickledcitizens.com/images/Pickled-Citizens-Logo-Site.png'],
     },
   };
 }
