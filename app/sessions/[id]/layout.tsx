@@ -51,7 +51,14 @@ export async function generateMetadata({ params }: SessionLayoutProps): Promise<
           siteName: 'Pickled Citizens',
           locale: 'en_US',
           type: 'website',
-          images: [], // Explicitly empty array to satisfy Facebook without showing images
+          images: [
+            {
+              url: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
+              width: 1,
+              height: 1,
+              alt: '',
+            },
+          ],
         },
         twitter: {
           card: 'summary',
@@ -75,7 +82,14 @@ export async function generateMetadata({ params }: SessionLayoutProps): Promise<
       siteName: 'Pickled Citizens',
       locale: 'en_US',
       type: 'website',
-      images: [], // Explicitly empty array to satisfy Facebook without showing images
+      images: [
+        {
+          url: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
+          width: 1,
+          height: 1,
+          alt: '',
+        },
+      ],
     },
     twitter: {
       card: 'summary',
