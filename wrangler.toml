@@ -1,0 +1,8 @@
+name = "pickled-citizens"
+main = ".open-next/worker.js"
+compatibility_date = "2025-12-14"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
