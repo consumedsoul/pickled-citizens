@@ -1153,6 +1153,7 @@ export default function SessionsPage() {
                         <Link
                           className="btn-secondary"
                           href={`/sessions/${session.id}`}
+                          prefetch={false}
                         >
                           {session.created_by === userId ? "Manage" : "View"}
                         </Link>
@@ -1236,6 +1237,7 @@ export default function SessionsPage() {
                         <Link
                           className="btn-secondary"
                           href={`/sessions/${session.id}`}
+                          prefetch={false}
                         >
                           {session.created_by === userId ? "Manage" : "View"}
                         </Link>

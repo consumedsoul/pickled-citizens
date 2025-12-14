@@ -129,7 +129,18 @@ export default function LeaguesPage() {
   async function handleCreate(event: FormEvent) {
     event.preventDefault();
     const trimmedName = name.trim();
-    if (!userId || !trimmedName || reachedLimit) return;
+    if (!userId) {
+      setError('Please sign in again.');
+      return;
+    }
+    if (!trimmedName) {
+      setError('Please enter a league name.');
+      return;
+    }
+    if (reachedLimit) {
+      setError(`You have reached the maximum of ${MAX_LEAGUES} leagues.`);
+      return;
+    }
 
     setCreating(true);
     setError(null);
