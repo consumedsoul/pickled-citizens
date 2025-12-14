@@ -73,6 +73,7 @@ Lightweight web app for running casual pickleball leagues: create leagues, invit
 - **Language**: TypeScript, React 18
 - **Backend / DB**: [Supabase](https://supabase.com/) (Postgres, Auth, RLS)
 - **Client DB access**: `@supabase/supabase-js` v2
+- **Hosting**: Cloudflare Workers (SSR) via [OpenNext for Cloudflare](https://opennext.js.org/)
 
 ---
 
@@ -127,10 +128,12 @@ Create a `.env.local` file in the project root with your Supabase credentials an
 NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 NEXT_PUBLIC_SITE_URL=https://your-site-url.example.com
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
 ```
 
 - `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are used by `src/lib/supabaseClient.ts`.
 - `NEXT_PUBLIC_SITE_URL` is used by the auth flow for redirect URLs (falls back to `window.location.origin` in development).
+- `SUPABASE_SERVICE_ROLE_KEY` is used by server-side Route Handlers that bypass RLS (e.g. `/api/session/[id]/metadata`).
 - **Do not commit** `.env.local` to version control.
 
 ---
@@ -256,6 +259,9 @@ npm run dev     # Start Next.js dev server
 npm run build   # Production build
 npm run start   # Start production server (after build)
 npm run lint    # Run ESLint
+npm run preview # Build OpenNext bundle + run a local Cloudflare-style preview
+npm run deploy  # Build OpenNext bundle + deploy to Cloudflare (preserves dashboard vars)
+npm run cf-typegen # Generate Cloudflare env type definitions
 ```
 
 ---
@@ -286,10 +292,57 @@ npm run lint    # Run ESLint
 
 ## Deployment
 
-Any platform that supports Next.js 14 + environment variables should work (e.g. Vercel, Netlify with Next support, or a custom Node server).
+This app is deployed to **Cloudflare Workers** using **OpenNext**.
 
-- Ensure `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `NEXT_PUBLIC_SITE_URL` are set in your hosting environment.
-- Run database migrations / apply `supabase/schema.sql` to your production Supabase project.
+### Cloudflare build + deploy (recommended)
+
+Use Cloudflare’s **Workers → Build → Connect to repository** integration so pushes to `main` build and deploy automatically.
+
+In Cloudflare Worker build configuration, use:
+
+```bash
+# Build command
+npx opennextjs-cloudflare build
+
+# Deploy command
+npx wrangler deploy --keep-vars
+```
+
+### Cloudflare environment variables
+
+There are two places variables matter:
+
+- **Build-time** (used during `next build`): set `NEXT_PUBLIC_*` values in Cloudflare’s build “Variables and secrets”.
+- **Runtime** (used by the Worker at request time): set `SUPABASE_SERVICE_ROLE_KEY` as an encrypted secret.
+
+Recommended configuration:
+
+- `NEXT_PUBLIC_SUPABASE_URL` (variable)
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` (variable)
+- `NEXT_PUBLIC_SITE_URL` (variable)
+- `SUPABASE_SERVICE_ROLE_KEY` (secret / encrypted)
+
+### Local deploy (optional)
+
+If you deploy from your machine instead of Cloudflare Git integration:
+
+```bash
+npm run deploy
+```
+
+`--keep-vars` is used to avoid wiping dashboard-managed variables.
+
+### Domain routing + Supabase cutover
+
+1. Configure Cloudflare DNS so `pickledcitizens.com` and `www.pickledcitizens.com` are proxied (orange cloud) and no longer point at Netlify.
+2. Add Worker routes:
+   - `pickledcitizens.com/*`
+   - `www.pickledcitizens.com/*`
+3. In Supabase, add allowed redirect URLs (Authentication → URL Configuration):
+   - `https://pickledcitizens.com/auth/complete`
+   - `https://www.pickledcitizens.com/auth/complete`
+   - (If using password reset) `https://pickledcitizens.com/auth/reset/complete`
+4. Set Supabase Site URL to `https://pickledcitizens.com`.
 
 ---
 
