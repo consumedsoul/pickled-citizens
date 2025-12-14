@@ -340,7 +340,7 @@ export default function LeagueMembersPage() {
     const admins = members.filter(member => member.role === 'admin');
     const isCurrentUserAdmin = admins.some(admin => admin.user_id === currentUserId);
     
-    if (isCurrentUserAdmin && admins.length === 1) {
+    if (isCurrentUserAdmin && admins.length === 1 && members.length > 1) {
       setDeleteLeagueError('You are the sole admin of this league. Please promote another member to admin before deleting the league.');
       return;
     }
