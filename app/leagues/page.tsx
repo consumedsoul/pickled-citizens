@@ -128,6 +128,7 @@ export default function LeaguesPage() {
 
   async function handleCreate(event: FormEvent) {
     event.preventDefault();
+    setError(null);
     const trimmedName = name.trim();
     if (!userId) {
       setError('Please sign in again.');
@@ -143,81 +144,79 @@ export default function LeaguesPage() {
     }
 
     setCreating(true);
-    setError(null);
 
-    const { data: existingLeagues, error: existingError } = await supabase
-      .from('leagues')
-      .select('id, name')
-      .eq('owner_id', userId);
+    try {
+      const { data: existingLeagues, error: existingError } = await supabase
+        .from('leagues')
+        .select('id, name')
+        .eq('owner_id', userId);
 
-    if (existingError) {
-      setError(existingError.message);
+      if (existingError) {
+        setError(existingError.message);
+        return;
+      }
+
+      const duplicate = (existingLeagues ?? []).some(
+        (league) =>
+          league.name.trim().toLowerCase() === trimmedName.toLowerCase()
+      );
+
+      if (duplicate) {
+        setError('A league with that name already exists.');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('leagues')
+        .insert({ name: trimmedName, owner_id: userId })
+        .select('id, name, created_at')
+        .single();
+
+      if (error || !data) {
+        const message = error?.message?.includes('limit_3_leagues_per_owner')
+          ? 'You have reached the maximum of 3 leagues.'
+          : error?.message ?? 'Unable to create league.';
+        setError(message);
+        return;
+      }
+
+      // Add the creator as an admin in league_members
+      const { error: memberError } = await supabase
+        .from('league_members')
+        .insert({
+          league_id: data.id,
+          user_id: userId,
+          role: 'admin',
+          email: (await supabase.auth.getUser()).data.user?.email || '',
+        });
+
+      if (memberError) {
+        setError(`Failed to add admin: ${memberError.message}`);
+        return;
+      }
+
+      const leagueWithCount: League = { ...data, memberCount: 1 };
+      setLeagues((prev) => [leagueWithCount, ...prev]);
+      setName('');
+
+      // Log admin event
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+
+      if (!userError && userData.user) {
+        const ownerEmail = userData.user.email?.toLowerCase() ?? null;
+        await supabase.from('admin_events').insert({
+          event_type: 'league.created',
+          user_id: userData.user.id,
+          user_email: ownerEmail,
+          league_id: data.id,
+          payload: { league_name: trimmedName },
+        });
+      }
+    } catch (e: any) {
+      setError(e?.message ?? 'Unexpected error creating league.');
+    } finally {
       setCreating(false);
-      return;
     }
-
-    const duplicate = (existingLeagues ?? []).some(
-      (league) => league.name.trim().toLowerCase() === trimmedName.toLowerCase()
-    );
-
-    if (duplicate) {
-      setError('A league with that name already exists.');
-      setCreating(false);
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from('leagues')
-      .insert({ name: trimmedName, owner_id: userId })
-      .select('id, name, created_at')
-      .single();
-
-    if (error) {
-      const message = error.message.includes('limit_3_leagues_per_owner')
-        ? 'You have reached the maximum of 3 leagues.'
-        : error.message;
-      setError(message);
-      setCreating(false);
-      return;
-    }
-
-    // Add the creator as an admin in league_members
-    const { error: memberError } = await supabase
-      .from('league_members')
-      .insert({ 
-        league_id: data.id, 
-        user_id: userId, 
-        role: 'admin',
-        email: (await supabase.auth.getUser()).data.user?.email || ''
-      });
-
-    if (memberError) {
-      setError(`Failed to add admin: ${memberError.message}`);
-      setCreating(false);
-      return;
-    }
-
-    const leagueWithCount: League = { ...data, memberCount: 1 };
-    setLeagues((prev) => [leagueWithCount, ...prev]);
-    setName('');
-
-    // Log admin event
-    const {
-      data: userData,
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (!userError && userData.user) {
-      const ownerEmail = userData.user.email?.toLowerCase() ?? null;
-      await supabase.from('admin_events').insert({
-        event_type: 'league.created',
-        user_id: userData.user.id,
-        user_email: ownerEmail,
-        league_id: data.id,
-        payload: { league_name: trimmedName },
-      });
-    }
-    setCreating(false);
   }
 
   if (loading) {
@@ -282,7 +281,7 @@ export default function LeaguesPage() {
         <button
           type="submit"
           className="btn-primary"
-          disabled={creating || !name.trim() || reachedLimit}
+          disabled={creating || reachedLimit}
         >
           {creating ? 'Creating…' : 'Create league'}
         </button>

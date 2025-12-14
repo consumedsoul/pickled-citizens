@@ -570,6 +570,12 @@ export default function SessionsPage() {
       return;
     }
 
+
+    if (!members.length) {
+      setError("This league has no members yet.");
+      return;
+    }
+
     if (!userId) {
       setError("You must be signed in to create a session.");
       return;
@@ -1016,7 +1022,7 @@ export default function SessionsPage() {
             <button
               type="submit"
               className="btn-primary"
-              disabled={generating || membersLoading || !members.length}
+              disabled={generating || membersLoading}
               style={{ justifySelf: "flex-start", marginTop: "0.5rem" }}
             >
               {generating ? "Creating session..." : "Create session"}
