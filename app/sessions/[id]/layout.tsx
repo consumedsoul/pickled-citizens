@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { supabaseServiceRole } from '@/lib/supabaseClient';
 
 // Helper function to format date for OG image
 const formatDateTimeForTitle = (value: string | null) => {
@@ -26,21 +27,23 @@ interface SessionLayoutProps {
 export async function generateMetadata({ params }: SessionLayoutProps): Promise<Metadata> {
   const sessionId = params.id;
   
-  // Fetch session data for metadata
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'https://pickledcitizens.com'}/api/session/${sessionId}/metadata`, {
-      cache: 'no-store',
-    });
-    
-    if (response.ok) {
-      const sessionData = await response.json();
-      
+    const { data: sessionRow, error: sessionError } = await supabaseServiceRole
+      .from('game_sessions')
+      .select('scheduled_for, player_count, league:leagues(name)')
+      .eq('id', sessionId)
+      .maybeSingle();
+
+    if (!sessionError && sessionRow) {
+      const leagueRel: any = (sessionRow as any).league;
+      const leagueName =
+        Array.isArray(leagueRel) && leagueRel.length > 0
+          ? leagueRel[0]?.name ?? null
+          : leagueRel?.name ?? null;
+
       const title = 'Pickleball Session - Pickled Citizens';
-      const description = `${sessionData.league_name || 'Pickleball Session'} | ${sessionData.player_count} Players | ${formatDateTimeForTitle(sessionData.scheduled_for)}`;
-      
-      // Remove OG image for social previews
-      // Social platforms will not show images without explicit og:image tags
-      
+      const description = `${leagueName || 'Pickleball Session'} | ${sessionRow.player_count} Players | ${formatDateTimeForTitle(sessionRow.scheduled_for)}`;
+
       return {
         title,
         description,
@@ -69,7 +72,7 @@ export async function generateMetadata({ params }: SessionLayoutProps): Promise<
       };
     }
   } catch (error) {
-    console.error('Failed to fetch session metadata:', error);
+    console.error('Failed to load session metadata:', error);
   }
   
   // Fallback metadata - with logo and updated description format
