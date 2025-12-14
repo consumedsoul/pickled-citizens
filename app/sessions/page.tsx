@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -1149,13 +1150,12 @@ export default function SessionsPage() {
                         </div>
                       </div>
                       <div style={{ display: "flex", gap: "0.5rem" }}>
-                        <button
-                          type="button"
+                        <Link
                           className="btn-secondary"
-                          onClick={() => router.push(`/sessions/${session.id}`)}
+                          href={`/sessions/${session.id}`}
                         >
                           {session.created_by === userId ? "Manage" : "View"}
-                        </button>
+                        </Link>
                       </div>
                     </li>
                   ))}
@@ -1233,13 +1233,12 @@ export default function SessionsPage() {
                         })()}
                       </div>
                       <div style={{ display: "flex", gap: "0.5rem" }}>
-                        <button
-                          type="button"
+                        <Link
                           className="btn-secondary"
-                          onClick={() => router.push(`/sessions/${session.id}`)}
+                          href={`/sessions/${session.id}`}
                         >
                           {session.created_by === userId ? "Manage" : "View"}
-                        </button>
+                        </Link>
                       </div>
                     </li>
                   ))}
