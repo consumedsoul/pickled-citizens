@@ -603,7 +603,8 @@ export default function SessionDetailPage() {
                 style={{
                   display: 'grid',
                   gridTemplateColumns: '1fr 1fr',
-                  background: '#0f172a',
+                  gap: '1px',
+                  background: '#d1d5db',
                 }}
               >
                 <div
@@ -617,7 +618,6 @@ export default function SessionDetailPage() {
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderRight: '1px solid #d1d5db',
                     fontFamily: '"Courier New", monospace',
                     letterSpacing: '0.05em',
                   }}
@@ -649,6 +649,8 @@ export default function SessionDetailPage() {
                 style={{
                   display: 'grid',
                   gridTemplateColumns: '1fr 1fr',
+                  gap: '1px',
+                  background: '#d1d5db',
                 }}
               >
                 <div
@@ -656,7 +658,6 @@ export default function SessionDetailPage() {
                     display: 'flex',
                     flexDirection: 'column',
                     background: '#ffffff',
-                    borderRight: '1px solid #d1d5db',
                   }}
                 >
                   <div

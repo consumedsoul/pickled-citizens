@@ -2,7 +2,6 @@ import "./globals.css";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import menuLogo from "./images/Pickled-Citizens-Logo-Site.png";
 import favicon from "./images/Pickled-Citizens-Logo-Favicon.png";
 import { AuthStatus } from "@/components/AuthStatus";
 import { Navigation } from "@/components/Navigation";
@@ -49,9 +48,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <div className="app-header-inner">
               <Link href="/" className="app-logo">
                 <Image
-                  src={menuLogo}
+                  src="/images/Pickled-Citizens-Logo-Site.png"
                   alt="Pickled Citizens logo"
+                  width={200}
                   height={40}
+                  unoptimized
                   priority
                   quality={100}
                   style={{
