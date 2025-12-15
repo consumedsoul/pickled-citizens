@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "pages:build": "opennextjs-cloudflare build && rm -rf .open-next/pages && mkdir -p .open-next/pages && cp -R .open-next/assets/. .open-next/pages/ && cp -R .open-next/cloudflare .open-next/pages/cloudflare && cp -R .open-next/middleware .open-next/pages/middleware && cp -R .open-next/server-functions .open-next/pages/server-functions && cp -R .open-next/.build .open-next/pages/.build && cp -R .open-next/cache .open-next/pages/cache && cp -R .open-next/dynamodb-provider .open-next/pages/dynamodb-provider && cp -R .open-next/cloudflare-templates .open-next/pages/cloudflare-templates && cp .open-next/worker.js .open-next/pages/_worker.js",
+    "pages:build": "opennextjs-cloudflare build && rm -rf .open-next/pages && mkdir -p .open-next/pages && cp -R .open-next/assets/. .open-next/pages/ && cp -R .open-next/cloudflare .open-next/pages/cloudflare && cp -R .open-next/middleware .open-next/pages/middleware && cp -R .open-next/server-functions .open-next/pages/server-functions && cp -R .open-next/.build .open-next/pages/.build && cp -R .open-next/cache .open-next/pages/cache && cp -R .open-next/dynamodb-provider .open-next/pages/dynamodb-provider && cp -R .open-next/cloudflare-templates .open-next/pages/cloudflare-templates && cp .open-next/worker.js .open-next/pages/opennext-worker.js && node scripts/write-pages-worker.mjs",
     "deploy": "opennextjs-cloudflare build && wrangler deploy --config wrangler.worker.toml --keep-vars",
     "deploy:ci": "opennextjs-cloudflare build && wrangler deploy --config wrangler.worker.toml --keep-vars",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
