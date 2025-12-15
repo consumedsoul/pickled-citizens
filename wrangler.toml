@@ -3,3 +3,8 @@ compatibility_date = "2025-12-14"
 compatibility_flags = ["nodejs_compat"]
 
 pages_build_output_dir = ".open-next/pages"
+
+[vars]
+NEXT_PUBLIC_SITE_URL = "https://pickledcitizens.com"
+NEXT_PUBLIC_SUPABASE_URL = "https://alyqhhyvpebvmdcssahn.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_c6B_tg9PKslCicc4Y1Cz0A_CqnUJ_P8"
