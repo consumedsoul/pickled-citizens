@@ -50,15 +50,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 <Image
                   src="/images/Pickled-Citizens-Logo-Site.png"
                   alt="Pickled Citizens logo"
-                  width={200}
+                  width={66}
                   height={40}
                   unoptimized
                   priority
                   quality={100}
-                  style={{
-                    height: "40px",
-                    width: "auto",
-                  }}
                 />
               </Link>
               <div className="app-header-right">
