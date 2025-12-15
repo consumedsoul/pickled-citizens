@@ -126,9 +126,9 @@ Each match stores:
 ## 5. System Requirements
 
 ### Tech Stack
-- Frontend: React or Next.js  
+- Frontend: Next.js (React)  
 - Backend: Supabase (Auth + Postgres + RLS)  
-- Hosting: Netlify free tier  
+- Hosting: Cloudflare Workers (SSR) via OpenNext  
 - Repository: GitHub  
 
 ---
@@ -230,7 +230,7 @@ Each match stores:
 ### Risks
 - Scheduling logic can become complex for fairness  
 - Supabase free-tier limits  
-- Netlify build limits  
+- Cloudflare Workers platform limits (CPU/memory/bundle size)  
 
 ### Open Questions
 1. Do players see sessions they are not participating in?  

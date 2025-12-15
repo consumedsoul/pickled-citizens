@@ -334,7 +334,7 @@ npm run deploy
 
 ### Domain routing + Supabase cutover
 
-1. Configure Cloudflare DNS so `pickledcitizens.com` and `www.pickledcitizens.com` are proxied (orange cloud) and no longer point at Netlify.
+1. Configure Cloudflare DNS so `pickledcitizens.com` and `www.pickledcitizens.com` are proxied (orange cloud).
 2. Add Worker routes:
    - `pickledcitizens.com/*`
    - `www.pickledcitizens.com/*`
