@@ -683,12 +683,13 @@ export default function SessionDetailPage() {
                         key={p.id}
                         style={{
                           padding: '0.25rem 0.6rem',
-                          fontSize: '0.8rem',
+                          fontSize: '0.875rem',
                           display: 'flex',
                           justifyContent: 'center',
                           gap: '0.5rem',
                           textAlign: 'center',
                           color: '#14532d',
+                          fontWeight: 500,
                         }}
                       >
                         <span
@@ -730,12 +731,13 @@ export default function SessionDetailPage() {
                         key={p.id}
                         style={{
                           padding: '0.25rem 0.6rem',
-                          fontSize: '0.8rem',
+                          fontSize: '0.875rem',
                           display: 'flex',
                           justifyContent: 'center',
                           gap: '0.5rem',
                           textAlign: 'center',
                           color: '#1e3a8a',
+                          fontWeight: 500,
                         }}
                       >
                         <span
@@ -802,7 +804,7 @@ export default function SessionDetailPage() {
                     }}
                   >
                     <div>
-                      <div style={{ fontSize: '0.85rem', color: nameColor }}>
+                      <div style={{ fontSize: '0.875rem', color: nameColor, fontWeight: 500 }}>
                         {displayPlayerName(ps.player)}
                         {ps.player.self_reported_dupr != null &&
                           !Number.isNaN(ps.player.self_reported_dupr) && (
@@ -906,8 +908,8 @@ export default function SessionDetailPage() {
                           Win
                         </button>
                         <div
-                          className="text-xs text-center flex flex-col md:flex-row md:justify-center md:gap-1"
-                          style={{ color: '#14532d' }}
+                          className="text-center flex flex-col md:flex-row md:justify-center md:gap-1"
+                          style={{ color: '#14532d', fontSize: '0.875rem', fontWeight: 500 }}
                         >
                           {match.team1.map((p, i) => (
                             <span key={p.id}>
@@ -926,8 +928,8 @@ export default function SessionDetailPage() {
                           vs
                         </span>
                         <div
-                          className="text-xs text-center flex flex-col md:flex-row md:justify-center md:gap-1"
-                          style={{ color: '#1e3a8a' }}
+                          className="text-center flex flex-col md:flex-row md:justify-center md:gap-1"
+                          style={{ color: '#1e3a8a', fontSize: '0.875rem', fontWeight: 500 }}
                         >
                           {match.team2.map((p, i) => (
                             <span key={p.id}>
