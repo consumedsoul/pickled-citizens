@@ -193,14 +193,34 @@ export default function ProfilePage() {
     setError(null);
     setSuccess(null);
 
-    const { error: leaveError } = await supabase
-      .from('league_members')
-      .delete()
-      .eq('league_id', leagueId)
-      .eq('user_id', userId);
+    const {
+      data: sessionData,
+      error: sessionError,
+    } = await supabase.auth.getSession();
 
-    if (leaveError) {
-      setError(leaveError.message);
+    const accessToken = sessionData.session?.access_token;
+
+    if (sessionError || !accessToken) {
+      setError(sessionError?.message ?? 'You must be signed in.');
+      setSaving(false);
+      return;
+    }
+
+    const response = await fetch('/api/leagues/leave', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ leagueId }),
+    });
+
+    const json = (await response.json().catch(() => null)) as
+      | { ok?: boolean; error?: string }
+      | null;
+
+    if (!response.ok) {
+      setError(json?.error ?? 'Unable to leave league. Please refresh and try again.');
       setSaving(false);
       return;
     }
