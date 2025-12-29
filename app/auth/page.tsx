@@ -110,68 +110,44 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="section" style={{ maxWidth: 420 }}>
-      <h1 className="section-title">Sign up</h1>
-      <p className="hero-subtitle" style={{ marginBottom: '1rem' }}>
+    <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5 max-w-[420px]">
+      <h1 className="text-base font-medium mb-3">Sign up</h1>
+      <p className="text-app-muted mb-4">
         Create your Pickled Citizens account with a password. You can also send yourself a
         magic link instead if you prefer passwordless sign-in.
       </p>
 
-      <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '0.75rem' }}>
-        <div style={{ display: 'grid', gap: '0.5rem', gridTemplateColumns: '1fr 1fr' }}>
-          <label style={{ fontSize: '0.8rem' }}>
+      <form onSubmit={handleSubmit} className="grid gap-3">
+        <div className="grid gap-2 grid-cols-2">
+          <label className="text-[0.8rem]">
             First name (required)
             <input
               type="text"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
               required
-              style={{
-                marginTop: '0.35rem',
-                width: '100%',
-                padding: '0.45rem 0.6rem',
-                borderRadius: '0.5rem',
-                border: '1px solid #d1d5db',
-                background: '#f9fafb',
-                color: '#111827',
-              }}
+              className="mt-1.5 w-full px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-app-text"
             />
           </label>
-          <label style={{ fontSize: '0.8rem' }}>
+          <label className="text-[0.8rem]">
             Last name (required)
             <input
               type="text"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
               required
-              style={{
-                marginTop: '0.35rem',
-                width: '100%',
-                padding: '0.45rem 0.6rem',
-                borderRadius: '0.5rem',
-                border: '1px solid #d1d5db',
-                background: '#f9fafb',
-                color: '#111827',
-              }}
+              className="mt-1.5 w-full px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-app-text"
             />
           </label>
         </div>
 
-        <label style={{ fontSize: '0.8rem' }}>
+        <label className="text-[0.8rem]">
           Gender (required)
           <select
             value={gender}
             onChange={(e) => setGender(e.target.value)}
             required
-            style={{
-              marginTop: '0.35rem',
-              width: '100%',
-              padding: '0.45rem 0.6rem',
-              borderRadius: '0.5rem',
-              border: '1px solid #d1d5db',
-              background: '#f9fafb',
-              color: '#111827',
-            }}
+            className="mt-1.5 w-full px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-app-text"
           >
             <option value="">Select gender</option>
             <option value="male">Male</option>
@@ -179,90 +155,55 @@ export default function AuthPage() {
           </select>
         </label>
 
-        <label style={{ fontSize: '0.8rem' }}>
+        <label className="text-[0.8rem]">
           Email
           <input
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            style={{
-              marginTop: '0.35rem',
-              width: '100%',
-              padding: '0.45rem 0.6rem',
-              borderRadius: '0.5rem',
-              border: '1px solid #d1d5db',
-              background: '#f9fafb',
-              color: '#111827',
-            }}
+            className="mt-1.5 w-full px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-app-text"
           />
         </label>
 
-        <label style={{ fontSize: '0.8rem' }}>
+        <label className="text-[0.8rem]">
           Password (min 8 characters)
           <input
             type="password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            style={{
-              marginTop: '0.35rem',
-              width: '100%',
-              padding: '0.45rem 0.6rem',
-              borderRadius: '0.5rem',
-              border: '1px solid #d1d5db',
-              background: '#f9fafb',
-              color: '#111827',
-            }}
+            className="mt-1.5 w-full px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-app-text"
           />
         </label>
 
-        <label style={{ fontSize: '0.8rem' }}>
+        <label className="text-[0.8rem]">
           Confirm password
           <input
             type="password"
             required
             value={passwordConfirm}
             onChange={(e) => setPasswordConfirm(e.target.value)}
-            style={{
-              marginTop: '0.35rem',
-              width: '100%',
-              padding: '0.45rem 0.6rem',
-              borderRadius: '0.5rem',
-              border: '1px solid #d1d5db',
-              background: '#f9fafb',
-              color: '#111827',
-            }}
+            className="mt-1.5 w-full px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-app-text"
           />
         </label>
 
-        <label style={{ fontSize: '0.8rem' }}>
+        <label className="text-[0.8rem]">
           Self-reported DUPR (required, x.xx)
           <input
             type="text"
             value={selfDupr}
             onChange={(e) => setSelfDupr(e.target.value)}
             placeholder="e.g. 3.75"
-            style={{
-              marginTop: '0.35rem',
-              width: '100%',
-              padding: '0.45rem 0.6rem',
-              borderRadius: '0.5rem',
-              border: '1px solid #d1d5db',
-              background: '#f9fafb',
-              color: '#111827',
-            }}
+            className="mt-1.5 w-full px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-app-text"
           />
-          <p
-            className="hero-subtitle"
-            style={{ fontSize: '0.75rem', marginTop: '0.35rem' }}
-          >
+          <p className="text-app-muted text-xs mt-1.5">
             Need help estimating your rating? See{' '}
             <a
               href="https://www.pickleheads.com/guides/pickleball-rating"
               target="_blank"
               rel="noreferrer"
-              style={{ color: '#60a5fa', textDecoration: 'underline' }}
+              className="text-blue-400 underline"
             >
               this guide
             </a>
@@ -272,31 +213,18 @@ export default function AuthPage() {
 
         <button
           type="submit"
-          className="btn-primary"
+          className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed justify-self-start"
           disabled={status === 'loading'}
-          style={{ justifySelf: 'flex-start' }}
         >
           {status === 'loading' ? 'Creating account…' : 'Create account'}
         </button>
       </form>
 
       {message && (
-        <p
-          style={{
-            marginTop: '0.75rem',
-            fontSize: '0.8rem',
-            color: status === 'error' ? '#fca5a5' : '#9ca3af',
-          }}
-        >
+        <p className={`mt-3 text-[0.8rem] ${status === 'error' ? 'text-red-300' : 'text-app-muted'}`}>
           {status === 'success' && message.includes('Check your email') ? (
             <span>
-              <span style={{ 
-                backgroundColor: '#fef3c7', 
-                color: '#92400e', 
-                fontWeight: 'bold',
-                padding: '0.2rem 0.4rem',
-                borderRadius: '0.25rem'
-              }}>
+              <span className="bg-yellow-100 text-yellow-800 font-bold px-1.5 py-0.5 rounded">
                 Check your email
               </span>{' '}
               to confirm your account and finish signing up.
@@ -306,22 +234,16 @@ export default function AuthPage() {
           )}
         </p>
       )}
-      <p
-        className="hero-subtitle"
-        style={{ marginTop: '1rem', fontSize: '0.8rem' }}
-      >
+      <p className="text-app-muted mt-4 text-[0.8rem]">
         Already have an account?{' '}
-        <a href="/auth/signin" style={{ textDecoration: 'underline' }}>
+        <a href="/auth/signin" className="underline">
           Sign in with email only
         </a>
         .
       </p>
-      <p
-        className="hero-subtitle"
-        style={{ marginTop: '0.5rem', fontSize: '0.8rem' }}
-      >
+      <p className="text-app-muted mt-2 text-[0.8rem]">
         Prefer passwordless sign-up? You can use the{' '}
-        <a href="/auth/signin" style={{ textDecoration: 'underline' }}>
+        <a href="/auth/signin" className="underline">
           magic link sign-in
         </a>{' '}
         page instead.

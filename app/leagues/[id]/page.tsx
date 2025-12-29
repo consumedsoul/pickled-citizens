@@ -537,18 +537,18 @@ export default function LeagueMembersPage() {
 
   if (loading) {
     return (
-      <div className="section">
-        <h1 className="section-title">League</h1>
-        <p className="hero-subtitle">Loading league members…</p>
+      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
+        <h1 className="text-base font-medium mb-3">League</h1>
+        <p className="text-app-muted">Loading league members…</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="section">
-        <h1 className="section-title">League</h1>
-        <p className="hero-subtitle" style={{ color: '#fca5a5' }}>
+      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
+        <h1 className="text-base font-medium mb-3">League</h1>
+        <p className="text-app-muted" style={{ color: '#fca5a5' }}>
           {error}
         </p>
       </div>
@@ -557,16 +557,16 @@ export default function LeagueMembersPage() {
 
   if (!league) {
     return (
-      <div className="section">
-        <h1 className="section-title">League</h1>
-        <p className="hero-subtitle">League not found.</p>
+      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
+        <h1 className="text-base font-medium mb-3">League</h1>
+        <p className="text-app-muted">League not found.</p>
       </div>
     );
   }
 
   return (
-    <div className="section">
-      <h1 className="section-title">{league.name} - League Details</h1>
+    <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
+      <h1 className="text-base font-medium mb-3">{league.name} - League Details</h1>
       {isOwner && (
         <>
           <form
@@ -594,7 +594,7 @@ export default function LeagueMembersPage() {
             />
             <button
               type="submit"
-              className="btn-secondary"
+              className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
               disabled={
                 renaming ||
                 !renameInput.trim() ||
@@ -604,7 +604,7 @@ export default function LeagueMembersPage() {
               {renaming ? 'Renaming…' : 'Rename league'}
             </button>
           </form>
-          <p className="hero-subtitle">
+          <p className="text-app-muted">
             Add or remove authenticated players from this league by email. Players must
             have already signed up and saved their profile so their email is stored.
           </p>
@@ -634,7 +634,7 @@ export default function LeagueMembersPage() {
             />
             <button
               type="submit"
-              className="btn-primary"
+              className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={saving || !emailInput.trim()}
             >
               {saving ? 'Saving…' : 'Add player'}
@@ -652,13 +652,13 @@ export default function LeagueMembersPage() {
             <>
               {/* League Admins Section */}
               <div>
-                <h2 className="section-title">
+                <h2 className="text-base font-medium mb-3">
                   League Admin{admins.length !== 1 ? 's' : ''} ({admins.length})
                 </h2>
                 {admins.length === 0 ? (
-                  <p className="hero-subtitle">No league admins found.</p>
+                  <p className="text-app-muted">No league admins found.</p>
                 ) : (
-                  <ul className="section-list" style={{ listStyle: 'none', paddingLeft: 0 }}>
+                  <ul className="list-none pl-0 text-app-muted text-[0.87rem]" style={{ listStyle: 'none', paddingLeft: 0 }}>
                     {admins.map((admin) => (
                       <li
                         key={admin.user_id}
@@ -691,7 +691,7 @@ export default function LeagueMembersPage() {
                           <div className="admin-actions">
                             <button
                               type="button"
-                              className="btn-secondary"
+                              className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
                               onClick={() => handleDemoteToMember(admin)}
                               disabled={roleUpdating || admins.length <= 1}
                               style={{
@@ -714,11 +714,11 @@ export default function LeagueMembersPage() {
 
               {/* Regular Members Section */}
               <div style={{ marginTop: '2rem' }}>
-                <h2 className="section-title">Members ({regularMembers.length})</h2>
+                <h2 className="text-base font-medium mb-3">Members ({regularMembers.length})</h2>
                 {regularMembers.length === 0 ? (
-                  <p className="hero-subtitle">No members yet.</p>
+                  <p className="text-app-muted">No members yet.</p>
                 ) : (
-                  <ul className="section-list" style={{ listStyle: 'none', paddingLeft: 0 }}>
+                  <ul className="list-none pl-0 text-app-muted text-[0.87rem]" style={{ listStyle: 'none', paddingLeft: 0 }}>
                     {regularMembers.map((member) => (
                       <li
                         key={member.user_id}
@@ -748,64 +748,39 @@ export default function LeagueMembersPage() {
                           })()}
                         </span>
                         {isOwner && (
-                          <>
-                            <div className="member-actions-mobile" style={{ display: 'flex', gap: '0.5rem' }}>
-                              <button
-                                type="button"
-                                className="btn-primary"
-                                onClick={() => handlePromoteToAdmin(member)}
-                                disabled={roleUpdating}
-                                title="Make admin"
-                                style={{
-                                  padding: '0.25rem 0.5rem',
-                                  fontSize: '0.875rem',
-                                  minWidth: 'auto',
-                                }}
-                              >
-                                👑
-                              </button>
-                              <button
-                                type="button"
-                                className="btn-secondary"
-                                onClick={() => handleRemoveMember(member)}
-                                disabled={saving}
-                                title="Remove"
-                                style={{
-                                  background: '#b91c1c',
-                                  borderColor: '#b91c1c',
-                                  color: '#fee2e2',
-                                  padding: '0.25rem 0.5rem',
-                                  fontSize: '0.875rem',
-                                  minWidth: 'auto',
-                                }}
-                              >
-                                ❌
-                              </button>
-                            </div>
-                            <div className="member-actions-desktop" style={{ display: 'flex', gap: '0.5rem' }}>
-                              <button
-                                type="button"
-                                className="btn-primary"
-                                onClick={() => handlePromoteToAdmin(member)}
-                                disabled={roleUpdating}
-                                title="Make admin"
-                              >
-                                Make Admin
-                              </button>
-                              <button
-                                type="button"
-                                className="btn-secondary"
-                                onClick={() => handleRemoveMember(member)}
-                                style={{
-                                  background: '#b91c1c',
-                                  borderColor: '#b91c1c',
-                                  color: '#fee2e2',
-                                }}
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          </>
+                          <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              className="rounded-full text-xs border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              onClick={() => handlePromoteToAdmin(member)}
+                              disabled={roleUpdating}
+                              style={{
+                                padding: '0.25rem 0.5rem',
+                                fontSize: '0.7rem',
+                                minWidth: 'auto',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              Make admin
+                            </button>
+                            <button
+                              type="button"
+                              className="rounded-full text-xs border cursor-pointer hover:opacity-80 transition-colors"
+                              onClick={() => handleRemoveMember(member)}
+                              disabled={saving}
+                              style={{
+                                background: '#b91c1c',
+                                borderColor: '#b91c1c',
+                                color: '#fee2e2',
+                                padding: '0.25rem 0.5rem',
+                                fontSize: '0.7rem',
+                                minWidth: 'auto',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              Remove
+                            </button>
+                          </div>
                         )}
                       </li>
                     ))}
@@ -826,14 +801,14 @@ export default function LeagueMembersPage() {
               borderTop: '1px solid #1f2937',
             }}
           >
-            <h2 className="section-title">Delete league</h2>
-            <p className="hero-subtitle">
+            <h2 className="text-base font-medium mb-3">Delete league</h2>
+            <p className="text-app-muted">
               This will permanently delete this league and its data. This action cannot be
               undone.
             </p>
             <button
               type="button"
-              className="btn-primary"
+              className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={openDeleteDialog}
               style={{
                 marginTop: '0.75rem',
@@ -876,15 +851,15 @@ export default function LeagueMembersPage() {
               }}
             >
               <div
-                className="section"
+                className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5"
                 style={{
                   maxWidth: 420,
                   width: '90%',
                   boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
                 }}
               >
-                <h2 className="section-title">Delete league</h2>
-                <p className="hero-subtitle">
+                <h2 className="text-base font-medium mb-3">Delete league</h2>
+                <p className="text-app-muted">
                   This will permanently delete this league and its data. Type
                   <span style={{ fontWeight: 600 }}> delete </span>
                   to confirm.
@@ -914,14 +889,14 @@ export default function LeagueMembersPage() {
                 >
                   <button
                     type="button"
-                    className="btn-secondary"
+                    className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
                     onClick={closeDeleteDialog}
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
-                    className="btn-primary"
+                    className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={handleDeleteLeague}
                     disabled={deleteLoading || deleteConfirm !== 'delete'}
                     style={{

@@ -250,18 +250,18 @@ export default function AdminUsersPage() {
 
   if (loading) {
     return (
-      <div className="section">
-        <h1 className="section-title">Admin users</h1>
-        <p className="hero-subtitle">Loading users…</p>
+      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
+        <h1 className="text-base font-medium mb-3">Admin users</h1>
+        <p className="text-app-muted">Loading users…</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="section">
-        <h1 className="section-title">Admin users</h1>
-        <p className="hero-subtitle" style={{ color: '#fca5a5' }}>
+      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
+        <h1 className="text-base font-medium mb-3">Admin users</h1>
+        <p className="text-app-muted" style={{ color: '#fca5a5' }}>
           {error}
         </p>
       </div>
@@ -269,19 +269,19 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div className="section">
-      <h1 className="section-title">Admin users</h1>
+    <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
+      <h1 className="text-base font-medium mb-3">Admin users</h1>
       {userEmail && (
-        <p className="hero-subtitle" style={{ marginBottom: '0.5rem' }}>
+        <p className="text-app-muted" style={{ marginBottom: '0.5rem' }}>
           Signed in as {userEmail}
         </p>
       )}
-      <p className="hero-subtitle">
+      <p className="text-app-muted">
         View and manage all user profiles. Only your admin account can access this page.
       </p>
 
       {users.length === 0 ? (
-        <p className="hero-subtitle" style={{ marginTop: '1rem' }}>
+        <p className="text-app-muted" style={{ marginTop: '1rem' }}>
           No profiles found.
         </p>
       ) : (
@@ -294,7 +294,7 @@ export default function AdminUsersPage() {
           }}
         >
           <ul
-            className="section-list"
+            className="list-none pl-0 text-app-muted text-[0.87rem]"
             style={{ listStyle: 'none', paddingLeft: 0, margin: 0 }}
           >
             {users.map((user) => {
@@ -437,7 +437,7 @@ export default function AdminUsersPage() {
                           >
                             <button
                               type="button"
-                              className="btn-secondary"
+                              className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
                               onClick={cancelEdit}
                               disabled={saving}
                             >
@@ -445,7 +445,7 @@ export default function AdminUsersPage() {
                             </button>
                             <button
                               type="submit"
-                              className="btn-primary"
+                              className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                               disabled={saving}
                             >
                               {saving ? 'Saving…' : 'Save'}
@@ -464,14 +464,14 @@ export default function AdminUsersPage() {
                         >
                           <button
                             type="button"
-                            className="btn-secondary"
+                            className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
                             onClick={() => startEdit(user)}
                           >
                             Edit profile
                           </button>
                           <button
                             type="button"
-                            className="btn-primary"
+                            className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             onClick={() => handleDelete(user)}
                             disabled={deletingId === user.id}
                             style={{

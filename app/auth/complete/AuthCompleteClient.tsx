@@ -100,9 +100,9 @@ export default function AuthCompleteClient() {
   }
 
   return (
-    <div className="section" style={{ maxWidth: 420 }}>
-      <h1 className="section-title">Completing sign-in</h1>
-      <p className="hero-subtitle">{text}</p>
+    <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5 max-w-[420px]">
+      <h1 className="text-base font-medium mb-3">Completing sign-in</h1>
+      <p className="text-app-muted">{text}</p>
     </div>
   );
 }

@@ -79,45 +79,45 @@ export default function AdminLeaguesPage() {
 
   if (loading) {
     return (
-      <div className="section">
-        <h1 className="section-title">Admin: Leagues</h1>
-        <p className="hero-subtitle">Loading leagues…</p>
+      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
+        <h1 className="text-base font-medium mb-3">Admin: Leagues</h1>
+        <p className="text-app-muted">Loading leagues…</p>
       </div>
     );
   }
 
   if (!isAdmin) {
     return (
-      <div className="section">
-        <h1 className="section-title">Admin: Leagues</h1>
-        <p className="hero-subtitle">You do not have access to this page.</p>
+      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
+        <h1 className="text-base font-medium mb-3">Admin: Leagues</h1>
+        <p className="text-app-muted">You do not have access to this page.</p>
       </div>
     );
   }
 
   return (
-    <div className="section">
-      <h1 className="section-title">Admin: Leagues</h1>
+    <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
+      <h1 className="text-base font-medium mb-3">Admin: Leagues</h1>
       {error && (
-        <p className="hero-subtitle" style={{ color: '#fca5a5' }}>
+        <p className="text-app-muted" style={{ color: '#fca5a5' }}>
           {error}
         </p>
       )}
       {!error && (
-        <p className="hero-subtitle">
+        <p className="text-app-muted">
           This view lists all leagues in the system. Open a league to rename it, manage
           members, or delete it.
         </p>
       )}
 
       {leagues.length === 0 ? (
-        <p className="hero-subtitle" style={{ marginTop: '1rem' }}>
+        <p className="text-app-muted" style={{ marginTop: '1rem' }}>
           No leagues found.
         </p>
       ) : (
         <div style={{ marginTop: '1rem' }}>
           <ul
-            className="section-list"
+            className="list-none pl-0 text-app-muted text-[0.87rem]"
             style={{ listStyle: 'none', paddingLeft: 0, margin: 0 }}
           >
             {leagues.map((league) => (
@@ -145,7 +145,7 @@ export default function AdminLeaguesPage() {
                 </div>
                 <button
                   type="button"
-                  className="btn-secondary"
+                  className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
                   onClick={() => router.push(`/leagues/${league.id}`)}
                 >
                   Open

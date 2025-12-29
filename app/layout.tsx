@@ -43,10 +43,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <div className="app-shell">
-          <header className="app-header">
-            <div className="app-header-inner">
-              <Link href="/" className="app-logo">
+        <div className="min-h-screen flex flex-col">
+          <header className="border-b border-app-border backdrop-blur-[10px] bg-app-bg-alt">
+            <div className="max-w-app mx-auto px-6 py-3 flex items-center justify-between md:flex-row flex-col md:gap-0 gap-2">
+              <Link href="/" className="font-semibold tracking-wide">
                 <Image
                   src="/images/Pickled-Citizens-Logo-Site.png"
                   alt="Pickled Citizens logo"
@@ -57,24 +57,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                   quality={100}
                 />
               </Link>
-              <div className="app-header-right">
+              <div className="flex items-center gap-4 md:flex-row flex-col md:w-auto w-full">
                 <Navigation />
                 <AuthStatus />
               </div>
             </div>
           </header>
-          <main className="app-main">{children}</main>
-          <footer className="app-footer">
-            <div
-              style={{
-                display: "flex",
-                width: "100%",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "1rem",
-                flexWrap: "wrap",
-              }}
-            >
+          <main className="flex-1 max-w-app mx-auto px-6 py-6 w-full">{children}</main>
+          <footer className="border-t border-app-border px-6 py-3 text-center text-xs text-app-muted">
+            <div className="flex w-full items-center justify-between gap-4 flex-wrap">
               <span>{`Copyright ${year} Pickled Citizens | All Rights Reserved`}</span>
               <AdminFooterLinks />
             </div>

@@ -10,12 +10,10 @@ export function Navigation() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // Check initial auth state
     supabase.auth.getUser().then(({ data }) => {
       setIsAuthenticated(!!data.user);
     });
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsAuthenticated(!!session?.user);
     });
@@ -23,34 +21,29 @@ export function Navigation() {
     return () => subscription.unsubscribe();
   }, []);
 
-  function getLinkStyle(href: string) {
+  function getLinkClassName(href: string) {
     const isActive = 
       (href === '/' && pathname === '/') ||
       (href !== '/' && pathname.startsWith(href));
     
-    return {
-      color: isActive ? '#263FA9' : 'inherit',
-      fontWeight: isActive ? 'bold' : 'normal',
-      textDecoration: 'none',
-      padding: '0.25rem 0.5rem',
-      borderRadius: '0.25rem',
-      transition: 'all 0.2s ease'
-    };
+    return `px-2 py-1 rounded no-underline transition-all duration-200 ${
+      isActive ? 'text-app-link font-bold' : ''
+    }`;
   }
 
   return (
-    <nav className="app-nav">
-      <Link href="/" style={getLinkStyle('/')}>
+    <nav className="flex gap-4 text-sm md:w-auto w-full md:justify-start justify-center flex-wrap md:gap-y-0 gap-y-1">
+      <Link href="/" className={getLinkClassName('/')}>
         Home
       </Link>
-      <Link href="/leagues" style={getLinkStyle('/leagues')}>
+      <Link href="/leagues" className={getLinkClassName('/leagues')}>
         Leagues
       </Link>
-      <Link href="/sessions" style={getLinkStyle('/sessions')}>
+      <Link href="/sessions" className={getLinkClassName('/sessions')}>
         Sessions
       </Link>
       {isAuthenticated && (
-        <Link href="/profile" style={getLinkStyle('/profile')}>
+        <Link href="/profile" className={getLinkClassName('/profile')}>
           Profile
         </Link>
       )}

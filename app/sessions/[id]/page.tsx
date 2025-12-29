@@ -88,6 +88,17 @@ function displayPlayerName(player: SessionPlayer) {
   return 'Deleted player';
 }
 
+function displayPlayerNameShort(player: SessionPlayer) {
+  const firstName = player.first_name?.trim() || '';
+  const lastName = player.last_name?.trim() || '';
+  if (firstName && lastName) {
+    return `${firstName} ${lastName.charAt(0)}`;
+  }
+  if (firstName) return firstName;
+  if (lastName) return lastName;
+  return 'Deleted player';
+}
+
 export default function SessionDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -509,18 +520,18 @@ export default function SessionDetailPage() {
 
   if (loading) {
     return (
-      <div className="section">
-        <h1 className="section-title">Session</h1>
-        <p className="hero-subtitle">Loading session…</p>
+      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
+        <h1 className="text-base font-medium mb-3">Session</h1>
+        <p className="text-app-muted">Loading session…</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="section">
-        <h1 className="section-title">Session</h1>
-        <p className="hero-subtitle" style={{ color: '#fca5a5' }}>
+      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
+        <h1 className="text-base font-medium mb-3">Session</h1>
+        <p className="text-app-muted" style={{ color: '#fca5a5' }}>
           {error}
         </p>
       </div>
@@ -529,15 +540,15 @@ export default function SessionDetailPage() {
 
   if (!session) {
     return (
-      <div className="section">
-        <h1 className="section-title">Session</h1>
-        <p className="hero-subtitle">Session not found.</p>
+      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
+        <h1 className="text-base font-medium mb-3">Session</h1>
+        <p className="text-app-muted">Session not found.</p>
       </div>
     );
   }
 
   return (
-    <div className="section">
+    <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
       <div
         style={{
           display: 'flex',
@@ -547,11 +558,11 @@ export default function SessionDetailPage() {
           flexWrap: 'wrap',
         }}
       >
-        <h1 className="section-title">Session details</h1>
+        <h1 className="text-base font-medium mb-3">Session details</h1>
         {canEdit && (
           <button
             type="button"
-            className="btn-primary"
+            className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={openDeleteDialog}
             style={{
               background: '#b91c1c',
@@ -563,36 +574,32 @@ export default function SessionDetailPage() {
           </button>
         )}
       </div>
-      <p className="hero-subtitle" style={{ marginBottom: '0.5rem' }}>
+      <p className="text-app-muted" style={{ marginBottom: '0.5rem' }}>
         {session.league_name || 'Deleted league'} · {session.player_count} players ·{' '}
         {formatDateTime(session.scheduled_for ?? session.created_at)}
       </p>
       {!canEdit && (
-        <p className="hero-subtitle" style={{ fontSize: '0.85rem' }}>
+        <p className="text-app-muted" style={{ fontSize: '0.85rem' }}>
           Only the session creator can update match results. You can still view the
           current standings.
         </p>
       )}
 
       <div
-        className="session-details-grid"
-        style={{
-          marginTop: '1.5rem',
-          gap: '1rem',
-          alignItems: 'flex-start',
-        }}
+        className="mt-6 grid grid-cols-1 gap-0 md:grid-cols-[1fr_2fr] md:gap-x-6"
       >
-        {/* Teams column */}
-        <div>
-          <h2 className="section-title">Teams</h2>
+        {/* Teams section - shows first on mobile */}
+        <div style={{ order: 1 }} className="md:col-start-1 md:row-start-1">
+          <h2 className="text-base font-medium mb-3">Teams</h2>
           {matches.length === 0 ? (
-            <p className="hero-subtitle" style={{ fontSize: '0.85rem' }}>
+            <p className="text-app-muted" style={{ fontSize: '0.85rem' }}>
               No matches found for this session.
             </p>
           ) : (
             <div
               style={{
-                marginTop: '0.75rem',
+                marginTop: 0,
+                marginBottom: 0,
                 borderRadius: '0.75rem',
                 overflow: 'hidden',
                 border: '1px solid #d1d5db',
@@ -751,162 +758,17 @@ export default function SessionDetailPage() {
           )}
         </div>
 
-        {/* Matchups column */}
-        <div>
-          <h2 className="section-title">Matchups</h2>
-          {matches.length === 0 ? (
-            <p className="hero-subtitle" style={{ fontSize: '0.85rem' }}>
-              No matchups to show yet.
-            </p>
-          ) : (
-            <div
-              style={{
-                marginTop: '0.75rem',
-                borderRadius: '0.75rem',
-                border: '1px solid #d1d5db',
-                background: '#ffffff',
-                padding: '0.5rem 0.6rem',
-              }}
-            >
-              {rounds.map((roundMatches, roundIndex) => (
-                <div
-                  key={roundIndex}
-                  style={{
-                    marginTop: roundIndex === 0 ? 0 : '0.75rem',
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: '0.8rem',
-                      fontWeight: 600,
-                      color: '#4b5563',
-                      marginBottom: '0.25rem',
-                    }}
-                  >
-                    Round {roundIndex + 1}
-                  </div>
-                  {roundMatches.map((match, index) => {
-                    const teamALabel =
-                      match.team1.length >= 2
-                        ? [
-                            `${displayPlayerName(match.team1[0])} +`,
-                            displayPlayerName(match.team1[1]),
-                          ]
-                        : [match.team1.map(displayPlayerName).join(', ')];
-                    const teamBLabel =
-                      match.team2.length >= 2
-                        ? [
-                            `${displayPlayerName(match.team2[0])} +`,
-                            displayPlayerName(match.team2[1]),
-                          ]
-                        : [match.team2.map(displayPlayerName).join(', ')];
-
-                    return (
-                      <div
-                        key={match.id}
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns:
-                            'auto minmax(0, 1fr) auto minmax(0, 1fr) auto',
-                          gap: '0.25rem',
-                          alignItems: 'center',
-                          justifyItems: 'center',
-                          padding: '0.3rem 0',
-                          borderTop:
-                            index === 0 && roundIndex === 0
-                              ? undefined
-                              : '1px solid #1f2937',
-                        }}
-                      >
-                        <button
-                          type="button"
-                          className="btn-secondary"
-                          onClick={
-                            canEdit ? () => handleToggleWinner(match.id, 1) : undefined
-                          }
-                          disabled={!canEdit || updatingMatchId === match.id}
-                          style={{
-                            padding: '0.15rem 0.4rem',
-                            fontSize: '0.75rem',
-                            background:
-                              match.winner === 1 ? '#14532d' : '#f9fafb',
-                            borderColor:
-                              match.winner === 1 ? '#14532d' : '#d1d5db',
-                            color: match.winner === 1 ? '#ffffff' : '#4b5563',
-                          }}
-                        >
-                          Win
-                        </button>
-                        <span
-                          style={{
-                            fontSize: '0.85rem',
-                            color: '#14532d',
-                            textAlign: 'center',
-                          }}
-                        >
-                          {teamALabel.map((line, idx) => (
-                            <div key={idx}>{line}</div>
-                          ))}
-                        </span>
-                        <span
-                          style={{
-                            fontSize: '0.75rem',
-                            color: '#6b7280',
-                            textAlign: 'center',
-                          }}
-                        >
-                          vs
-                        </span>
-                        <span
-                          style={{
-                            fontSize: '0.85rem',
-                            color: '#1e3a8a',
-                            textAlign: 'center',
-                          }}
-                        >
-                          {teamBLabel.map((line, idx) => (
-                            <div key={idx}>{line}</div>
-                          ))}
-                        </span>
-                        <button
-                          type="button"
-                          className="btn-secondary"
-                          onClick={
-                            canEdit ? () => handleToggleWinner(match.id, 2) : undefined
-                          }
-                          disabled={!canEdit || updatingMatchId === match.id}
-                          style={{
-                            padding: '0.15rem 0.4rem',
-                            fontSize: '0.75rem',
-                            background:
-                              match.winner === 2 ? '#1e40af' : '#f9fafb',
-                            borderColor:
-                              match.winner === 2 ? '#1e40af' : '#d1d5db',
-                            color: match.winner === 2 ? '#ffffff' : '#4b5563',
-                          }}
-                        >
-                          Win
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Players column */}
-        <div>
-          <h2 className="section-title">Players</h2>
+        {/* Players section - shows second on mobile */}
+        <div style={{ order: 3 }} className="mt-6 md:mt-0 md:col-start-1 md:row-start-2">
+          <h2 className="text-base font-medium mb-3">Players</h2>
           {playerStats.length === 0 ? (
-            <p className="hero-subtitle" style={{ fontSize: '0.85rem' }}>
+            <p className="text-app-muted" style={{ fontSize: '0.85rem' }}>
               Players will appear here once matches and participants are loaded.
             </p>
           ) : (
             <div
               style={{
-                marginTop: '0.75rem',
+                marginTop: 0,
                 borderRadius: '0.75rem',
                 border: '1px solid #d1d5db',
                 background: '#ffffff',
@@ -914,7 +776,7 @@ export default function SessionDetailPage() {
               }}
             >
               <ul
-                className="section-list"
+                className="list-none pl-0 text-app-muted text-[0.87rem]"
                 style={{ listStyle: 'none', paddingLeft: 0, margin: 0 }}
               >
                 {playerStats.map((ps) => {
@@ -966,6 +828,142 @@ export default function SessionDetailPage() {
             </div>
           )}
         </div>
+
+        {/* Matchups section - shows third on mobile, second column on desktop */}
+        <div style={{ order: 2 }} className="mt-6 md:mt-0 md:col-start-2 md:row-start-1 md:row-span-2">
+          <h2 className="text-base font-medium mb-3">Matchups</h2>
+          {matches.length === 0 ? (
+            <p className="text-app-muted" style={{ fontSize: '0.85rem' }}>
+              No matchups to show yet.
+            </p>
+          ) : (
+            <div
+              style={{
+                marginTop: '0.75rem',
+                borderRadius: '0.75rem',
+                border: '1px solid #d1d5db',
+                background: '#ffffff',
+                padding: '0.5rem 0.6rem',
+              }}
+            >
+              {rounds.map((roundMatches, roundIndex) => (
+                <div
+                  key={roundIndex}
+                  style={{
+                    marginTop: roundIndex === 0 ? 0 : '0.5rem',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      color: '#4b5563',
+                      marginBottom: '0.15rem',
+                      textAlign: 'center',
+                      background: '#f3f4f6',
+                      padding: '0.25rem 0.5rem',
+                      marginLeft: '-0.6rem',
+                      marginRight: '-0.6rem',
+                    }}
+                  >
+                    ROUND {roundIndex + 1}
+                  </div>
+                  {roundMatches.map((match, index) => {
+                    const team1Names = match.team1.map(displayPlayerNameShort).join(' + ');
+                    const team2Names = match.team2.map(displayPlayerNameShort).join(' + ');
+
+                    return (
+                      <div
+                        key={match.id}
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns:
+                            'auto minmax(0, 1fr) auto minmax(0, 1fr) auto',
+                          gap: '0.25rem',
+                          alignItems: 'center',
+                          justifyItems: 'center',
+                          padding: '0.3rem 0',
+                          borderTop: index === 0 ? undefined : '1px solid #e5e7eb',
+                        }}
+                      >
+                        <button
+                          type="button"
+                          className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
+                          onClick={
+                            canEdit ? () => handleToggleWinner(match.id, 1) : undefined
+                          }
+                          disabled={!canEdit || updatingMatchId === match.id}
+                          style={{
+                            padding: '0.15rem 0.4rem',
+                            fontSize: '0.75rem',
+                            background:
+                              match.winner === 1 ? '#14532d' : '#f9fafb',
+                            borderColor:
+                              match.winner === 1 ? '#14532d' : '#d1d5db',
+                            color: match.winner === 1 ? '#ffffff' : '#4b5563',
+                          }}
+                        >
+                          Win
+                        </button>
+                        <div
+                          className="text-xs text-center flex flex-col md:flex-row md:justify-center md:gap-1"
+                          style={{ color: '#14532d' }}
+                        >
+                          {match.team1.map((p, i) => (
+                            <span key={p.id}>
+                              {displayPlayerNameShort(p)}
+                              {i < match.team1.length - 1 && <span className="hidden md:inline"> +</span>}
+                            </span>
+                          ))}
+                        </div>
+                        <span
+                          style={{
+                            fontSize: '0.75rem',
+                            color: '#6b7280',
+                            textAlign: 'center',
+                          }}
+                        >
+                          vs
+                        </span>
+                        <div
+                          className="text-xs text-center flex flex-col md:flex-row md:justify-center md:gap-1"
+                          style={{ color: '#1e3a8a' }}
+                        >
+                          {match.team2.map((p, i) => (
+                            <span key={p.id}>
+                              {displayPlayerNameShort(p)}
+                              {i < match.team2.length - 1 && <span className="hidden md:inline"> +</span>}
+                            </span>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
+                          onClick={
+                            canEdit ? () => handleToggleWinner(match.id, 2) : undefined
+                          }
+                          disabled={!canEdit || updatingMatchId === match.id}
+                          style={{
+                            padding: '0.15rem 0.4rem',
+                            fontSize: '0.75rem',
+                            background:
+                              match.winner === 2 ? '#1e40af' : '#f9fafb',
+                            borderColor:
+                              match.winner === 2 ? '#1e40af' : '#d1d5db',
+                            color: match.winner === 2 ? '#ffffff' : '#4b5563',
+                          }}
+                        >
+                          Win
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
       </div>
 
       {canEdit && deleteOpen && (
@@ -981,15 +979,15 @@ export default function SessionDetailPage() {
           }}
         >
           <div
-            className="section"
+            className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5"
             style={{
               maxWidth: 420,
               width: '90%',
               boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
             }}
           >
-            <h2 className="section-title">Delete session</h2>
-            <p className="hero-subtitle">
+            <h2 className="text-base font-medium mb-3">Delete session</h2>
+            <p className="text-app-muted">
               Are you sure you want to delete this session? This action cannot be undone.
             </p>
             <div
@@ -1002,14 +1000,14 @@ export default function SessionDetailPage() {
             >
               <button
                 type="button"
-                className="btn-secondary"
+                className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
                 onClick={closeDeleteDialog}
               >
                 Cancel
               </button>
               <button
                 type="button"
-                className="btn-primary"
+                className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleDeleteSession}
                 disabled={deleteLoading}
                 style={{

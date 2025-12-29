@@ -818,18 +818,18 @@ export default function SessionsPage() {
 
   if (loading) {
     return (
-      <div className="section">
-        <h1 className="section-title">Create session</h1>
-        <p className="hero-subtitle">Loading your sessions...</p>
+      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
+        <h1 className="text-base font-medium mb-3">Create session</h1>
+        <p className="text-app-muted">Loading your sessions...</p>
       </div>
     );
   }
 
   if (!userId) {
     return (
-      <div className="section">
-        <h1 className="section-title">Create session</h1>
-        <p className="hero-subtitle">You must be signed in to create sessions.</p>
+      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
+        <h1 className="text-base font-medium mb-3">Create session</h1>
+        <p className="text-app-muted">You must be signed in to create sessions.</p>
       </div>
     );
   }
@@ -860,20 +860,20 @@ export default function SessionsPage() {
     .map((item) => item.session);
 
   return (
-    <div className="section">
-      <h1 className="section-title">Create session</h1>
+    <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
+      <h1 className="text-base font-medium mb-3">Create session</h1>
       {userEmail && (
-        <p className="hero-subtitle" style={{ marginBottom: "0.5rem" }}>
+        <p className="text-app-muted mb-2">
           Signed in as {userEmail}
         </p>
       )}
       {error && (
-        <p className="hero-subtitle" style={{ color: "#fca5a5" }}>
+        <p className="text-red-300">
           {error}
         </p>
       )}
       {!error && (
-        <p className="hero-subtitle">
+        <p className="text-app-muted">
           {leagues.length
             ? "Create a session for one of your leagues, pick 6 / 8 / 10 / 12 players, and generate balanced teams and matchups."
             : "You do not own any leagues yet. You can still view sessions you play in below."}
@@ -884,33 +884,15 @@ export default function SessionsPage() {
         <>
           <form
             onSubmit={handleGenerate}
-            style={{
-              marginTop: "1rem",
-              display: "grid",
-              gap: "0.75rem",
-            }}
+            className="mt-4 grid gap-3"
           >
-            <div
-              style={{
-                display: "grid",
-                gap: "0.5rem",
-                gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)",
-              }}
-            >
-              <label style={{ fontSize: "0.8rem" }}>
+            <div className="grid gap-2 grid-cols-2">
+              <label className="text-[0.8rem]">
                 League
                 <select
                   value={selectedLeagueId}
                   onChange={(e) => handleLeagueChange(e.target.value)}
-                  style={{
-                    marginTop: "0.35rem",
-                    width: "100%",
-                    padding: "0.45rem 0.6rem",
-                    borderRadius: "0.5rem",
-                    border: "1px solid #d1d5db",
-                    background: "#f9fafb",
-                    color: "#111827",
-                  }}
+                  className="mt-1.5 w-full px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-app-text"
                 >
                   <option value="">Select League</option>
                   {sortedLeaguesForSelect.map((league) => (
@@ -921,47 +903,24 @@ export default function SessionsPage() {
                 </select>
               </label>
 
-              <label style={{ fontSize: "0.8rem" }}>
+              <label className="text-[0.8rem]">
                 Date and time (Required)
                 <input
                   type="datetime-local"
                   value={scheduledFor}
                   onChange={(e) => setScheduledFor(e.target.value)}
-                  style={{
-                    marginTop: "0.35rem",
-                    width: "100%",
-                    padding: "0.45rem 0.6rem",
-                    borderRadius: "0.5rem",
-                    border: "1px solid #d1d5db",
-                    background: "#f9fafb",
-                    color: "#111827",
-                  }}
+                  className="mt-1.5 w-full px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-app-text"
                 />
               </label>
             </div>
 
-            <div
-              style={{
-                display: "grid",
-                gap: "0.5rem",
-                gridTemplateColumns: "minmax(0,1fr) minmax(0,2fr)",
-                alignItems: "flex-start",
-              }}
-            >
-              <label style={{ fontSize: "0.8rem" }}>
+            <div className="grid gap-2 grid-cols-[1fr_2fr] items-start">
+              <label className="text-[0.8rem]">
                 Player count
                 <select
                   value={playerCount}
                   onChange={(e) => handlePlayerCountChange(e.target.value)}
-                  style={{
-                    marginTop: "0.35rem",
-                    width: "100%",
-                    padding: "0.45rem 0.6rem",
-                    borderRadius: "0.5rem",
-                    border: "1px solid #d1d5db",
-                    background: "#f9fafb",
-                    color: "#111827",
-                  }}
+                  className="mt-1.5 w-full px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-app-text"
                 >
                   {PLAYER_COUNTS.map((n) => (
                     <option key={n} value={n}>
@@ -972,39 +931,27 @@ export default function SessionsPage() {
               </label>
 
               <div>
-                <p className="hero-subtitle" style={{ marginBottom: "0.25rem" }}>
+                <p className="text-app-muted mb-1">
                   Select players
                 </p>
                 {membersLoading && (
-                  <p className="hero-subtitle" style={{ fontSize: "0.8rem" }}>
+                  <p className="text-app-muted text-[0.8rem]">
                     Loading league members…
                   </p>
                 )}
                 {!membersLoading && !members.length && (
-                  <p className="hero-subtitle" style={{ fontSize: "0.8rem" }}>
+                  <p className="text-app-muted text-[0.8rem]">
                     {selectedLeagueId ? "This league has no members yet." : "Please select a league in the drop-down above."}
                   </p>
                 )}
                 {!membersLoading && members.length > 0 && (
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-                      gap: "0.5rem",
-                    }}
-                  >
+                  <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-2">
                     {Array.from({ length: playerCount }).map((_, i) => (
                       <select
                         key={i}
                         value={selectedPlayerIds[i] ?? ""}
                         onChange={(e) => handlePlayerSelect(i, e.target.value)}
-                        style={{
-                          padding: "0.45rem 0.6rem",
-                          borderRadius: "0.5rem",
-                          border: "1px solid #d1d5db",
-                          background: "#f9fafb",
-                          color: "#111827",
-                        }}
+                        className="px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-app-text"
                       >
                         <option value="">Select Player {i + 1}</option>
                         {getAvailablePlayersForSlot(i).map((member) => (
@@ -1021,64 +968,45 @@ export default function SessionsPage() {
 
             <button
               type="submit"
-              className="btn-primary"
+              className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed justify-self-start mt-2"
               disabled={generating || membersLoading}
-              style={{ justifySelf: "flex-start", marginTop: "0.5rem" }}
             >
               {generating ? "Creating session..." : "Create session"}
             </button>
           </form>
-          <div style={{ marginTop: "1.5rem" }}>
-            <h2 className="section-title">Players (snaking order)</h2>
+          <div className="mt-6">
+            <h2 className="text-base font-medium mb-3">Players (snaking order)</h2>
             {!orderedPlayers.length ? (
-              <p className="hero-subtitle" style={{ fontSize: "0.85rem" }}>
+              <p className="text-app-muted text-[0.85rem]">
                 After selecting players, they will appear here sorted by DUPR. Use the
                 arrows to adjust the order; teams and matchups will be based on this
                 list.
               </p>
             ) : (
-              <div
-                style={{
-                  marginTop: "0.75rem",
-                  borderRadius: "0.75rem",
-                  border: "1px solid #1f2937",
-                  padding: "0.5rem 0.6rem",
-                }}
-              >
-                <ul
-                  className="section-list"
-                  style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}
-                >
+              <div className="mt-3 rounded-xl border border-app-dark p-2">
+                <ul className="list-none pl-0 m-0 text-app-muted text-[0.87rem]">
                   {orderedPlayers.map((member, index) => (
                     <li
                       key={member.user_id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: "0.5rem",
-                        padding: "0.25rem 0",
-                      }}
+                      className="flex items-center justify-between gap-2 py-1.5"
                     >
-                      <span style={{ fontSize: "0.85rem" }}>
+                      <div className="text-[0.85rem]">
                         {index + 1}. {displayPlayer(member)}
-                      </span>
-                      <div style={{ display: "flex", gap: "0.25rem" }}>
+                      </div>
+                      <div className="flex gap-1">
                         <button
                           type="button"
-                          className="btn-secondary"
+                          className="rounded-full px-1.5 py-0.5 text-xs border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           onClick={() => movePlayer(index, index - 1)}
                           disabled={index === 0}
-                          style={{ padding: "0.1rem 0.35rem", fontSize: "0.75rem" }}
                         >
                           ↑
                         </button>
                         <button
                           type="button"
-                          className="btn-secondary"
+                          className="rounded-full px-1.5 py-0.5 text-xs border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           onClick={() => movePlayer(index, index + 1)}
                           disabled={index === orderedPlayers.length - 1}
-                          style={{ padding: "0.1rem 0.35rem", fontSize: "0.75rem" }}
                         >
                           ↓
                         </button>
@@ -1092,72 +1020,46 @@ export default function SessionsPage() {
         </>
       )}
 
-      <div style={{ marginTop: "1.5rem" }}>
-        <h2 className="section-title">Sessions</h2>
+      <div className="mt-6">
+        <h2 className="text-base font-medium mb-3">Sessions</h2>
         {sessionsLoading ? (
-          <p className="hero-subtitle" style={{ fontSize: "0.85rem" }}>
+          <p className="text-app-muted text-[0.85rem]">
             Loading sessions...
           </p>
         ) : sessions.length === 0 ? (
-          <p className="hero-subtitle" style={{ fontSize: "0.85rem" }}>
+          <p className="text-app-muted text-[0.85rem]">
             {leagues.length
               ? "No sessions yet. Create one above to see it here."
               : "No sessions yet. You'll see sessions you play in here."}
           </p>
         ) : (
-          <div
-            style={{
-              marginTop: "0.75rem",
-              borderRadius: "0.75rem",
-              border: "1px solid #1f2937",
-              padding: "0.5rem 0.6rem",
-            }}
-          >
+          <div className="mt-3 rounded-xl border border-app-dark p-2">
             {upcomingSessions.length > 0 && (
-              <div style={{ marginBottom: pastSessions.length ? "0.75rem" : 0 }}>
-                <h3
-                  style={{
-                    fontSize: "0.8rem",
-                    fontWeight: 600,
-                    margin: 0,
-                    marginBottom: "0.35rem",
-                    color: "#111827",
-                  }}
-                >
+              <div className={pastSessions.length ? "mb-3" : ""}>
+                <h3 className="text-[0.8rem] font-semibold m-0 mb-1.5 text-app-text">
                   Current / upcoming sessions
                 </h3>
-                <ul
-                  className="section-list"
-                  style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}
-                >
+                <ul className="list-none pl-0 m-0 text-app-muted text-[0.87rem]">
                   {upcomingSessions.map((session) => (
                     <li
                       key={session.id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: "0.75rem",
-                        padding: "0.4rem 0",
-                      }}
+                      className="flex items-center justify-between gap-3 py-1.5"
                     >
-                      <div style={{ fontSize: "0.85rem" }}>
-                        <div style={{ fontWeight: 600, color: "#1f2937" }}>
+                      <div className="text-[0.85rem]">
+                        <div className="font-semibold text-app-dark">
                           🗓️ {session.league_name || "Unknown league"} -
                           {" "}
                           {session.player_count} players
                         </div>
-                        <div
-                          style={{ color: "#9ca3af", marginTop: "0.1rem" }}
-                        >
+                        <div className="text-app-light-gray mt-0.5">
                           {formatDateTime(
                             session.scheduled_for ?? session.created_at
                           )}
                         </div>
                       </div>
-                      <div style={{ display: "flex", gap: "0.5rem" }}>
+                      <div className="flex gap-2">
                         <Link
-                          className="btn-secondary"
+                          className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer no-underline hover:bg-gray-50 transition-colors"
                           href={`/sessions/${session.id}`}
                           prefetch={false}
                         >
@@ -1171,41 +1073,22 @@ export default function SessionsPage() {
             )}
             {pastSessions.length > 0 && (
               <div>
-                <h3
-                  style={{
-                    fontSize: "0.8rem",
-                    fontWeight: 600,
-                    margin: 0,
-                    marginBottom: "0.35rem",
-                    color: "#111827",
-                  }}
-                >
+                <h3 className="text-[0.8rem] font-semibold m-0 mb-1.5 text-app-text">
                   Past sessions
                 </h3>
-                <ul
-                  className="section-list"
-                  style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}
-                >
+                <ul className="list-none pl-0 m-0 text-app-muted text-[0.87rem]">
                   {pastSessions.map((session) => (
                     <li
                       key={session.id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: "0.75rem",
-                        padding: "0.4rem 0",
-                      }}
+                      className="flex items-center justify-between gap-3 py-1.5"
                     >
-                      <div style={{ fontSize: "0.85rem" }}>
-                        <div style={{ fontWeight: 600, color: "#1f2937" }}>
+                      <div className="text-[0.85rem]">
+                        <div className="font-semibold text-app-dark">
                           🗓️ {session.league_name || "Unknown league"} -
                           {" "}
                           {session.player_count} players
                         </div>
-                        <div
-                          style={{ color: "#9ca3af", marginTop: "0.1rem" }}
-                        >
+                        <div className="text-app-light-gray mt-0.5">
                           {formatDateTime(
                             session.scheduled_for ?? session.created_at
                           )}
@@ -1227,21 +1110,15 @@ export default function SessionsPage() {
                           }
 
                           return (
-                            <div
-                              style={{
-                                color: "#14532d",
-                                marginTop: "0.1rem",
-                                fontSize: "0.8rem",
-                              }}
-                            >
+                            <div className="text-app-accent mt-0.5 text-[0.8rem]">
                               {label}
                             </div>
                           );
                         })()}
                       </div>
-                      <div style={{ display: "flex", gap: "0.5rem" }}>
+                      <div className="flex gap-2">
                         <Link
-                          className="btn-secondary"
+                          className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer no-underline hover:bg-gray-50 transition-colors"
                           href={`/sessions/${session.id}`}
                           prefetch={false}
                         >

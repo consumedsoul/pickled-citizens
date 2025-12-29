@@ -16,44 +16,30 @@ export default function AccountDeletedPage() {
   }, [router]);
 
   return (
-    <div className="section" style={{ maxWidth: 500, textAlign: 'center' }}>
-      <h1 className="section-title">Account Deleted</h1>
+    <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5 max-w-[500px] text-center">
+      <h1 className="text-base font-medium mb-3">Account Deleted</h1>
       
-      <div style={{ 
-        fontSize: '3rem', 
-        marginBottom: '1rem',
-        color: '#10b981'
-      }}>
+      <div className="text-5xl mb-4 text-green-500">
         ✅
       </div>
       
-      <p className="hero-subtitle" style={{ marginBottom: '1.5rem' }}>
+      <p className="text-app-muted mb-6">
         Your account has been successfully deleted. All your profile data, league memberships, and associated information has been permanently removed.
       </p>
       
-      <div style={{
-        backgroundColor: '#f0fdf4',
-        border: '1px solid #86efac',
-        borderRadius: '0.5rem',
-        padding: '1rem',
-        marginBottom: '1.5rem'
-      }}>
-        <p style={{ 
-          margin: 0,
-          fontSize: '0.9rem',
-          color: '#166534'
-        }}>
+      <div className="bg-green-50 border border-green-300 rounded-lg p-4 mb-6">
+        <p className="m-0 text-sm text-green-800">
           <strong>What's next?</strong><br/>
           You can sign up again at any time with the same or a different email address to create a fresh account.
         </p>
       </div>
       
-      <p className="hero-subtitle" style={{ fontSize: '0.8rem', color: '#9ca3af' }}>
+      <p className="text-app-muted text-[0.8rem] text-app-light-gray">
         You will be redirected to the home page automatically in 5 seconds...
       </p>
       
-      <div style={{ marginTop: '2rem' }}>
-        <a href="/" className="btn-primary">
+      <div className="mt-8">
+        <a href="/" className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer no-underline bg-app-accent text-white hover:bg-app-accent/90 transition-colors inline-block">
           Go to Home Page Now
         </a>
       </div>

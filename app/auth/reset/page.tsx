@@ -41,50 +41,35 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="section" style={{ maxWidth: 420 }}>
-      <h1 className="section-title">Reset password</h1>
-      <p className="hero-subtitle" style={{ marginBottom: '1rem' }}>
+    <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5 max-w-[420px]">
+      <h1 className="text-base font-medium mb-3">Reset password</h1>
+      <p className="text-app-muted mb-4">
         Enter your email and we&apos;ll send you a link to set a new password.
       </p>
 
-      <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '0.75rem' }}>
-        <label style={{ fontSize: '0.8rem' }}>
+      <form onSubmit={handleSubmit} className="grid gap-3">
+        <label className="text-[0.8rem]">
           Email
           <input
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            style={{
-              marginTop: '0.35rem',
-              width: '100%',
-              padding: '0.45rem 0.6rem',
-              borderRadius: '0.5rem',
-              border: '1px solid #d1d5db',
-              background: '#f9fafb',
-              color: '#111827',
-            }}
+            className="mt-1.5 w-full px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-app-text"
           />
         </label>
 
         <button
           type="submit"
-          className="btn-primary"
+          className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed justify-self-start"
           disabled={status === 'loading'}
-          style={{ justifySelf: 'flex-start' }}
         >
           {status === 'loading' ? 'Sending link…' : 'Send reset link'}
         </button>
       </form>
 
       {message && (
-        <p
-          style={{
-            marginTop: '0.75rem',
-            fontSize: '0.8rem',
-            color: status === 'error' ? '#fca5a5' : '#9ca3af',
-          }}
-        >
+        <p className={`mt-3 text-[0.8rem] ${status === 'error' ? 'text-red-300' : 'text-app-muted'}`}>
           {message}
         </p>
       )}

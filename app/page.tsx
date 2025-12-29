@@ -524,18 +524,18 @@ export default function HomePage() {
   const showPersonalizedContent = !auth.loading && auth.userId;
 
   return (
-    <section className="hero">
+    <section className="grid gap-6">
       <div>
-        <p className="hero-subtitle" style={{ maxWidth: "none" }}>
+        <p className="max-w-full text-app-muted">
           <strong>PICKLED CITIZENS</strong> is a lightweight web app for setting up team
           battle matchups for your league's pickleball sessions.
         </p>
         {showCtas && (
-          <div className="hero-actions">
-            <a href="/auth" className="btn-primary">
+          <div className="flex flex-wrap gap-3 mt-3">
+            <a href="/auth" className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer no-underline bg-app-accent text-white hover:bg-app-accent/90 transition-colors">
               Get started (sign up)
             </a>
-            <a href="/auth/signin" className="btn-secondary">
+            <a href="/auth/signin" className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer no-underline hover:bg-gray-50 transition-colors">
               Sign in
             </a>
           </div>
@@ -544,58 +544,42 @@ export default function HomePage() {
 
       {showPersonalizedContent && (
         <>
-          <div className="section">
-            <h2 className="section-title">Your Leagues</h2>
+          <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
+            <h2 className="text-base font-medium mb-3">Your Leagues</h2>
             {leaguesLoading ? (
-              <p className="hero-subtitle" style={{ fontSize: "0.85rem" }}>
+              <p className="text-app-muted text-[0.85rem]">
                 Loading leagues...
               </p>
             ) : leagues.length === 0 ? (
-              <p className="hero-subtitle" style={{ fontSize: "0.85rem" }}>
+              <p className="text-app-muted text-[0.85rem]">
                 You are not a member of any leagues yet. Visit the{" "}
-                <a href="/leagues" style={{ textDecoration: "underline" }}>
+                <a href="/leagues" className="underline">
                   leagues page
                 </a>{" "}
                 to create or join one.
               </p>
             ) : (
-              <div
-                style={{
-                  marginTop: "0.75rem",
-                  borderRadius: "0.75rem",
-                  border: "1px solid #1f2937",
-                  padding: "0.5rem 0.6rem",
-                }}
-              >
-                <ul
-                  className="section-list"
-                  style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}
-                >
+              <div className="mt-3 rounded-xl border border-app-dark p-2">
+                <ul className="list-none pl-0 m-0 text-app-muted text-[0.87rem]">
                   {leagues.map((league) => (
                     <li
                       key={league.id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: "0.75rem",
-                        padding: "0.4rem 0",
-                      }}
+                      className="flex items-center justify-between gap-3 py-1.5"
                     >
-                      <div style={{ fontSize: "0.85rem" }}>
-                        <div style={{ fontWeight: 600, color: "#1f2937" }}>
+                      <div className="text-[0.85rem]">
+                        <div className="font-semibold text-app-dark">
                           🏆 {formatLeagueName(league.name, league.created_at)}
                         </div>
                         {typeof league.memberCount === "number" && (
-                          <div style={{ color: "#9ca3af", marginTop: "0.1rem" }}>
+                          <div className="text-app-light-gray mt-0.5">
                             {league.memberCount} {league.memberCount === 1 ? "member" : "members"}
                           </div>
                         )}
                       </div>
-                      <div style={{ display: "flex", gap: "0.5rem" }}>
+                      <div className="flex gap-2">
                         <button
                           type="button"
-                          className="btn-secondary"
+                          className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
                           onClick={() => router.push(`/leagues/${league.id}`)}
                         >
                           {league.owner_id === auth.userId ? "Manage" : "View"}
@@ -608,52 +592,36 @@ export default function HomePage() {
             )}
           </div>
 
-          <div className="section">
-            <h2 className="section-title">Your Upcoming Sessions</h2>
+          <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
+            <h2 className="text-base font-medium mb-3">Your Upcoming Sessions</h2>
             {sessionsLoading ? (
-              <p className="hero-subtitle" style={{ fontSize: "0.85rem" }}>
+              <p className="text-app-muted text-[0.85rem]">
                 Loading sessions...
               </p>
             ) : upcomingSessions.length === 0 ? (
-              <p className="hero-subtitle" style={{ fontSize: "0.85rem" }}>
+              <p className="text-app-muted text-[0.85rem]">
                 No upcoming sessions.
               </p>
             ) : (
-              <div
-                style={{
-                  marginTop: "0.75rem",
-                  borderRadius: "0.75rem",
-                  border: "1px solid #1f2937",
-                  padding: "0.5rem 0.6rem",
-                }}
-              >
-                <ul
-                  className="section-list"
-                  style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}
-                >
+              <div className="mt-3 rounded-xl border border-app-dark p-2">
+                <ul className="list-none pl-0 m-0 text-app-muted text-[0.87rem]">
                   {upcomingSessions.map((session) => (
                     <li
                       key={session.id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: "0.75rem",
-                        padding: "0.4rem 0",
-                      }}
+                      className="flex items-center justify-between gap-3 py-1.5"
                     >
-                      <div style={{ fontSize: "0.85rem" }}>
-                        <div style={{ fontWeight: 600, color: "#1f2937" }}>
+                      <div className="text-[0.85rem]">
+                        <div className="font-semibold text-app-dark">
                           🗓️ {session.league_name || "Unknown league"} - {session.player_count} players
                         </div>
-                        <div style={{ color: "#9ca3af", marginTop: "0.1rem" }}>
+                        <div className="text-app-light-gray mt-0.5">
                           {formatDateTime(session.scheduled_for ?? session.created_at)}
                         </div>
                       </div>
-                      <div style={{ display: "flex", gap: "0.5rem" }}>
+                      <div className="flex gap-2">
                         <button
                           type="button"
-                          className="btn-secondary"
+                          className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
                           onClick={() => router.push(`/sessions/${session.id}`)}
                         >
                           {session.created_by === auth.userId ? "Manage" : "View"}
@@ -664,61 +632,38 @@ export default function HomePage() {
                 </ul>
               </div>
             )}
-            <div style={{ marginTop: "0.75rem", textAlign: "center" }}>
+            <div className="mt-3 text-center">
               <a 
                 href="/sessions" 
-                style={{ 
-                  fontSize: "0.85rem", 
-                  textDecoration: "underline",
-                  color: "inherit"
-                }}
+                className="text-[0.85rem] underline"
               >
                 View past sessions
               </a>
             </div>
           </div>
 
-          <div className="section">
-            <h2 className="section-title">Your Stats</h2>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                gap: "1rem",
-                marginTop: "0.75rem",
-              }}
-            >
-              <div
-                style={{
-                  borderRadius: "0.75rem",
-                  border: "1px solid #1f2937",
-                  padding: "1rem",
-                }}
-              >
-                <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "#1f2937", marginBottom: "0.25rem" }}>
+          <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
+            <h2 className="text-base font-medium mb-3">Your Stats</h2>
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4 mt-3">
+              <div className="rounded-xl border border-app-dark p-4">
+                <div className="text-[0.8rem] font-semibold text-app-dark mb-1">
                   👤 Individual Record
                 </div>
-                <div style={{ fontSize: "1.5rem", fontWeight: 600 }}>
+                <div className="text-2xl font-semibold">
                   {lifetimeStats.individualWins}-{lifetimeStats.individualLosses}
                 </div>
-                <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "0.25rem" }}>
+                <div className="text-xs text-app-light-gray mt-1">
                   {lifetimeStats.individualWins + lifetimeStats.individualLosses} games played
                 </div>
               </div>
-              <div
-                style={{
-                  borderRadius: "0.75rem",
-                  border: "1px solid #1f2937",
-                  padding: "1rem",
-                }}
-              >
-                <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "#1f2937", marginBottom: "0.25rem" }}>
+              <div className="rounded-xl border border-app-dark p-4">
+                <div className="text-[0.8rem] font-semibold text-app-dark mb-1">
                   👥 Team Record
                 </div>
-                <div style={{ fontSize: "1.5rem", fontWeight: 600 }}>
+                <div className="text-2xl font-semibold">
                   {lifetimeStats.teamWins}-{lifetimeStats.teamLosses}-{lifetimeStats.teamTies}
                 </div>
-                <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "0.25rem" }}>
+                <div className="text-xs text-app-light-gray mt-1">
                   {lifetimeStats.teamWins + lifetimeStats.teamLosses + lifetimeStats.teamTies} sessions
                 </div>
               </div>
@@ -727,12 +672,12 @@ export default function HomePage() {
         </>
       )}
 
-      <div className="section">
-        <h2 className="section-title">v1.0.0 Release</h2>
+      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
+        <h2 className="text-base font-medium mb-3">v1.0.0 Release</h2>
         <p>
           <strong>Release highlights</strong>
         </p>
-        <ul className="section-list">
+        <ul className="mt-1 pl-4 text-app-muted text-[0.87rem]">
           <li>
             Email signup using magic link or password, plus player name and self-assessed DUPR rating
           </li>
@@ -746,10 +691,10 @@ export default function HomePage() {
             Record results and track both team and individual win-loss records over time
           </li>
         </ul>
-        <p style={{ marginTop: '1.5rem' }}>
+        <p className="mt-6">
           <strong>Coming soon</strong>
         </p>
-        <ul className="section-list">
+        <ul className="mt-1 pl-4 text-app-muted text-[0.87rem]">
           <li>
             Email notifications for players and league admins
           </li>
@@ -762,7 +707,7 @@ export default function HomePage() {
         </ul>
       </div>
 
-      <div style={{ textAlign: 'center', marginTop: '2rem', paddingBottom: '1rem' }}>
+      <div className="text-center mt-8 pb-4">
         <a
           href="https://www.buymeacoffee.com/hunkim"
           target="_blank"
@@ -771,7 +716,7 @@ export default function HomePage() {
           <img
             src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
             alt="Buy Me A Coffee"
-            style={{ height: '38px', width: '135px' }}
+            className="h-[38px] w-[135px] inline-block"
           />
         </a>
       </div>

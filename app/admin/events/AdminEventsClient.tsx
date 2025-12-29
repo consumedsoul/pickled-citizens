@@ -111,18 +111,18 @@ export default function AdminEventsClient() {
 
   if (loading) {
     return (
-      <div className="section">
-        <h1 className="section-title">Admin events</h1>
-        <p className="hero-subtitle">Loading admin event log...</p>
+      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
+        <h1 className="text-base font-medium mb-3">Admin events</h1>
+        <p className="text-app-muted">Loading admin event log...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="section">
-        <h1 className="section-title">Admin events</h1>
-        <p className="hero-subtitle" style={{ color: '#fca5a5' }}>
+      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
+        <h1 className="text-base font-medium mb-3">Admin events</h1>
+        <p className="text-app-muted" style={{ color: '#fca5a5' }}>
           {error}
         </p>
       </div>
@@ -133,14 +133,14 @@ export default function AdminEventsClient() {
     totalCount != null && totalCount > 0 ? Math.ceil(totalCount / PAGE_SIZE) : null;
 
   return (
-    <div className="section">
-      <h1 className="section-title">Admin events</h1>
+    <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
+      <h1 className="text-base font-medium mb-3">Admin events</h1>
       {userEmail && (
-        <p className="hero-subtitle" style={{ marginBottom: '0.5rem' }}>
+        <p className="text-app-muted" style={{ marginBottom: '0.5rem' }}>
           Signed in as {userEmail}
         </p>
       )}
-      <p className="hero-subtitle">
+      <p className="text-app-muted">
         Internal audit log of key system events. Showing newest first, up to {PAGE_SIZE} per page.
       </p>
 
@@ -196,12 +196,12 @@ export default function AdminEventsClient() {
       </div>
 
       {events.length === 0 ? (
-        <p className="hero-subtitle" style={{ marginTop: '1rem' }}>
+        <p className="text-app-muted" style={{ marginTop: '1rem' }}>
           No events recorded yet.
         </p>
       ) : (
         <>
-          <ul className="section-list" style={{ listStyle: 'none', paddingLeft: 0, marginTop: '1rem' }}>
+          <ul className="list-none pl-0 text-app-muted text-[0.87rem]" style={{ listStyle: 'none', paddingLeft: 0, marginTop: '1rem' }}>
             {events.map((event) => {
               const created = new Date(event.created_at);
               const timestamp = created.toLocaleString();
@@ -259,19 +259,19 @@ export default function AdminEventsClient() {
           >
             <button
               type="button"
-              className="btn-secondary"
+              className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
               disabled={page === 0}
               onClick={() => setPage((p) => Math.max(0, p - 1))}
             >
               Previous page
             </button>
-            <span className="hero-subtitle" style={{ fontSize: '0.8rem' }}>
+            <span className="text-app-muted" style={{ fontSize: '0.8rem' }}>
               Page {page + 1}
               {totalPages != null ? ` of ${totalPages}` : ''}
             </span>
             <button
               type="button"
-              className="btn-secondary"
+              className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
               disabled={events.length < PAGE_SIZE}
               onClick={() => setPage((p) => p + 1)}
             >

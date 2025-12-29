@@ -75,11 +75,10 @@ export function AuthStatus() {
 
   if (!state.email) {
     return (
-      <div style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <div className="text-[0.8rem] flex items-center gap-2">
         <Link 
           href="/auth/signin" 
-          className="btn-secondary"
-          style={{ paddingInline: '0.75rem', textDecoration: 'none' }}
+          className="rounded-full px-3 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer no-underline hover:bg-gray-50 transition-colors"
         >
           Sign in
         </Link>
@@ -88,12 +87,11 @@ export function AuthStatus() {
   }
 
   return (
-    <div style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+    <div className="text-[0.8rem] flex items-center gap-2">
       <button
         type="button"
         onClick={handleSignOut}
-        className="btn-secondary"
-        style={{ paddingInline: '0.75rem' }}
+        className="rounded-full px-3 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
       >
         Sign out
       </button>

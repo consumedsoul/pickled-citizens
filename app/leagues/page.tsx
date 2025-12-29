@@ -221,31 +221,28 @@ export default function LeaguesPage() {
 
   if (loading) {
     return (
-      <div className="section">
-        <h1 className="section-title">Leagues</h1>
-        <p className="hero-subtitle">Loading your leagues...</p>
+      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
+        <h1 className="text-base font-medium mb-3">Leagues</h1>
+        <p className="text-app-muted">Loading your leagues...</p>
       </div>
     );
   }
 
   return (
-    <div className="section">
-      <h1 className="section-title">Leagues</h1>
+    <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
+      <h1 className="text-base font-medium mb-3">Leagues</h1>
       {error && (
-        <p className="hero-subtitle" style={{ color: '#fca5a5' }}>
+        <p className="text-red-300">
           {error}
         </p>
       )}
       {!error && (
         <>
-          <p className="hero-subtitle">
+          <p className="text-app-muted">
             Create a league you can manage and schedule sessions.
           </p>
           {reachedLimit && (
-            <p
-              className="hero-subtitle"
-              style={{ marginTop: '0.5rem', color: '#fbbf24' }}
-            >
+            <p className="text-app-muted mt-2 text-yellow-400">
               You have reached the limit of {MAX_LEAGUES} leagues. Delete one to create
               another.
             </p>
@@ -255,12 +252,7 @@ export default function LeaguesPage() {
 
       <form
         onSubmit={handleCreate}
-        style={{
-          marginTop: '1rem',
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '0.5rem',
-        }}
+        className="mt-4 flex flex-wrap gap-2"
       >
         <input
           type="text"
@@ -268,41 +260,27 @@ export default function LeaguesPage() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           disabled={reachedLimit}
-          style={{
-            flex: '1 1 200px',
-            padding: '0.45rem 0.6rem',
-            borderRadius: '0.5rem',
-            border: '1px solid #d1d5db',
-            background: '#f9fafb',
-            color: '#111827',
-            opacity: reachedLimit ? 0.6 : 1,
-          }}
+          className="flex-1 min-w-[200px] px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-app-text disabled:opacity-60"
         />
         <button
           type="submit"
-          className="btn-primary"
+          className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={creating || reachedLimit}
         >
           {creating ? 'Creating…' : 'Create league'}
         </button>
       </form>
 
-      <div style={{ marginTop: '1.5rem' }}>
-        <h2 className="section-title">Leagues you manage</h2>
+      <div className="mt-6">
+        <h2 className="text-base font-medium mb-3">Leagues you manage</h2>
         {leagues.length === 0 ? (
-          <p className="hero-subtitle">You don't manage any leagues yet.</p>
+          <p className="text-app-muted">You don't manage any leagues yet.</p>
         ) : (
-          <ul className="section-list" style={{ listStyle: 'none', paddingLeft: 0 }}>
+          <ul className="list-none pl-0 text-app-muted text-[0.87rem]">
             {leagues.map((league) => (
               <li
                 key={league.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '0.75rem',
-                  padding: '0.25rem 0',
-                }}
+                className="flex items-center justify-between gap-3 py-1"
               >
                 <span>
                   👑 {league.name}{' '}
@@ -314,8 +292,7 @@ export default function LeaguesPage() {
                 </span>
                 <a
                   href={`/leagues/${league.id}`}
-                  className="btn-secondary"
-                  style={{ textDecoration: 'none' }}
+                  className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer no-underline hover:bg-gray-50 transition-colors"
                 >
                   Manage
                 </a>
@@ -325,22 +302,16 @@ export default function LeaguesPage() {
         )}
       </div>
 
-      <div style={{ marginTop: '1.5rem' }}>
-        <h2 className="section-title">Leagues you're a member of</h2>
+      <div className="mt-6">
+        <h2 className="text-base font-medium mb-3">Leagues you're a member of</h2>
         {memberLeagues.length === 0 ? (
-          <p className="hero-subtitle">You are not a member of any leagues yet.</p>
+          <p className="text-app-muted">You are not a member of any leagues yet.</p>
         ) : (
-          <ul className="section-list" style={{ listStyle: 'none', paddingLeft: 0 }}>
+          <ul className="list-none pl-0 text-app-muted text-[0.87rem]">
             {memberLeagues.map((league) => (
               <li
                 key={league.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '0.75rem',
-                  padding: '0.25rem 0',
-                }}
+                className="flex items-center justify-between gap-3 py-1"
               >
                 <span>
                   👤 {league.name}{' '}
@@ -350,11 +321,10 @@ export default function LeaguesPage() {
                       })`
                     : ''}
                 </span>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div className="flex gap-2">
                   <a
                     href={`/leagues/${league.id}`}
-                    className="btn-secondary"
-                    style={{ textDecoration: 'none' }}
+                    className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer no-underline hover:bg-gray-50 transition-colors"
                   >
                     {league.owner_id && userId && league.owner_id === userId
                       ? 'Manage'

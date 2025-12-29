@@ -369,18 +369,18 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="section">
-        <h1 className="section-title">Profile</h1>
-        <p className="hero-subtitle">Loading your profile…</p>
+      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
+        <h1 className="text-base font-medium mb-3">Profile</h1>
+        <p className="text-app-muted">Loading your profile…</p>
       </div>
     );
   }
 
   if (error && !saving && !success && !firstName && !lastName && !gender) {
     return (
-      <div className="section">
-        <h1 className="section-title">Profile</h1>
-        <p className="hero-subtitle" style={{ color: '#fca5a5' }}>
+      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
+        <h1 className="text-base font-medium mb-3">Profile</h1>
+        <p className="text-app-muted" style={{ color: '#fca5a5' }}>
           {error}
         </p>
       </div>
@@ -388,20 +388,20 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="section" style={{ maxWidth: 640 }}>
-      <h1 className="section-title">Profile</h1>
+    <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5" style={{ maxWidth: 640 }}>
+      <h1 className="text-base font-medium mb-3">Profile</h1>
       {userEmail && (
-        <p className="hero-subtitle" style={{ marginBottom: '0.5rem' }}>
+        <p className="text-app-muted" style={{ marginBottom: '0.5rem' }}>
           Email: {userEmail}
         </p>
       )}
       {error && (
-        <p className="hero-subtitle" style={{ color: '#fca5a5' }}>
+        <p className="text-app-muted" style={{ color: '#fca5a5' }}>
           {error}
         </p>
       )}
       {success && (
-        <p className="hero-subtitle" style={{ color: '#4ade80' }}>
+        <p className="text-app-muted" style={{ color: '#4ade80' }}>
           {success}
         </p>
       )}
@@ -492,7 +492,7 @@ export default function ProfilePage() {
             }}
           />
           <p
-            className="hero-subtitle"
+            className="text-app-muted"
             style={{ fontSize: '0.75rem', marginTop: '0.35rem' }}
           >
             Need help estimating your rating? See{' '}
@@ -510,7 +510,7 @@ export default function ProfilePage() {
 
         <button
           type="submit"
-          className="btn-primary"
+          className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={saving}
           style={{ marginTop: '0.5rem', justifySelf: 'flex-start' }}
         >
@@ -519,11 +519,11 @@ export default function ProfilePage() {
       </form>
 
       <div style={{ marginTop: '1.5rem' }}>
-        <h2 className="section-title">Leagues you belong to</h2>
+        <h2 className="text-base font-medium mb-3">Leagues you belong to</h2>
         {leagues.length === 0 ? (
-          <p className="hero-subtitle">You are not in any leagues yet.</p>
+          <p className="text-app-muted">You are not in any leagues yet.</p>
         ) : (
-          <ul className="section-list">
+          <ul className="list-none pl-0 text-app-muted text-[0.87rem]">
             {leagues.map((league) => {
               const isOwner = league.owner_id === userId;
               return (
@@ -540,7 +540,7 @@ export default function ProfilePage() {
                   <span>{formatLeagueName(league.name, league.created_at)}</span>
                   <button
                     type="button"
-                    className="btn-secondary"
+                    className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
                     onClick={() => isOwner 
                       ? router.push(`/leagues/${league.id}`)
                       : openLeaveLeagueDialog(league.id)
@@ -562,8 +562,8 @@ export default function ProfilePage() {
           borderTop: '1px solid #1f2937',
         }}
       >
-        <h2 className="section-title">Password</h2>
-        <p className="hero-subtitle" style={{ fontSize: '0.85rem' }}>
+        <h2 className="text-base font-medium mb-3">Password</h2>
+        <p className="text-app-muted" style={{ fontSize: '0.85rem' }}>
           Set or change your password. You can still use magic link sign-in if you prefer.
         </p>
         <form
@@ -641,7 +641,7 @@ export default function ProfilePage() {
           </label>
           <button
             type="submit"
-            className="btn-primary"
+            className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={saving}
             style={{ justifySelf: 'flex-start' }}
           >
@@ -657,14 +657,14 @@ export default function ProfilePage() {
           borderTop: '1px solid #1f2937',
         }}
       >
-        <h2 className="section-title">Delete account</h2>
-        <p className="hero-subtitle">
+        <h2 className="text-base font-medium mb-3">Delete account</h2>
+        <p className="text-app-muted">
           This will delete your profile and league data in Pickled Citizens. This
           action cannot be undone.
         </p>
         <button
           type="button"
-          className="btn-primary"
+          className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={openDeleteDialog}
           style={{
             marginTop: '0.75rem',
@@ -707,15 +707,15 @@ export default function ProfilePage() {
           }}
         >
           <div
-            className="section"
+            className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5"
             style={{
               maxWidth: 420,
               width: '90%',
               boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
             }}
           >
-            <h2 className="section-title">Delete account</h2>
-            <p className="hero-subtitle">
+            <h2 className="text-base font-medium mb-3">Delete account</h2>
+            <p className="text-app-muted">
               This will permanently delete your profile and league data. Type
               <span style={{ fontWeight: 600 }}> delete </span>
               to confirm.
@@ -745,14 +745,14 @@ export default function ProfilePage() {
             >
               <button
                 type="button"
-                className="btn-secondary"
+                className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
                 onClick={closeDeleteDialog}
               >
                 Cancel
               </button>
               <button
                 type="button"
-                className="btn-primary"
+                className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleDeleteAccount}
                 disabled={deleteLoading || deleteConfirm !== 'delete'}
                 style={{
@@ -781,15 +781,15 @@ export default function ProfilePage() {
           }}
         >
           <div
-            className="section"
+            className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5"
             style={{
               maxWidth: 420,
               width: '90%',
               boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
             }}
           >
-            <h2 className="section-title">Leave league</h2>
-            <p className="hero-subtitle">
+            <h2 className="text-base font-medium mb-3">Leave league</h2>
+            <p className="text-app-muted">
               Are you sure you want to leave{' '}
               {leagues.find((league) => league.id === leaveLeagueId)?.name ?? 'this league'}
               ?
@@ -804,14 +804,14 @@ export default function ProfilePage() {
             >
               <button
                 type="button"
-                className="btn-secondary"
+                className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
                 onClick={closeLeaveLeagueDialog}
               >
                 Cancel
               </button>
               <button
                 type="button"
-                className="btn-primary"
+                className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={confirmLeaveLeague}
                 disabled={saving}
               >

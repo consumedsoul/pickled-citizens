@@ -38,22 +38,15 @@ export function AdminFooterLinks() {
   const isAdmin = email === 'hun@ghkim.com';
 
   return (
-    <nav
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.75rem',
-        fontSize: '0.8rem',
-      }}
-    >
+    <nav className="flex items-center gap-3 text-[0.8rem]">
       {isAdmin && (
         <>
           <Link href="/admin/events">Logs</Link>
-          <span style={{ opacity: 0.7 }}>·</span>
+          <span className="opacity-70">·</span>
           <Link href="/admin/users">Users</Link>
-          <span style={{ opacity: 0.7 }}>·</span>
+          <span className="opacity-70">·</span>
           <Link href="/admin/leagues">Leagues</Link>
-          <span style={{ opacity: 0.7 }}>·</span>
+          <span className="opacity-70">·</span>
         </>
       )}
       <Link
