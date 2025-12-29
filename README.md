@@ -1,14 +1,18 @@
 # Pickled Citizens
 
-Lightweight web app for running casual pickleball leagues: create leagues, invite players, schedule sessions, auto-generate balanced doubles matchups, and track results with a simple DUPR-style rating display.
+Lightweight web app for running casual pickleball leagues: create leagues, invite players, schedule sessions, auto-generate balanced doubles matchups, and track results with lifetime statistics and DUPR-style rating display.
+
+**Live Site**: [pickledcitizens.com](https://pickledcitizens.com)
 
 ---
 
 ## Features
 
-- **Email-based auth**
+- **Email-based Authentication**
   - Magic-link sign up / sign in via Supabase Auth.
   - Profile completion with first/last name, gender, and self-reported DUPR.
+  - Password reset flow with email verification.
+  - Secure session management with automatic token refresh.
 
 - **Multi-Admin League System**
   - Create leagues with multiple administrators instead of single owners.
@@ -17,15 +21,18 @@ Lightweight web app for running casual pickleball leagues: create leagues, invit
   - Admins cannot demote themselves if they're the sole admin.
   - Automatic admin assignment for league creators.
   - Visual distinction between admins (👑) and regular members (👤).
+  - League owner retains ultimate control while delegating admin responsibilities.
 
-- **Leagues**
-  - Create and manage leagues with per-user league limits enforced in the database.
-  - Case-insensitive duplicate league name protection.
+- **League Management**
+  - Create and manage leagues with role-based permissions.
   - Members list with names, email, self-reported DUPR, and admin status.
   - League sorting: managed leagues appear first (A-Z), followed by member leagues (A-Z).
-  - Role-based permissions for league management.
+  - Member count display for each league.
+  - League invites system for adding new members.
+  - Leave league functionality with sole admin protection.
+  - Dedicated admin page (`/admin/leagues`) for super-admin oversight.
 
-- **Game sessions**
+- **Game Sessions**
   - League admins can schedule sessions for **6, 8, 10, or 12** players.
   - Select players from a league and order them by DUPR (with manual reordering).
   - Automatically generates balanced doubles teams and matchups using a snaking algorithm.
@@ -38,73 +45,132 @@ Lightweight web app for running casual pickleball leagues: create leagues, invit
   - **Permissions**:
     - Session creator (league admin) can update match results.
     - Any player who participates in a session can view it in their history as read-only.
+  - Session metadata API for sharing and social previews.
 
-- **Session history**
+- **Session History & Statistics**
   - Sessions page shows:
     - **Current / upcoming sessions** at the top (soonest first).
     - **Past sessions** below (most recent first).
   - Uses scheduled time when available, otherwise creation time.
+  - Dedicated history page (`/history`) showing all user sessions.
+  - Lifetime statistics tracking:
+    - Individual wins/losses (personal match record).
+    - Team wins/losses/ties (Team A vs Team B record).
+    - Total games played.
+    - Win percentages and performance metrics.
 
 - **Account Security**
   - Account deletion protection for sole admins of any league.
   - Clear error messages displayed directly at deletion points.
   - League deletion protection for sole admins.
   - Admin event logging for all role changes and deletions.
+  - Secure profile management with email verification.
 
-- **Admin tools**
+- **Admin Tools**
   - Restricted to a **configured super-admin user** via RLS and UI checks.
-  - `/admin/events`: System event log (e.g., league created, session created, user signup, role changes).
+  - `/admin/events`: System event log (league created, session created, user signup, role changes).
   - `/admin/users`: User management (view, edit, delete profiles).
-  - Footer shows `Logs` and `Users` links only for the super-admin.
+  - `/admin/leagues`: League oversight and management.
+  - Footer shows `Logs`, `Users`, and `Leagues` links only for the super-admin.
+  - Admin function for deleting users from auth system.
 
 - **Branding & UX**
   - Custom logo in the header using `next/image` for crisp rendering.
-  - Simple dark theme with minimal dependencies.
-  - Favicon based on the same logo asset.
+  - Clean, modern design with custom color palette (Tailwind CSS).
+  - Favicon and social media preview images.
   - Landing page with clear CTA for sign up / sign in.
   - Contextual error messages displayed at relevant action points.
   - Visual indicators for user roles and permissions.
+  - Responsive design for mobile and desktop.
+  - Active navigation highlighting.
 
 ---
 
-## Tech stack
+## Tech Stack
 
-- **Framework**: [Next.js 14](https://nextjs.org/) (App Router)
-- **Language**: TypeScript, React 18
-- **Backend / DB**: [Supabase](https://supabase.com/) (Postgres, Auth, RLS)
-- **Client DB access**: `@supabase/supabase-js` v2
-- **Hosting**: Cloudflare Workers (SSR) via [OpenNext for Cloudflare](https://opennext.js.org/)
+- **Framework**: [Next.js 14](https://nextjs.org/) (App Router, React Server Components)
+- **Language**: TypeScript 5.6, React 18
+- **Styling**: [Tailwind CSS 3.4](https://tailwindcss.com/) with custom design tokens
+- **Backend / DB**: [Supabase](https://supabase.com/) (PostgreSQL, Auth, Row Level Security)
+- **Client DB Access**: `@supabase/supabase-js` v2.48
+- **Hosting**: [Cloudflare Workers](https://workers.cloudflare.com/) (SSR) via [OpenNext for Cloudflare](https://opennext.js.org/) v1.3
+- **Build Tool**: [Wrangler 4.54](https://developers.cloudflare.com/workers/wrangler/)
+- **Repository**: GitHub (consumedsoul/pickled-citizens)
 
 ---
 
-## Project structure (high level)
+## Project Structure
 
-- `app/`
-  - `layout.tsx` – global layout, header, navigation, footer.
-  - `page.tsx` – home/landing page with league sorting.
-  - `auth/` – sign up and auth-completion flow (magic link).
-  - `auth/signin` – existing user sign-in.
-  - `auth/complete` – completes signup, upserts profile, and redirects.
-  - `profile/` – user profile management with admin deletion protection.
-  - `leagues/` – list and manage leagues with role-based sorting.
-  - `leagues/[id]/` – single league details with multi-admin management.
-  - `sessions/` – create sessions and show session history.
-  - `sessions/[id]/` – individual session detail page (teams, matchups, results).
-  - `admin/events/` – admin event log (super-admin only).
-  - `admin/users/` – admin user management (super-admin only).
+### Application Routes (`app/`)
+- `layout.tsx` – Global layout with header, navigation, footer, and metadata.
+- `page.tsx` – Home/landing page with league sorting, session history, and lifetime stats.
+- `globals.css` – Global styles and Tailwind directives.
 
-- `src/components/`
-  - `AuthStatus.tsx` – header auth indicator + sign in/out.
-  - `AdminFooterLinks.tsx` – conditional footer links for the super-admin.
+#### Authentication (`auth/`)
+- `page.tsx` – Sign up page with magic link flow.
+- `signin/page.tsx` – Sign in page for existing users.
+- `complete/` – Auth completion handler (upserts profile, redirects).
+  - `page.tsx` – Server component wrapper.
+  - `AuthCompleteClient.tsx` – Client component for auth completion logic.
+- `reset/` – Password reset flow.
+  - `page.tsx` – Request password reset.
+  - `complete/page.tsx` – Complete password reset.
 
-- `src/lib/`
-  - `supabaseClient.ts` – initializes the browser-side Supabase client.
+#### User Pages
+- `profile/page.tsx` – User profile management with deletion protection.
+- `history/page.tsx` – Complete session history for the user.
+- `account-deleted/page.tsx` – Confirmation page after account deletion.
 
-- `supabase/`
-  - `schema.sql` – database schema for profiles, leagues, league_members (with role system), sessions, matches, match_players, match_results, admin_events, plus RLS policies and migration scripts.
+#### League Management (`leagues/`)
+- `page.tsx` – List all leagues with role-based sorting.
+- `[id]/page.tsx` – Single league details with member management and admin controls.
 
-- `docs/`
-  - Additional project documentation (if present).
+#### Session Management (`sessions/`)
+- `page.tsx` – Create sessions and view session history (upcoming/past).
+- `[id]/` – Individual session details.
+  - `layout.tsx` – Session layout wrapper.
+  - `page.tsx` – Session detail page (teams, matchups, results).
+
+#### Admin Pages (`admin/`)
+- `events/` – System event log (super-admin only).
+  - `page.tsx` – Server component wrapper.
+  - `AdminEventsClient.tsx` – Client component with pagination.
+- `users/page.tsx` – User management (view, edit, delete).
+- `leagues/page.tsx` – League oversight and management.
+
+#### API Routes (`api/`)
+- `dupr-score/route.ts` – DUPR score lookup/validation.
+- `leagues/leave/route.ts` – Leave league endpoint.
+- `session/[id]/metadata/route.ts` – Session metadata for social sharing.
+- `test-session/[id]/route.ts` – Test session endpoint.
+- `og/route.tsx` – Open Graph image generation.
+
+### Components (`src/components/`)
+- `AuthStatus.tsx` – Header auth indicator with sign in/out button.
+- `Navigation.tsx` – Main navigation with active route highlighting.
+- `AdminFooterLinks.tsx` – Conditional footer links for super-admin.
+
+### Library (`src/lib/`)
+- `supabaseClient.ts` – Supabase client initialization (browser and service role).
+
+### Database (`supabase/`)
+- `schema.sql` – Complete database schema:
+  - Tables: `profiles`, `leagues`, `league_members`, `league_invites`, `game_sessions`, `matches`, `match_players`, `match_results`, `admin_events`.
+  - Row Level Security (RLS) policies for all tables.
+  - Multi-admin role system with migration scripts.
+  - Admin functions for user deletion.
+
+### Configuration Files
+- `next.config.mjs` – Next.js configuration.
+- `tailwind.config.js` – Tailwind CSS with custom color palette.
+- `tsconfig.json` – TypeScript configuration.
+- `wrangler.toml` – Cloudflare Pages configuration.
+- `wrangler.worker.toml` – Cloudflare Workers configuration.
+- `open-next.config.ts` – OpenNext for Cloudflare configuration.
+- `postcss.config.js` – PostCSS configuration.
+
+### Documentation (`docs/`)
+- `prd.md` – Product Requirements Document.
 
 ---
 
@@ -138,130 +204,234 @@ SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
 
 ---
 
-## Database schema
+## Database Schema
 
 Run the SQL in `supabase/schema.sql` against your Supabase Postgres instance (via the Supabase SQL editor or CLI).
 
-This file defines tables like:
+### Tables
 
-- `profiles`
-- `leagues`, `league_members` (with role-based admin system)
-- `game_sessions`, `matches`, `match_players`, `match_results`
-- `admin_events` (with RLS allowing only the configured super-admin to read events)
+- **`profiles`** – User profile data (name, gender, DUPR, display name, avatar).
+- **`leagues`** – League information with owner reference.
+- **`league_members`** – Many-to-many relationship with role system ('player' or 'admin').
+- **`league_invites`** – Pending/accepted/revoked league invitations.
+- **`game_sessions`** – Session metadata (league, creator, date, player count).
+- **`matches`** – Individual matches within sessions (court, order, status).
+- **`match_players`** – Match participants with team assignments (team 1 or 2).
+- **`match_results`** – Match scores and completion timestamps.
+- **`admin_events`** – System audit log for admin actions and events.
 
-It also sets up:
-- Constraints (e.g., allowed player counts for sessions, role validation)
-- RLS policies for multi-admin security
-- Migration scripts to promote existing owners to admin roles
+### Security Features
+
+- **Row Level Security (RLS)** enabled on all tables with granular policies.
+- **Role-based access control** for league admins vs regular members.
+- **Super-admin policies** restricting admin_events to configured email.
+- **Cascading deletes** to maintain referential integrity.
+- **Check constraints** for data validation (player counts, roles, teams).
+- **Admin function** (`admin_delete_user`) for secure user deletion.
+
+### Migrations
+
+- Automatic promotion of league owners to admin role in `league_members`.
+- Ensures all leagues have at least one admin member.
 
 ---
 
-## Super-admin configuration
+## Super-Admin Configuration
 
-A single **super-admin user** is used for admin views and event log access.
+A single **super-admin user** is configured for system-wide admin access and event log viewing.
 
-- RLS policies in `supabase/schema.sql` and UI components like `AdminFooterLinks` assume a specific super-admin identifier (e.g., a particular email).
-- To change the super-admin:
-  1. Update the RLS policy for `admin_events` (and any other admin tables) in `supabase/schema.sql`.
-  2. Update any hard-coded checks in components (e.g., `AdminFooterLinks`, auth-related code).
+### Current Implementation
 
-Avoid committing any real personal identifiers (like actual email addresses) to version control.
+The super-admin email is currently hardcoded in two locations:
+1. **Database RLS Policy** (`supabase/schema.sql`):
+   - `admin_events_select_admin` policy checks `(auth.jwt() ->> 'email') = 'hun@ghkim.com'`
+   - `admin_delete_user` function checks the same email
+2. **UI Component** (`src/components/AdminFooterLinks.tsx`):
+   - Line 38: `const isAdmin = email === 'hun@ghkim.com';`
+
+### Changing the Super-Admin
+
+To configure a different super-admin user:
+
+1. **Update the database schema** (`supabase/schema.sql`):
+   ```sql
+   -- Line 123: Update the admin_events RLS policy
+   create policy admin_events_select_admin on public.admin_events
+     for select
+     using ((auth.jwt() ->> 'email') = 'your-email@example.com');
+   
+   -- Line 133: Update the admin_delete_user function
+   if (auth.jwt() ->> 'email') <> 'your-email@example.com' then
+     raise exception 'Permission denied: admin access required';
+   end if;
+   ```
+
+2. **Update the UI component** (`src/components/AdminFooterLinks.tsx`):
+   ```typescript
+   const isAdmin = email === 'your-email@example.com';
+   ```
+
+3. **Apply the schema changes** to your Supabase instance via SQL editor.
+
+**Security Note**: Consider using environment variables or Supabase secrets for production deployments instead of hardcoding email addresses.
 
 ---
 
-## Key flows
+## Key Flows
 
-### Sign up & profile
+### Sign Up & Profile
 
-1. User goes to `/auth` and enters:
-   - Email, first name, last name, gender, **self-reported DUPR**.
-2. App sends a Supabase magic link with redirect to `/auth/complete`.
-3. `/auth/complete` upserts the `profiles` row with the provided data.
-4. User is redirected to `/profile` where they can edit details and see their leagues.
+1. User visits `/auth` and enters:
+   - Email, first name, last name, gender, **self-reported DUPR** (required).
+2. Supabase sends a magic link email with redirect to `/auth/complete`.
+3. `/auth/complete` verifies the token and upserts the `profiles` table.
+4. User is redirected to home page (`/`) with authenticated session.
+5. User can edit profile details at `/profile`.
 
-The self-reported DUPR field is **required**, with validation and a helper link to a public guide on estimating pickleball rating.
+**DUPR Field**: Required numeric field (0.00-8.00) with validation and helper link to DUPR rating guide.
+
+### Sign In
+
+1. Existing users visit `/auth/signin`.
+2. Enter email to receive magic link.
+3. Click link to authenticate and return to home page.
+
+### Password Reset
+
+1. User visits `/auth/reset` and enters email.
+2. Supabase sends password reset email.
+3. User clicks link and completes reset at `/auth/reset/complete`.
 
 ### Multi-Admin League Management
 
-1. From `/leagues`, authenticated users can create leagues (automatically become admin).
-2. League admins can manage members through `/leagues/[id]`:
-   - View members separated into "League Admins" and "Members" sections
-   - Promote regular members to admin status
-   - Demote admins to regular members (if not the sole admin)
-   - Remove members from the league
-3. Role changes are logged to `admin_events` for audit.
-4. League deletion is blocked for sole admins with clear error messaging.
+1. **Create League**: From `/leagues`, authenticated users create leagues (automatically become admin and owner).
+2. **Manage Members** at `/leagues/[id]`:
+   - View members separated into "League Admins" and "Members" sections.
+   - Promote regular members to admin status (owner only).
+   - Demote admins to regular members (owner only, if not sole admin).
+   - Remove members from the league.
+3. **Audit Trail**: All role changes logged to `admin_events`.
+4. **Protection**: League deletion blocked for sole admins with contextual error messages.
 
 ### League Display & Sorting
 
-1. Home page and leagues page show:
-   - **Managed leagues first** (where user is admin), sorted A-Z
-   - **Member leagues below** (where user is regular member), sorted A-Z
-2. Visual indicators: 👑 for managed leagues, 👤 for member leagues
+1. **Home page** (`/`) and **leagues page** (`/leagues`) display:
+   - **Managed leagues first** (where user is admin), sorted A-Z with 👑 icon.
+   - **Member leagues below** (where user is regular member), sorted A-Z with 👤 icon.
+2. Each league shows member count and creation year.
 3. Role-based access controls throughout the application.
 
-### Sessions
+### Session Creation & Management
 
-1. League admins go to `/sessions`.
-2. Select a league, date/time, player count, and pick players from the league roster.
-3. The app sorts players by DUPR and allows manual ordering.
-4. On "Create session", the app:
+1. **Create Session**: League admins visit `/sessions`.
+2. **Configure Session**:
+   - Select a league.
+   - Choose date/time and location (optional).
+   - Select player count (6, 8, 10, or 12).
+   - Pick players from league roster.
+3. **Player Ordering**: App sorts by DUPR with manual reordering allowed.
+4. **Generate Matchups**: On "Create session":
    - Inserts into `game_sessions`.
-   - Creates `matches` and `match_players` rows according to the matchup plan.
-   - For 8-player sessions: generates 6 rounds (12 games) with repeated matchups
+   - Creates `matches` and `match_players` using snaking algorithm.
+   - **8-player format**: Generates 6 rounds (12 games) with repeated matchups.
    - Logs `session.created` to `admin_events`.
    - Redirects to `/sessions/[id]`.
-5. The session detail page lets admins toggle winners for each matchup; results are stored in `match_results`.
-6. Non-admin participants can view sessions and standings but cannot modify results.
+5. **Record Results**: Session detail page allows admins to toggle winners; results stored in `match_results`.
+6. **View Access**: All participants can view sessions read-only; only creator can edit.
+
+### Session History & Statistics
+
+1. **Sessions Page** (`/sessions`): Shows upcoming sessions (soonest first) and past sessions (most recent first).
+2. **History Page** (`/history`): Complete session history for the user.
+3. **Home Page** (`/`): Displays lifetime statistics:
+   - Individual wins/losses (personal match record).
+   - Team wins/losses/ties (Team A vs Team B record).
+   - Win percentages calculated automatically.
 
 ### Account Security
 
-1. Account deletion checks for sole admin status across all leagues.
-2. League deletion checks if user is the sole admin of that league.
-3. Clear error messages appear at relevant action points (not just page top).
-4. Admin must promote another member before deletion can proceed.
+1. **Account Deletion**: Profile page checks for sole admin status across all leagues.
+2. **League Deletion**: Blocked if user is sole admin of the league.
+3. **Error Messages**: Contextual errors displayed at action points.
+4. **Required Action**: Admin must promote another member before deletion can proceed.
+5. **Audit Trail**: All deletions and role changes logged to `admin_events`.
 
-### Admin views
+### Admin Views (Super-Admin Only)
 
-- `Logs` (footer link → `/admin/events`): paginated list of `admin_events` including role changes.
-- `Users` (footer link → `/admin/users`): list + edit/delete for user profiles.
-- Both are guarded by RLS and client-side checks so only the super-admin can see them.
+- **Logs** (`/admin/events`): Paginated system event log with filtering.
+- **Users** (`/admin/users`): User management (view, edit, delete profiles).
+- **Leagues** (`/admin/leagues`): League oversight and management.
+- **Access Control**: Guarded by RLS policies and client-side checks.
+- **Footer Links**: Only visible to configured super-admin email.
 
 ---
 
 ## Recent Updates
 
-### Multi-Admin System (Latest)
-- **Database**: Added `role` column to `league_members` table with 'player'/'admin' constraints
-- **Migration**: Automatic promotion of existing league owners to admin status
-- **UI**: Separate admin/member sections with promotion/demotion controls
-- **Security**: Sole admin protection for league and account deletion
-- **Sorting**: Role-based league display (admin leagues first, then member leagues)
+### Multi-Admin System
+- **Database**: Added `role` column to `league_members` table with 'player'/'admin' constraints.
+- **Migration**: Automatic promotion of existing league owners to admin status.
+- **UI**: Separate admin/member sections with promotion/demotion controls.
+- **Security**: Sole admin protection for league and account deletion.
+- **Sorting**: Role-based league display (admin leagues first, then member leagues).
 
 ### Enhanced 8-Player Sessions
-- **Extended gameplay**: 6 rounds (12 games) instead of 3 rounds (6 games)
-- **Repeated matchups**: Rounds 4-6 repeat the pairings from rounds 1-3
-- **Better session length**: More playtime for 8-player groups
+- **Extended gameplay**: 6 rounds (12 games) instead of 3 rounds (6 games).
+- **Repeated matchups**: Rounds 4-6 repeat the pairings from rounds 1-3.
+- **Better session length**: More playtime for 8-player groups.
 
-### Improved Error Handling
-- **Contextual errors**: Messages appear at relevant action points
-- **Better UX**: No need to scroll to see error messages
-- **Clear guidance**: Specific instructions for admin-related actions
+### Session History & Statistics
+- **History page**: Dedicated `/history` route for complete session history.
+- **Lifetime stats**: Individual and team win/loss tracking on home page.
+- **Win percentages**: Automatic calculation of performance metrics.
+
+### Admin Tools Enhancement
+- **Leagues admin page**: Added `/admin/leagues` for super-admin oversight.
+- **Event logging**: Comprehensive audit trail for all admin actions.
+- **User management**: Enhanced profile editing and deletion capabilities.
+
+### UX Improvements
+- **Contextual errors**: Messages appear at relevant action points.
+- **Navigation**: Active route highlighting for better orientation.
+- **Responsive design**: Mobile-friendly layouts throughout.
+- **Social sharing**: Open Graph metadata for session sharing.
 
 ---
 
 ## Scripts
 
-From `package.json`:
+Available npm commands from `package.json`:
 
 ```bash
-npm run dev     # Start Next.js dev server
-npm run build   # Production build
-npm run start   # Start production server (after build)
-npm run lint    # Run ESLint
-npm run preview # Build OpenNext bundle + run a local Cloudflare-style preview
-npm run deploy  # Build OpenNext bundle + deploy to Cloudflare (preserves dashboard vars)
-npm run cf-typegen # Generate Cloudflare env type definitions
+npm run dev          # Start Next.js dev server (http://localhost:3000)
+npm run build        # Production build (Next.js)
+npm run start        # Start production server (after build)
+npm run lint         # Run ESLint
+
+# Cloudflare deployment
+npm run preview      # Build OpenNext bundle + run local Cloudflare preview
+npm run deploy       # Build OpenNext bundle + deploy to Cloudflare Workers
+npm run deploy:ci    # CI/CD deployment (same as deploy)
+npm run pages:build  # Build for Cloudflare Pages (legacy)
+
+# Development tools
+npm run cf-typegen   # Generate Cloudflare environment type definitions
+```
+
+### Development Workflow
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Build and preview locally (Cloudflare environment)
+npm run preview
+
+# Deploy to production
+npm run deploy
 ```
 
 ---
@@ -290,63 +460,67 @@ npm run cf-typegen # Generate Cloudflare env type definitions
 
 ---
 
-## Deployment
+## Development Best Practices
 
-This app is deployed to **Cloudflare Workers** using **OpenNext**.
+### Code Organization
+- **Server Components**: Use by default for better performance
+- **Client Components**: Mark with `'use client'` only when needed (hooks, browser APIs)
+- **Type Safety**: Leverage TypeScript for all code
+- **RLS First**: Rely on Supabase RLS policies for security, not just client-side checks
 
-### Cloudflare build + deploy (recommended)
+### Database Changes
+1. Update `supabase/schema.sql` with new schema changes
+2. Test locally with Supabase CLI or SQL editor
+3. Apply to production database via Supabase dashboard
+4. Document migrations in schema file comments
 
-Use Cloudflare’s **Workers → Build → Connect to repository** integration so pushes to `main` build and deploy automatically.
+### Styling Guidelines
+- Use Tailwind utility classes
+- Follow custom color palette defined in `tailwind.config.js`
+- Maintain responsive design (mobile-first approach)
+- Keep consistent spacing and typography
 
-In Cloudflare Worker build configuration, use:
-
+### Testing Deployment
 ```bash
-# Build command
-npx opennextjs-cloudflare build
+# Test locally with Cloudflare Workers environment
+npm run preview
 
-# Deploy command
-npx wrangler deploy --keep-vars
+# Access at http://localhost:8788
 ```
 
-### Cloudflare environment variables
+---
 
-There are two places variables matter:
+## Contributing
 
-- **Build-time** (used during `next build`): set `NEXT_PUBLIC_*` values in Cloudflare’s build “Variables and secrets”.
-- **Runtime** (used by the Worker at request time): set `SUPABASE_SERVICE_ROLE_KEY` as an encrypted secret.
+This is a personal project for managing pickleball leagues. If you'd like to use it for your own league or contribute improvements:
 
-Recommended configuration:
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes with clear commit messages
+4. Test thoroughly (especially RLS policies)
+5. Submit a pull request with description
 
-- `NEXT_PUBLIC_SUPABASE_URL` (variable)
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` (variable)
-- `NEXT_PUBLIC_SITE_URL` (variable)
-- `SUPABASE_SERVICE_ROLE_KEY` (secret / encrypted)
+### Areas for Contribution
+- Additional session formats (round robin, king of the court)
+- Enhanced statistics and analytics
+- Mobile app wrapper
+- Internationalization (i18n)
+- Accessibility improvements
 
-### Local deploy (optional)
+---
 
-If you deploy from your machine instead of Cloudflare Git integration:
+## Support & Contact
 
-```bash
-npm run deploy
-```
-
-`--keep-vars` is used to avoid wiping dashboard-managed variables.
-
-### Domain routing + Supabase cutover
-
-1. Configure Cloudflare DNS so `pickledcitizens.com` and `www.pickledcitizens.com` are proxied (orange cloud).
-2. Add Worker routes:
-   - `pickledcitizens.com/*`
-   - `www.pickledcitizens.com/*`
-3. In Supabase, add allowed redirect URLs (Authentication → URL Configuration):
-   - `https://pickledcitizens.com/auth/complete`
-   - `https://www.pickledcitizens.com/auth/complete`
-   - (If using password reset) `https://pickledcitizens.com/auth/reset/complete`
-4. Set Supabase Site URL to `https://pickledcitizens.com`.
+- **Repository**: [github.com/consumedsoul/pickled-citizens](https://github.com/consumedsoul/pickled-citizens)
+- **Live Site**: [pickledcitizens.com](https://pickledcitizens.com)
+- **Issues**: Report bugs or request features via GitHub Issues
 
 ---
 
 ## License
 
-This project is currently proprietary for personal/league use.  
-Adjust this section if you choose to open-source it (e.g., MIT, Apache 2.0, etc.).
+This project is currently proprietary for personal/league use.
+
+If you'd like to use this codebase for your own pickleball league, please reach out via GitHub.
+
+Future consideration for open-source licensing (MIT, Apache 2.0, etc.) may be evaluated based on community interest.
