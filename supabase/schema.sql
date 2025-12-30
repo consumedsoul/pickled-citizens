@@ -92,6 +92,7 @@ create table if not exists public.match_players (
   match_id uuid not null references public.matches(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
   team int not null check (team in (1, 2)),
+  position int not null default 0,
   primary key (match_id, user_id)
 );
 

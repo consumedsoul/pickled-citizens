@@ -766,7 +766,7 @@ export default function SessionsPage() {
         (a, b) => (a.scheduled_order ?? 0) - (b.scheduled_order ?? 0)
       );
 
-      const playerInserts: { match_id: string; user_id: string; team: number }[] = [];
+      const playerInserts: { match_id: string; user_id: string; team: number; position: number }[] = [];
 
       sortedMatches.forEach((match, index) => {
         const plan = gamesPlan[index];
@@ -774,10 +774,10 @@ export default function SessionsPage() {
         const [a1, a2] = plan.pairA;
         const [b1, b2] = plan.pairB;
         playerInserts.push(
-          { match_id: match.id, user_id: a1.user_id, team: 1 },
-          { match_id: match.id, user_id: a2.user_id, team: 1 },
-          { match_id: match.id, user_id: b1.user_id, team: 2 },
-          { match_id: match.id, user_id: b2.user_id, team: 2 }
+          { match_id: match.id, user_id: a1.user_id, team: 1, position: 0 },
+          { match_id: match.id, user_id: a2.user_id, team: 1, position: 1 },
+          { match_id: match.id, user_id: b1.user_id, team: 2, position: 0 },
+          { match_id: match.id, user_id: b2.user_id, team: 2, position: 1 }
         );
       });
 

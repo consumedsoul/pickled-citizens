@@ -175,7 +175,7 @@ export default function SessionDetailPage() {
       const { data: matchRows, error: matchesError } = await supabase
         .from('matches')
         .select(
-          'id, session_id, court_number, scheduled_order, status, match_players(user_id, team), result:match_results(team1_score, team2_score, completed_at)'
+          'id, session_id, court_number, scheduled_order, status, match_players(user_id, team, position), result:match_results(team1_score, team2_score, completed_at)'
         )
         .eq('session_id', sessionId)
         .order('scheduled_order', { ascending: true });
@@ -191,7 +191,7 @@ export default function SessionDetailPage() {
 
       const playerIds = new Set<string>();
       (matchRows ?? []).forEach((row: any) => {
-        const mps = (row.match_players ?? []) as { user_id: string; team: number }[];
+        const mps = (row.match_players ?? []) as { user_id: string; team: number; position: number }[];
         mps.forEach((mp) => {
           if (mp.user_id) playerIds.add(mp.user_id);
         });
@@ -242,12 +242,14 @@ export default function SessionDetailPage() {
       }
 
       const loadedMatches: MatchWithPlayers[] = (matchRows ?? []).map((row: any) => {
-        const mps = (row.match_players ?? []) as { user_id: string; team: number }[];
+        const mps = (row.match_players ?? []) as { user_id: string; team: number; position: number }[];
         const team1 = mps
           .filter((mp) => mp.team === 1)
+          .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
           .map((mp) => toPlayer(mp.user_id));
         const team2 = mps
           .filter((mp) => mp.team === 2)
+          .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
           .map((mp) => toPlayer(mp.user_id));
 
         const rawResult = (row as any).result as
@@ -300,19 +302,23 @@ export default function SessionDetailPage() {
     team1: TeamStats;
     team2: TeamStats;
   }>(() => {
-    const team1Roster = new Map<string, SessionPlayer>();
-    const team2Roster = new Map<string, SessionPlayer>();
+    const team1Roster = new Map<string, { player: SessionPlayer; firstMatchIndex: number; positionInMatch: number }>();
+    const team2Roster = new Map<string, { player: SessionPlayer; firstMatchIndex: number; positionInMatch: number }>();
     let team1Wins = 0;
     let team1Losses = 0;
     let team2Wins = 0;
     let team2Losses = 0;
 
-    matches.forEach((match) => {
-      match.team1.forEach((p) => {
-        if (!team1Roster.has(p.id)) team1Roster.set(p.id, p);
+    matches.forEach((match, matchIndex) => {
+      match.team1.forEach((p, positionInMatch) => {
+        if (!team1Roster.has(p.id)) {
+          team1Roster.set(p.id, { player: p, firstMatchIndex: matchIndex, positionInMatch });
+        }
       });
-      match.team2.forEach((p) => {
-        if (!team2Roster.has(p.id)) team2Roster.set(p.id, p);
+      match.team2.forEach((p, positionInMatch) => {
+        if (!team2Roster.has(p.id)) {
+          team2Roster.set(p.id, { player: p, firstMatchIndex: matchIndex, positionInMatch });
+        }
       });
 
       if (match.winner === 1) {
@@ -324,16 +330,34 @@ export default function SessionDetailPage() {
       }
     });
 
+    const team1RosterSorted = Array.from(team1Roster.values())
+      .sort((a, b) => {
+        if (a.firstMatchIndex !== b.firstMatchIndex) {
+          return a.firstMatchIndex - b.firstMatchIndex;
+        }
+        return a.positionInMatch - b.positionInMatch;
+      })
+      .map(entry => entry.player);
+    
+    const team2RosterSorted = Array.from(team2Roster.values())
+      .sort((a, b) => {
+        if (a.firstMatchIndex !== b.firstMatchIndex) {
+          return a.firstMatchIndex - b.firstMatchIndex;
+        }
+        return a.positionInMatch - b.positionInMatch;
+      })
+      .map(entry => entry.player);
+
     return {
       team1: {
         wins: team1Wins,
         losses: team1Losses,
-        roster: Array.from(team1Roster.values()),
+        roster: team1RosterSorted,
       },
       team2: {
         wins: team2Wins,
         losses: team2Losses,
-        roster: Array.from(team2Roster.values()),
+        roster: team2RosterSorted,
       },
     };
   }, [matches]);
