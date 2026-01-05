@@ -460,6 +460,36 @@ export default function SessionsPage() {
     setSelectedPlayerIds((prev) => prev.slice(0, n));
   }
 
+  function handleScheduledForChange(value: string) {
+    if (!value) {
+      setScheduledFor(value);
+      return;
+    }
+
+    const date = new Date(value);
+    const minutes = date.getMinutes();
+    
+    if (minutes !== 0 && minutes !== 30) {
+      const roundedMinutes = minutes < 15 ? 0 : minutes < 45 ? 30 : 0;
+      const hourAdjustment = minutes >= 45 ? 1 : 0;
+      
+      date.setMinutes(roundedMinutes);
+      date.setHours(date.getHours() + hourAdjustment);
+      date.setSeconds(0);
+      date.setMilliseconds(0);
+      
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const mins = String(date.getMinutes()).padStart(2, '0');
+      
+      setScheduledFor(`${year}-${month}-${day}T${hours}:${mins}`);
+    } else {
+      setScheduledFor(value);
+    }
+  }
+
   function handlePlayerSelect(index: number, userId: string) {
     setSelectedPlayerIds((prev) => {
       const next = [...prev];
@@ -908,7 +938,7 @@ export default function SessionsPage() {
                 <input
                   type="datetime-local"
                   value={scheduledFor}
-                  onChange={(e) => setScheduledFor(e.target.value)}
+                  onChange={(e) => handleScheduledForChange(e.target.value)}
                   className="mt-1.5 w-full px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-app-text"
                 />
               </label>
