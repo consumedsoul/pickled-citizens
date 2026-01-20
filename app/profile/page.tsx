@@ -37,6 +37,8 @@ export default function ProfilePage() {
   const [lastName, setLastName] = useState('');
   const [gender, setGender] = useState('');
   const [selfDupr, setSelfDupr] = useState('');
+  
+  const [newEmail, setNewEmail] = useState('');
 
   const [leagues, setLeagues] = useState<League[]>([]);
 
@@ -306,6 +308,43 @@ export default function ProfilePage() {
     setDeleteError(null);
   }
 
+  async function handleEmailUpdate(event: FormEvent) {
+    event.preventDefault();
+    setError(null);
+    setSuccess(null);
+
+    if (!newEmail.trim()) {
+      setError('New email is required.');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newEmail.trim())) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+
+    if (newEmail.trim().toLowerCase() === userEmail?.toLowerCase()) {
+      setError('New email must be different from your current email.');
+      return;
+    }
+
+    setSaving(true);
+
+    const { error: updateError } = await supabase.auth.updateUser({
+      email: newEmail.trim().toLowerCase(),
+    });
+
+    if (updateError) {
+      setError(updateError.message);
+    } else {
+      setSuccess('Confirmation email sent to your new address. Please check your inbox and confirm to complete the change.');
+      setNewEmail('');
+    }
+
+    setSaving(false);
+  }
+
   async function handleDeleteAccount() {
     if (deleteConfirm !== 'delete') return;
 
@@ -553,6 +592,50 @@ export default function ProfilePage() {
             })}
           </ul>
         )}
+      </div>
+
+      <div
+        style={{
+          marginTop: '2rem',
+          paddingTop: '1rem',
+          borderTop: '1px solid #1f2937',
+        }}
+      >
+        <h2 className="text-base font-medium mb-3">Change email</h2>
+        <p className="text-app-muted" style={{ fontSize: '0.85rem' }}>
+          Update your email address. You will receive a confirmation email at your new address.
+        </p>
+        <form
+          onSubmit={handleEmailUpdate}
+          style={{ display: 'grid', gap: '0.75rem', marginTop: '0.75rem' }}
+        >
+          <label style={{ fontSize: '0.8rem' }}>
+            New email address
+            <input
+              type="email"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              placeholder="Enter new email"
+              style={{
+                marginTop: '0.35rem',
+                width: '100%',
+                padding: '0.45rem 0.6rem',
+                borderRadius: '0.5rem',
+                border: '1px solid #d1d5db',
+                background: '#f9fafb',
+                color: '#111827',
+              }}
+            />
+          </label>
+          <button
+            type="submit"
+            className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={saving}
+            style={{ justifySelf: 'flex-start' }}
+          >
+            {saving ? 'Updating…' : 'Update email'}
+          </button>
+        </form>
       </div>
 
       <div
