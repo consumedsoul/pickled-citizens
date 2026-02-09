@@ -62,7 +62,9 @@ supabase/
   migrations/           # Incremental migration files
 
 public/                 # Static assets
-docs/                   # PRD
+docs/
+  prd.md                # Product requirements document
+  audits/               # Weekly code audit reports
 ```
 
 Path alias: `@/*` maps to `./src/*`.
@@ -129,3 +131,9 @@ Custom colors defined in `tailwind.config.js`:
 - **Scheduled times** are rounded to 30-minute intervals in the UI.
 - **Session history** sorts upcoming sessions first (by scheduled time), then past sessions most-recent-first.
 - **Sole-admin protection**: a league's last admin cannot leave or delete the league.
+
+## Known Gotchas
+
+- **No `.eslintrc` file**: ESLint runs via `next lint` defaults only. No custom rules configured.
+- **No test suite**: Zero test files exist. Critical paths (team generation, auth flows) are untested.
+- **`history/page.tsx`**: Route exists but returns a 404/not-found page.

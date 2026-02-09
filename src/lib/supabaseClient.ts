@@ -19,7 +19,17 @@ export const supabase: SupabaseClient =
     : missingClient;
 
 // Service role client for API routes (bypasses RLS)
-// Only create if service role key is available (for build compatibility)
+// Throws on first use if service role key is missing so misconfiguration is caught immediately
+function missingServiceRoleKey(): never {
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for API routes that bypass RLS.');
+}
+
+const missingServiceRoleClient = new Proxy({} as SupabaseClient, {
+  get() {
+    return missingServiceRoleKey();
+  },
+});
+
 export const supabaseServiceRole: SupabaseClient =
   supabaseUrl && process.env.SUPABASE_SERVICE_ROLE_KEY
     ? createClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY, {
@@ -28,4 +38,4 @@ export const supabaseServiceRole: SupabaseClient =
           persistSession: false,
         },
       })
-    : supabase; // Fallback to regular client if service role key not available
+    : missingServiceRoleClient;
