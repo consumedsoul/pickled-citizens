@@ -36,6 +36,31 @@ export async function POST(request: NextRequest) {
 
     const userId = userData.user.id;
 
+    // Check if user is an admin of this league
+    const { data: membership } = await supabaseServiceRole
+      .from('league_members')
+      .select('role')
+      .eq('league_id', leagueId)
+      .eq('user_id', userId)
+      .single();
+
+    if (membership?.role === 'admin') {
+      // Count other admins in the league
+      const { count } = await supabaseServiceRole
+        .from('league_members')
+        .select('user_id', { count: 'exact', head: true })
+        .eq('league_id', leagueId)
+        .eq('role', 'admin')
+        .neq('user_id', userId);
+
+      if (count === 0) {
+        return NextResponse.json(
+          { error: 'You are the only admin. Promote another member to admin before leaving.' },
+          { status: 409 }
+        );
+      }
+    }
+
     const { data: deletedRows, error: deleteError } = await supabaseServiceRole
       .from('league_members')
       .delete()

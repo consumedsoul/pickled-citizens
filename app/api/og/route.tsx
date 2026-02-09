@@ -2,12 +2,19 @@ import { ImageResponse } from 'next/og';
 
 export const runtime = 'nodejs';
 
+function sanitizeParam(value: string | null, fallback: string, maxLength: number): string {
+  if (!value) return fallback;
+  // Strip HTML tags and limit length
+  const cleaned = value.replace(/<[^>]*>/g, '').trim();
+  return cleaned.slice(0, maxLength) || fallback;
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    
-    const title = searchParams.get('title') || 'Pickled Citizens';
-    const description = searchParams.get('description') || 'Pickleball Team Battle Management Tool';
+
+    const title = sanitizeParam(searchParams.get('title'), 'Pickled Citizens', 100);
+    const description = sanitizeParam(searchParams.get('description'), 'Pickleball Team Battle Management Tool', 200);
 
     return new ImageResponse(
       (
@@ -87,9 +94,9 @@ export async function GET(request: Request) {
         height: 630,
       }
     );
-  } catch (e: any) {
-    console.log(`OG Image Error: ${e.message}`);
-    return new Response(`Failed to generate the image: ${e.message}`, {
+  } catch (e) {
+    console.error('OG Image Error:', e);
+    return new Response('Failed to generate the image', {
       status: 500,
     });
   }
