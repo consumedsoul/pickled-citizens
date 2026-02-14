@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Script from "next/script";
 import { supabase } from "@/lib/supabaseClient";
+import type { Database } from "@/types/database";
 
 interface HomeAuthState {
   loading: boolean;
@@ -130,7 +131,8 @@ export default function HomePage() {
         return;
       }
 
-      const memberships = (membershipData as any[]) || [];
+      type LeagueMembership = Database['public']['Tables']['league_members']['Row'];
+      const memberships = (membershipData as LeagueMembership[]) || [];
       
       // Get all league IDs to fetch league details and member counts
       const leagueIds = memberships.map(m => m.league_id);
@@ -158,14 +160,15 @@ export default function HomePage() {
       }
 
       const memberCounts = new Map<string, number>();
-      (memberCountsData as any[]).forEach((row: any) => {
-        const leagueId = row.league_id as string;
+      (memberCountsData as LeagueMembership[]).forEach((row) => {
+        const leagueId = row.league_id;
         memberCounts.set(leagueId, (memberCounts.get(leagueId) ?? 0) + 1);
       });
 
       // Process leagues and separate by role
-      const leagues = (leaguesData as any[]) || [];
-      const allLeagues: League[] = leagues.map((league: any) => ({
+      type LeagueRow = Database['public']['Tables']['leagues']['Row'];
+      const leagues = (leaguesData as LeagueRow[]) || [];
+      const allLeagues: League[] = leagues.map((league) => ({
         id: league.id,
         name: league.name,
         created_at: league.created_at,
@@ -230,11 +233,15 @@ export default function HomePage() {
       return;
     }
 
-    let participantSessionRows: any[] = [];
+    type MatchPlayerRow = Database['public']['Tables']['match_players']['Row'];
+    type SessionWithLeague = Database['public']['Tables']['game_sessions']['Row'] & {
+      league: { name: string } | null;
+    };
+    let participantSessionRows: SessionWithLeague[] = [];
 
     if (mpRows && mpRows.length) {
       const matchIds = Array.from(
-        new Set((mpRows as any[]).map((row) => row.match_id))
+        new Set((mpRows as MatchPlayerRow[]).map((row) => row.match_id))
       );
 
       if (matchIds.length) {
@@ -248,10 +255,11 @@ export default function HomePage() {
           return;
         }
 
+        type MatchRow = Database['public']['Tables']['matches']['Row'];
         const sessionIds = Array.from(
           new Set(
-            (matchRows ?? [])
-              .map((m: any) => m.session_id)
+            (matchRows as MatchRow[] ?? [])
+              .map((m) => m.session_id)
               .filter((id: string | null) => !!id)
           )
         );
@@ -276,14 +284,14 @@ export default function HomePage() {
     }
 
     const allRows = [...(ownedSessionRows ?? []), ...participantSessionRows];
-    const byId = new Map<string, any>();
+    const byId = new Map<string, SessionWithLeague>();
     allRows.forEach((row) => {
       if (!row || !row.id) return;
       byId.set(row.id, row);
     });
 
-    const mapped: SessionSummary[] = Array.from(byId.values()).map((row: any) => {
-      const leagueRel: any = row.league;
+    const mapped: SessionSummary[] = Array.from(byId.values()).map((row) => {
+      const leagueRel = row.league;
       const leagueName =
         Array.isArray(leagueRel) && leagueRel.length > 0
           ? leagueRel[0]?.name ?? null
@@ -333,13 +341,16 @@ export default function HomePage() {
       return;
     }
 
+    type MatchPlayerWithMatch = MatchPlayerRow & {
+      matches: { session_id: string };
+    };
     const matchIds = Array.from(
-      new Set((mpRows as any[]).map((row) => row.match_id))
+      new Set((mpRows as MatchPlayerWithMatch[]).map((row) => row.match_id))
     );
 
     // Get all session IDs where user participated
     const sessionIds = Array.from(
-      new Set((mpRows as any[]).map((row) => row.matches.session_id))
+      new Set((mpRows as MatchPlayerWithMatch[]).map((row) => row.matches.session_id))
     );
 
     // Get ALL matches in those sessions (for complete team scores)
@@ -364,13 +375,13 @@ export default function HomePage() {
 
     // Build a map of match_id -> user's team
     const userTeamMap = new Map<string, number>();
-    (mpRows as any[]).forEach((row) => {
+    (mpRows as MatchPlayerWithMatch[]).forEach((row) => {
       userTeamMap.set(row.match_id, row.team);
     });
 
     // Build a map of session_id -> user's team (user is always on the same team in a session)
     const sessionTeamMap = new Map<string, number>();
-    (mpRows as any[]).forEach((row) => {
+    (mpRows as MatchPlayerWithMatch[]).forEach((row) => {
       sessionTeamMap.set(row.matches.session_id, row.team);
     });
 
@@ -380,16 +391,18 @@ export default function HomePage() {
     // Aggregate match scores by session for team stats
     const sessionScores = new Map<string, { team1Score: number; team2Score: number; userTeam: number }>();
 
+    type MatchWithResult = MatchRow & {
+      result: { team1_score: number | null; team2_score: number | null }[] |
+              { team1_score: number | null; team2_score: number | null } |
+              null;
+    };
+
     // Process user's matches for individual stats
-    (matchRows as any[]).forEach((row) => {
-      const sessionId = row.session_id as string | null;
+    (matchRows as MatchWithResult[]).forEach((row) => {
+      const sessionId = row.session_id;
       if (!sessionId) return;
 
-      const rawResult = (row as any).result as
-        | { team1_score: number | null; team2_score: number | null }[]
-        | { team1_score: number | null; team2_score: number | null }
-        | null
-        | undefined;
+      const rawResult = row.result;
 
       let result: { team1_score: number | null; team2_score: number | null } | null = null;
       if (rawResult) {
@@ -423,15 +436,11 @@ export default function HomePage() {
     });
 
     // Process ALL matches in sessions for complete team scores
-    (allMatchRows as any[]).forEach((row) => {
-      const sessionId = row.session_id as string | null;
+    (allMatchRows as MatchWithResult[]).forEach((row) => {
+      const sessionId = row.session_id;
       if (!sessionId) return;
 
-      const rawResult = (row as any).result as
-        | { team1_score: number | null; team2_score: number | null }[]
-        | { team1_score: number | null; team2_score: number | null }
-        | null
-        | undefined;
+      const rawResult = row.result;
 
       let result: { team1_score: number | null; team2_score: number | null } | null = null;
       if (rawResult) {

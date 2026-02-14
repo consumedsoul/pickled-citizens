@@ -4,6 +4,7 @@ tsconfig.tsbuildinfo
 
 .env
 .env.*
+!.env.example
 
 .open-next
 cloudflare-env.d.ts
