@@ -38,6 +38,19 @@ type League = {
   memberCount?: number;
 };
 
+type MatchPlayerRow = Database['public']['Tables']['match_players']['Row'];
+type MatchRow = Database['public']['Tables']['matches']['Row'];
+type SessionWithLeague = {
+  id: string;
+  league_id: string | null;
+  created_by: string;
+  created_at: string;
+  scheduled_for: string | null;
+  location: string | null;
+  player_count: 6 | 8 | 10 | 12;
+  league: { name: string }[] | { name: string } | null;
+};
+
 function formatLeagueName(name: string, createdAt: string) {
   const year = new Date(createdAt).getFullYear();
   return `${name} (est. ${year})`;
@@ -214,7 +227,7 @@ export default function HomePage() {
       const { data: ownedSessionRows, error: ownedSessionsError } = await supabase
         .from("game_sessions")
         .select(
-          "id, league_id, created_by, created_at, scheduled_for, player_count, league:leagues(name)"
+          "id, league_id, created_by, created_at, scheduled_for, location, player_count, league:leagues(name)"
         )
         .eq("created_by", userId);
       
@@ -233,10 +246,6 @@ export default function HomePage() {
       return;
     }
 
-    type MatchPlayerRow = Database['public']['Tables']['match_players']['Row'];
-    type SessionWithLeague = Database['public']['Tables']['game_sessions']['Row'] & {
-      league: { name: string } | null;
-    };
     let participantSessionRows: SessionWithLeague[] = [];
 
     if (mpRows && mpRows.length) {
@@ -255,7 +264,6 @@ export default function HomePage() {
           return;
         }
 
-        type MatchRow = Database['public']['Tables']['matches']['Row'];
         const sessionIds = Array.from(
           new Set(
             (matchRows as MatchRow[] ?? [])
@@ -269,7 +277,7 @@ export default function HomePage() {
             await supabase
               .from("game_sessions")
               .select(
-                "id, league_id, created_by, created_at, scheduled_for, player_count, league:leagues(name)"
+                "id, league_id, created_by, created_at, scheduled_for, location, player_count, league:leagues(name)"
               )
               .in("id", sessionIds);
 
@@ -295,7 +303,9 @@ export default function HomePage() {
       const leagueName =
         Array.isArray(leagueRel) && leagueRel.length > 0
           ? leagueRel[0]?.name ?? null
-          : leagueRel?.name ?? null;
+          : leagueRel && !Array.isArray(leagueRel)
+            ? leagueRel.name ?? null
+            : null;
 
       return {
         id: row.id,
@@ -341,8 +351,10 @@ export default function HomePage() {
       return;
     }
 
-    type MatchPlayerWithMatch = MatchPlayerRow & {
-      matches: { session_id: string };
+    type MatchPlayerWithMatch = {
+      match_id: string;
+      team: 1 | 2;
+      matches: { session_id: string }[];
     };
     const matchIds = Array.from(
       new Set((mpRows as MatchPlayerWithMatch[]).map((row) => row.match_id))
@@ -350,7 +362,10 @@ export default function HomePage() {
 
     // Get all session IDs where user participated
     const sessionIds = Array.from(
-      new Set((mpRows as MatchPlayerWithMatch[]).map((row) => row.matches.session_id))
+      new Set((mpRows as MatchPlayerWithMatch[]).map((row) => {
+        const m = row.matches;
+        return Array.isArray(m) ? m[0]?.session_id : (m as { session_id: string })?.session_id;
+      }).filter(Boolean) as string[])
     );
 
     // Get ALL matches in those sessions (for complete team scores)
@@ -382,7 +397,9 @@ export default function HomePage() {
     // Build a map of session_id -> user's team (user is always on the same team in a session)
     const sessionTeamMap = new Map<string, number>();
     (mpRows as MatchPlayerWithMatch[]).forEach((row) => {
-      sessionTeamMap.set(row.matches.session_id, row.team);
+      const m = row.matches;
+      const sessionId = Array.isArray(m) ? m[0]?.session_id : (m as { session_id: string })?.session_id;
+      if (sessionId) sessionTeamMap.set(sessionId, row.team);
     });
 
     let individualWins = 0;
