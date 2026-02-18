@@ -1056,101 +1056,280 @@ export default function SessionDetailPage() {
             </button>
           </div>
 
-          {/* Team score summary */}
+          {/* Fullscreen 2-column layout: Teams+Players | Matchups */}
           <div
             style={{
+              flex: 1,
               display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '1px',
-              background: '#e5e7eb',
-              flexShrink: 0,
+              gridTemplateColumns: '1fr 2fr',
+              gap: '1.5rem',
+              padding: '1rem 1.5rem',
+              overflow: 'auto',
             }}
           >
-            <div style={{ background: '#14532d', color: '#ffffff', padding: '0.5rem 1rem', textAlign: 'center' }}>
-              <div style={{ fontWeight: 800, fontFamily: '"Courier New", monospace', letterSpacing: '0.05em' }}>TEAM GREEN</div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{teamStats.team1.wins}</div>
-            </div>
-            <div style={{ background: '#1e40af', color: '#ffffff', padding: '0.5rem 1rem', textAlign: 'center' }}>
-              <div style={{ fontWeight: 800, fontFamily: '"Courier New", monospace', letterSpacing: '0.05em' }}>TEAM BLUE</div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{teamStats.team2.wins}</div>
-            </div>
-          </div>
-
-          {/* Fullscreen matchups */}
-          <div style={{ flex: 1, padding: '0.75rem 1.5rem', overflow: 'auto' }}>
-            {rounds.map((roundMatches, roundIndex) => (
+            {/* Left column: Teams + Players */}
+            <div style={{ overflow: 'auto' }}>
+              {/* Teams section */}
+              <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#111827', margin: '0 0 0.5rem' }}>Teams</h3>
               <div
-                key={roundIndex}
-                style={{ marginTop: roundIndex === 0 ? 0 : '0.75rem' }}
+                style={{
+                  borderRadius: '0.75rem',
+                  overflow: 'hidden',
+                  border: '1px solid #d1d5db',
+                  background: '#f9fafb',
+                }}
               >
                 <div
                   style={{
-                    fontSize: '0.9rem',
-                    fontWeight: 600,
-                    color: '#4b5563',
-                    marginBottom: '0.25rem',
-                    textAlign: 'center',
-                    background: '#f3f4f6',
-                    padding: '0.35rem 0.5rem',
-                    borderRadius: '0.5rem',
+                    display: 'grid',
+                    gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+                    gap: '1px',
+                    background: '#d1d5db',
                   }}
                 >
-                  ROUND {roundIndex + 1}
-                </div>
-                {roundMatches.map((match, index) => (
                   <div
-                    key={match.id}
                     style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'auto minmax(0, 1fr) auto minmax(0, 1fr) auto',
-                      gap: '0.5rem',
+                      padding: '0.4rem 0.6rem',
+                      background: '#14532d',
+                      color: '#ffffff',
+                      fontWeight: 800,
+                      textAlign: 'center',
+                      display: 'flex',
+                      flexDirection: 'column',
                       alignItems: 'center',
-                      justifyItems: 'center',
-                      padding: '0.4rem 0',
-                      borderTop: index === 0 ? undefined : '1px solid #e5e7eb',
+                      justifyContent: 'center',
+                      fontFamily: '"Courier New", monospace',
+                      letterSpacing: '0.05em',
                     }}
                   >
-                    <button
-                      type="button"
-                      className="rounded-full px-5 py-2 text-sm border cursor-pointer transition-colors"
-                      onClick={canEdit ? () => handleToggleWinner(match.id, 1) : undefined}
-                      disabled={!canEdit || updatingMatchId === match.id}
-                      style={{
-                        padding: '0.25rem 0.6rem',
-                        fontSize: '0.85rem',
-                        background: match.winner === 1 ? '#14532d' : '#f9fafb',
-                        borderColor: match.winner === 1 ? '#14532d' : '#d1d5db',
-                        color: match.winner === 1 ? '#ffffff' : '#4b5563',
-                      }}
-                    >
-                      Win
-                    </button>
-                    <div style={{ color: '#14532d', fontSize: '1rem', fontWeight: 500, textAlign: 'center' }}>
-                      {match.team1.map(displayPlayerNameShort).join(' + ')}
-                    </div>
-                    <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>vs</span>
-                    <div style={{ color: '#1e3a8a', fontSize: '1rem', fontWeight: 500, textAlign: 'center' }}>
-                      {match.team2.map(displayPlayerNameShort).join(' + ')}
-                    </div>
-                    <button
-                      type="button"
-                      className="rounded-full px-5 py-2 text-sm border cursor-pointer transition-colors"
-                      onClick={canEdit ? () => handleToggleWinner(match.id, 2) : undefined}
-                      disabled={!canEdit || updatingMatchId === match.id}
-                      style={{
-                        padding: '0.25rem 0.6rem',
-                        fontSize: '0.85rem',
-                        background: match.winner === 2 ? '#1e40af' : '#f9fafb',
-                        borderColor: match.winner === 2 ? '#1e40af' : '#d1d5db',
-                        color: match.winner === 2 ? '#ffffff' : '#4b5563',
-                      }}
-                    >
-                      Win
-                    </button>
+                    <span>TEAM</span>
+                    <span>GREEN</span>
                   </div>
-                ))}
+                  <div
+                    style={{
+                      padding: '0.4rem 0.6rem',
+                      background: '#1e40af',
+                      color: '#ffffff',
+                      fontWeight: 800,
+                      textAlign: 'center',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontFamily: '"Courier New", monospace',
+                      letterSpacing: '0.05em',
+                    }}
+                  >
+                    <span>TEAM</span>
+                    <span>BLUE</span>
+                  </div>
+                </div>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+                    gap: '1px',
+                    background: '#d1d5db',
+                  }}
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column', background: '#ffffff' }}>
+                    <div style={{ padding: '0.5rem 0.6rem', fontSize: '2rem', textAlign: 'center', color: '#14532d' }}>
+                      {teamStats.team1.wins}
+                    </div>
+                    {teamStats.team1.roster.map((p) => (
+                      <div
+                        key={p.id}
+                        style={{
+                          padding: '0.25rem 0.6rem',
+                          fontSize: '0.875rem',
+                          display: 'flex',
+                          justifyContent: 'center',
+                          gap: '0.5rem',
+                          textAlign: 'center',
+                          color: '#14532d',
+                          fontWeight: 500,
+                        }}
+                      >
+                        <span
+                          style={{
+                            maxWidth: '140px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            display: 'inline-block',
+                          }}
+                        >
+                          {displayPlayerName(p)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', background: '#ffffff' }}>
+                    <div style={{ padding: '0.5rem 0.6rem', fontSize: '2rem', textAlign: 'center', color: '#1e3a8a' }}>
+                      {teamStats.team2.wins}
+                    </div>
+                    {teamStats.team2.roster.map((p) => (
+                      <div
+                        key={p.id}
+                        style={{
+                          padding: '0.25rem 0.6rem',
+                          fontSize: '0.875rem',
+                          display: 'flex',
+                          justifyContent: 'center',
+                          gap: '0.5rem',
+                          textAlign: 'center',
+                          color: '#1e3a8a',
+                          fontWeight: 500,
+                        }}
+                      >
+                        <span
+                          style={{
+                            maxWidth: '140px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            display: 'inline-block',
+                          }}
+                        >
+                          {displayPlayerName(p)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-            ))}
+
+              {/* Players section */}
+              <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#111827', margin: '1rem 0 0.5rem' }}>Players</h3>
+              {playerStats.length > 0 && (
+                <div
+                  style={{
+                    borderRadius: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    background: '#ffffff',
+                    padding: '0.5rem 0.6rem',
+                  }}
+                >
+                  <ul style={{ listStyle: 'none', paddingLeft: 0, margin: 0 }}>
+                    {playerStats.map((ps) => {
+                      const team1Count = matches.filter((m) =>
+                        m.team1.some((p) => p.id === ps.player.id)
+                      ).length;
+                      const team2Count = matches.filter((m) =>
+                        m.team2.some((p) => p.id === ps.player.id)
+                      ).length;
+                      const isTeam1 = team1Count >= team2Count;
+                      const nameColor = isTeam1 ? '#14532d' : '#1e3a8a';
+                      const recordColor = isTeam1 ? '#14532d' : '#1e3a8a';
+
+                      return (
+                        <li
+                          key={ps.player.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '0.5rem',
+                            padding: '0.25rem 0',
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontSize: '0.875rem', color: nameColor, fontWeight: 500 }}>
+                              {displayPlayerName(ps.player)}
+                              {ps.player.self_reported_dupr != null &&
+                                !Number.isNaN(ps.player.self_reported_dupr) && (
+                                  <> ({ps.player.self_reported_dupr.toFixed(2)})</>
+                                )}
+                            </div>
+                          </div>
+                          <div style={{ fontSize: '0.8rem', color: recordColor, textAlign: 'right' }}>
+                            <div>{ps.wins}-{ps.losses}</div>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            {/* Right column: Matchups */}
+            <div style={{ overflow: 'auto' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#111827', margin: '0 0 0.5rem' }}>Matchups</h3>
+              {rounds.map((roundMatches, roundIndex) => (
+                <div
+                  key={roundIndex}
+                  style={{ marginTop: roundIndex === 0 ? 0 : '0.75rem' }}
+                >
+                  <div
+                    style={{
+                      fontSize: '0.9rem',
+                      fontWeight: 600,
+                      color: '#4b5563',
+                      marginBottom: '0.25rem',
+                      textAlign: 'center',
+                      background: '#f3f4f6',
+                      padding: '0.35rem 0.5rem',
+                      borderRadius: '0.5rem',
+                    }}
+                  >
+                    ROUND {roundIndex + 1}
+                  </div>
+                  {roundMatches.map((match, index) => (
+                    <div
+                      key={match.id}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'auto minmax(0, 1fr) auto minmax(0, 1fr) auto',
+                        gap: '0.5rem',
+                        alignItems: 'center',
+                        justifyItems: 'center',
+                        padding: '0.4rem 0',
+                        borderTop: index === 0 ? undefined : '1px solid #e5e7eb',
+                      }}
+                    >
+                      <button
+                        type="button"
+                        className="rounded-full px-5 py-2 text-sm border cursor-pointer transition-colors"
+                        onClick={canEdit ? () => handleToggleWinner(match.id, 1) : undefined}
+                        disabled={!canEdit || updatingMatchId === match.id}
+                        style={{
+                          padding: '0.25rem 0.6rem',
+                          fontSize: '0.85rem',
+                          background: match.winner === 1 ? '#14532d' : '#f9fafb',
+                          borderColor: match.winner === 1 ? '#14532d' : '#d1d5db',
+                          color: match.winner === 1 ? '#ffffff' : '#4b5563',
+                        }}
+                      >
+                        Win
+                      </button>
+                      <div style={{ color: '#14532d', fontSize: '1rem', fontWeight: 500, textAlign: 'center' }}>
+                        {match.team1.map(displayPlayerNameShort).join(' + ')}
+                      </div>
+                      <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>vs</span>
+                      <div style={{ color: '#1e3a8a', fontSize: '1rem', fontWeight: 500, textAlign: 'center' }}>
+                        {match.team2.map(displayPlayerNameShort).join(' + ')}
+                      </div>
+                      <button
+                        type="button"
+                        className="rounded-full px-5 py-2 text-sm border cursor-pointer transition-colors"
+                        onClick={canEdit ? () => handleToggleWinner(match.id, 2) : undefined}
+                        disabled={!canEdit || updatingMatchId === match.id}
+                        style={{
+                          padding: '0.25rem 0.6rem',
+                          fontSize: '0.85rem',
+                          background: match.winner === 2 ? '#1e40af' : '#f9fafb',
+                          borderColor: match.winner === 2 ? '#1e40af' : '#d1d5db',
+                          color: match.winner === 2 ? '#ffffff' : '#4b5563',
+                        }}
+                      >
+                        Win
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
