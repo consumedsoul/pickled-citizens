@@ -871,16 +871,16 @@ export default function SessionDetailPage() {
 
         {/* Matchups section - shows third on mobile, second column on desktop */}
         <div style={{ order: 2 }} className="mt-6 md:mt-0 md:col-start-2 md:row-start-1 md:row-span-2">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-            <h2 className="text-base font-medium mb-3">Matchups</h2>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <h2 className="text-base font-medium" style={{ margin: 0 }}>Matchups</h2>
             {matches.length > 0 && (
               <button
                 type="button"
                 onClick={toggleFullscreen}
-                className="rounded-full px-3 py-1 text-xs border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
+                className="rounded-full px-3 py-1.5 text-xs border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
                 title="View matchups fullscreen"
               >
-                Fullscreen
+                Full View
               </button>
             )}
           </div>
