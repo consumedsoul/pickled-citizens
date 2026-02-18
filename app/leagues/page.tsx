@@ -274,7 +274,7 @@ export default function LeaguesPage() {
       <div className="mt-6">
         <h2 className="text-base font-medium mb-3">Leagues you manage</h2>
         {leagues.length === 0 ? (
-          <p className="text-app-muted">You don't manage any leagues yet.</p>
+          <p className="text-app-muted">You don&apos;t manage any leagues yet.</p>
         ) : (
           <ul className="list-none pl-0 text-app-muted text-[0.87rem]">
             {leagues.map((league) => (
@@ -303,7 +303,7 @@ export default function LeaguesPage() {
       </div>
 
       <div className="mt-6">
-        <h2 className="text-base font-medium mb-3">Leagues you're a member of</h2>
+        <h2 className="text-base font-medium mb-3">Leagues you&apos;re a member of</h2>
         {memberLeagues.length === 0 ? (
           <p className="text-app-muted">You are not a member of any leagues yet.</p>
         ) : (

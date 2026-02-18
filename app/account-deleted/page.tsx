@@ -29,7 +29,7 @@ export default function AccountDeletedPage() {
       
       <div className="bg-green-50 border border-green-300 rounded-lg p-4 mb-6">
         <p className="m-0 text-sm text-green-800">
-          <strong>What's next?</strong><br/>
+          <strong>What&apos;s next?</strong><br/>
           You can sign up again at any time with the same or a different email address to create a fresh account.
         </p>
       </div>

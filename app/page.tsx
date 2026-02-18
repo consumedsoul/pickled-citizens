@@ -537,7 +537,7 @@ export default function HomePage() {
       <div>
         <p className="max-w-full text-app-muted">
           <strong>PICKLED CITIZENS</strong> is a lightweight web app for setting up team
-          battle matchups for your league's pickleball sessions.
+          battle matchups for your league&apos;s pickleball sessions.
         </p>
         {showCtas && (
           <div className="flex flex-wrap gap-3 mt-3">
