@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
-import { Metadata } from 'next';
 
 type SessionPlayer = {
   id: string;
@@ -116,6 +115,21 @@ export default function SessionDetailPage() {
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const toggleFullscreen = useCallback(() => {
+    setIsFullscreen((prev) => !prev);
+  }, []);
+
+  // Close fullscreen on Escape key
+  useEffect(() => {
+    if (!isFullscreen) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setIsFullscreen(false);
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreen]);
 
   useEffect(() => {
     let active = true;
@@ -857,7 +871,19 @@ export default function SessionDetailPage() {
 
         {/* Matchups section - shows third on mobile, second column on desktop */}
         <div style={{ order: 2 }} className="mt-6 md:mt-0 md:col-start-2 md:row-start-1 md:row-span-2">
-          <h2 className="text-base font-medium mb-3">Matchups</h2>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+            <h2 className="text-base font-medium mb-3">Matchups</h2>
+            {matches.length > 0 && (
+              <button
+                type="button"
+                onClick={toggleFullscreen}
+                className="rounded-full px-3 py-1 text-xs border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
+                title="View matchups fullscreen"
+              >
+                Fullscreen
+              </button>
+            )}
+          </div>
           {matches.length === 0 ? (
             <p className="text-app-muted" style={{ fontSize: '0.85rem' }}>
               No matchups to show yet.
@@ -895,9 +921,6 @@ export default function SessionDetailPage() {
                     ROUND {roundIndex + 1}
                   </div>
                   {roundMatches.map((match, index) => {
-                    const team1Names = match.team1.map(displayPlayerNameShort).join(' + ');
-                    const team2Names = match.team2.map(displayPlayerNameShort).join(' + ');
-
                     return (
                       <div
                         key={match.id}
@@ -991,6 +1014,146 @@ export default function SessionDetailPage() {
         </div>
 
       </div>
+
+      {isFullscreen && matches.length > 0 && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: '#ffffff',
+            zIndex: 50,
+            overflow: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          {/* Fullscreen header */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '0.75rem 1.5rem',
+              borderBottom: '1px solid #e5e7eb',
+              background: '#f9fafb',
+              flexShrink: 0,
+            }}
+          >
+            <div>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#111827', margin: 0 }}>
+                Matchups
+              </h2>
+              <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: '0.15rem 0 0' }}>
+                {session.league_name || 'Session'} · {session.player_count} players · {formatDateTime(session.scheduled_for ?? session.created_at)}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              className="rounded-full px-4 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-100 transition-colors"
+            >
+              Exit Fullscreen
+            </button>
+          </div>
+
+          {/* Team score summary */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '1px',
+              background: '#e5e7eb',
+              flexShrink: 0,
+            }}
+          >
+            <div style={{ background: '#14532d', color: '#ffffff', padding: '0.5rem 1rem', textAlign: 'center' }}>
+              <div style={{ fontWeight: 800, fontFamily: '"Courier New", monospace', letterSpacing: '0.05em' }}>TEAM GREEN</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{teamStats.team1.wins}</div>
+            </div>
+            <div style={{ background: '#1e40af', color: '#ffffff', padding: '0.5rem 1rem', textAlign: 'center' }}>
+              <div style={{ fontWeight: 800, fontFamily: '"Courier New", monospace', letterSpacing: '0.05em' }}>TEAM BLUE</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{teamStats.team2.wins}</div>
+            </div>
+          </div>
+
+          {/* Fullscreen matchups */}
+          <div style={{ flex: 1, padding: '0.75rem 1.5rem', overflow: 'auto' }}>
+            {rounds.map((roundMatches, roundIndex) => (
+              <div
+                key={roundIndex}
+                style={{ marginTop: roundIndex === 0 ? 0 : '0.75rem' }}
+              >
+                <div
+                  style={{
+                    fontSize: '0.9rem',
+                    fontWeight: 600,
+                    color: '#4b5563',
+                    marginBottom: '0.25rem',
+                    textAlign: 'center',
+                    background: '#f3f4f6',
+                    padding: '0.35rem 0.5rem',
+                    borderRadius: '0.5rem',
+                  }}
+                >
+                  ROUND {roundIndex + 1}
+                </div>
+                {roundMatches.map((match, index) => (
+                  <div
+                    key={match.id}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'auto minmax(0, 1fr) auto minmax(0, 1fr) auto',
+                      gap: '0.5rem',
+                      alignItems: 'center',
+                      justifyItems: 'center',
+                      padding: '0.4rem 0',
+                      borderTop: index === 0 ? undefined : '1px solid #e5e7eb',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      className="rounded-full px-5 py-2 text-sm border cursor-pointer transition-colors"
+                      onClick={canEdit ? () => handleToggleWinner(match.id, 1) : undefined}
+                      disabled={!canEdit || updatingMatchId === match.id}
+                      style={{
+                        padding: '0.25rem 0.6rem',
+                        fontSize: '0.85rem',
+                        background: match.winner === 1 ? '#14532d' : '#f9fafb',
+                        borderColor: match.winner === 1 ? '#14532d' : '#d1d5db',
+                        color: match.winner === 1 ? '#ffffff' : '#4b5563',
+                      }}
+                    >
+                      Win
+                    </button>
+                    <div style={{ color: '#14532d', fontSize: '1rem', fontWeight: 500, textAlign: 'center' }}>
+                      {match.team1.map(displayPlayerNameShort).join(' + ')}
+                    </div>
+                    <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>vs</span>
+                    <div style={{ color: '#1e3a8a', fontSize: '1rem', fontWeight: 500, textAlign: 'center' }}>
+                      {match.team2.map(displayPlayerNameShort).join(' + ')}
+                    </div>
+                    <button
+                      type="button"
+                      className="rounded-full px-5 py-2 text-sm border cursor-pointer transition-colors"
+                      onClick={canEdit ? () => handleToggleWinner(match.id, 2) : undefined}
+                      disabled={!canEdit || updatingMatchId === match.id}
+                      style={{
+                        padding: '0.25rem 0.6rem',
+                        fontSize: '0.85rem',
+                        background: match.winner === 2 ? '#1e40af' : '#f9fafb',
+                        borderColor: match.winner === 2 ? '#1e40af' : '#d1d5db',
+                        color: match.winner === 2 ? '#ffffff' : '#4b5563',
+                      }}
+                    >
+                      Win
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {canEdit && deleteOpen && (
         <div

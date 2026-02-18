@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import { ADMIN_EMAIL } from '@/lib/constants';
 
 type League = {
   id: string;
@@ -44,7 +45,7 @@ export default function AdminLeaguesPage() {
       setAdmin({ loading: false, email });
 
       const emailLower = email?.toLowerCase() ?? '';
-      const isAdmin = emailLower === 'hun@ghkim.com';
+      const isAdmin = emailLower === ADMIN_EMAIL;
       if (!isAdmin) {
         setLoading(false);
         return;
@@ -75,7 +76,7 @@ export default function AdminLeaguesPage() {
   }, []);
 
   const emailLower = admin.email?.toLowerCase() ?? '';
-  const isAdmin = emailLower === 'hun@ghkim.com';
+  const isAdmin = emailLower === ADMIN_EMAIL;
 
   if (loading) {
     return (

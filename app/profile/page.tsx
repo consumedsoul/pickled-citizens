@@ -365,39 +365,16 @@ export default function ProfilePage() {
 
     const user = userData.user;
 
-    // Best-effort cleanup of user-related data.
-    // Depending on your RLS policies, some of these may require
-    // additional delete policies to succeed.
-    const email = user.email ?? '';
+    // Use transactional RPC to delete all user data + auth user in one operation
+    const { error: deleteError } = await supabase.rpc('delete_user_cascade', {
+      target_user_id: user.id,
+    });
 
-    const operations = [
-      supabase.from('league_members').delete().eq('user_id', user.id),
-      supabase.from('league_invites').delete().eq('email', email),
-      supabase.from('leagues').delete().eq('owner_id', user.id),
-      supabase.from('profiles').delete().eq('id', user.id),
-    ];
-
-    for (const op of operations) {
-      const { error } = await op;
-      if (error) {
-        // Surface the first error and stop; user can retry after policies are adjusted.
-        setError(error.message);
-        setDeleteLoading(false);
-        return;
-      }
+    if (deleteError) {
+      setError(`Failed to delete account: ${deleteError.message}`);
+      setDeleteLoading(false);
+      return;
     }
-
-    // TODO: Temporarily disabled - need to run admin function migration
-    // Delete the actual auth user account
-    // const { error: deleteError } = await supabase.rpc('admin_delete_user', {
-    //   user_id_to_delete: user.id
-    // });
-
-    // if (deleteError) {
-    //   setError(`Failed to delete auth account: ${deleteError.message}`);
-    //   setDeleteLoading(false);
-    //   return;
-    // }
 
     // Sign out after successful deletion
     await supabase.auth.signOut();

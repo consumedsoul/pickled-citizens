@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { ADMIN_EMAIL } from '@/lib/constants';
 
 // Admin middleware for server-side route protection
 // Ensures only the super-admin user can access /admin/* routes
-
-const ADMIN_EMAIL = 'hun@ghkim.com';
 
 export async function middleware(request: NextRequest) {
   // Get Supabase credentials from environment

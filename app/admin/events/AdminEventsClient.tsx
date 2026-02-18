@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import { ADMIN_EMAIL } from '@/lib/constants';
 
 type AdminEvent = {
   id: string;
@@ -55,7 +56,7 @@ export default function AdminEventsClient() {
       const email = userData.user.email?.toLowerCase() ?? null;
       setUserEmail(email);
 
-      if (email !== 'hun@ghkim.com') {
+      if (email !== ADMIN_EMAIL) {
         setError('You are not authorized to view this page.');
         setLoading(false);
         return;

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
+import { ADMIN_EMAIL } from '@/lib/constants';
 
 interface AdminState {
   loading: boolean;
@@ -35,7 +36,7 @@ export function AdminFooterLinks() {
   }, []);
 
   const email = state.email?.toLowerCase() ?? null;
-  const isAdmin = email === 'hun@ghkim.com';
+  const isAdmin = email === ADMIN_EMAIL;
 
   return (
     <nav className="flex items-center gap-3 text-[0.8rem]">

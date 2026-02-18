@@ -56,6 +56,7 @@ src/
   components/           # Shared components (AuthStatus, Navigation, AdminFooterLinks)
   lib/
     supabaseClient.ts   # Exports `supabase` (anon) and `supabaseServiceRole` (bypasses RLS)
+    constants.ts        # Shared constants (ADMIN_EMAIL)
   types/
     database.ts         # TypeScript types for all Supabase tables (Row/Insert/Update)
 
@@ -140,8 +141,6 @@ Custom colors defined in `tailwind.config.js`:
 
 - **No test suite**: Zero test files exist. Critical paths (team generation, auth flows) are untested.
 - **`history/page.tsx`**: Route exists but returns a 404/not-found page.
-- **`src/types/supabase.ts`**: Corrupted — contains npm error output instead of types. Delete or regenerate.
 - **`share-test/page.tsx`**: Test page still accessible in production at `/share-test`.
-- **Admin email hardcoded in 7 files**: `hun@ghkim.com` appears in schema.sql, middleware, and 5 component files.
+- **Admin email**: Hardcoded in `supabase/schema.sql` (RLS + functions). Client-side code imports from `src/lib/constants.ts`.
 - **Admin user edit broken**: `app/admin/users/page.tsx` uses client-side Supabase (RLS blocks editing other users' profiles).
-- **Account deletion incomplete**: `admin_delete_user` RPC is commented out at `app/profile/page.tsx:390`.

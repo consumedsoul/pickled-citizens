@@ -260,6 +260,12 @@ export interface Database {
         }
         Returns: void
       }
+      delete_user_cascade: {
+        Args: {
+          target_user_id: string
+        }
+        Returns: void
+      }
     }
     Enums: {
       [_ in never]: never

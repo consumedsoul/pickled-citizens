@@ -3,6 +3,7 @@
 import { useEffect, useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import { ADMIN_EMAIL } from '@/lib/constants';
 
 type League = {
   id: string;
@@ -55,7 +56,7 @@ export default function AdminUsersPage() {
       const email = authData.user.email?.toLowerCase() ?? null;
       setUserEmail(email);
 
-      if (email !== 'hun@ghkim.com') {
+      if (email !== ADMIN_EMAIL) {
         setError('You are not authorized to view this page.');
         setLoading(false);
         return;

@@ -3,6 +3,7 @@
 import { useEffect, useState, FormEvent } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import { ADMIN_EMAIL } from '@/lib/constants';
 
 type League = {
   id: string;
@@ -64,7 +65,7 @@ export default function LeagueMembersPage() {
       const user = userData.user;
       setCurrentUserId(user.id);
       const emailLower = user.email?.toLowerCase() ?? '';
-      const isSuperAdmin = emailLower === 'hun@ghkim.com';
+      const isSuperAdmin = emailLower === ADMIN_EMAIL;
 
       const { data: leagueData, error: leagueError } = await supabase
         .from('leagues')
