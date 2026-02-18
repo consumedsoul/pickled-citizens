@@ -52,7 +52,7 @@ Lightweight web app for running casual pickleball leagues: create leagues, invit
     - **Current / upcoming sessions** at the top (soonest first).
     - **Past sessions** below (most recent first).
   - Uses scheduled time when available, otherwise creation time.
-  - Dedicated history page (`/history`) showing all user sessions.
+  - History page (`/history`) — planned (currently returns 404).
   - Lifetime statistics tracking:
     - Individual wins/losses (personal match record).
     - Team wins/losses/ties (Team A vs Team B record).
@@ -142,13 +142,16 @@ Lightweight web app for running casual pickleball leagues: create leagues, invit
 - `dupr-score/route.ts` – DUPR score lookup/validation.
 - `leagues/leave/route.ts` – Leave league endpoint.
 - `session/[id]/metadata/route.ts` – Session metadata for social sharing.
-- `test-session/[id]/route.ts` – Test session endpoint.
 - `og/route.tsx` – Open Graph image generation.
 
 ### Components (`src/components/`)
 - `AuthStatus.tsx` – Header auth indicator with sign in/out button.
 - `Navigation.tsx` – Main navigation with active route highlighting.
 - `AdminFooterLinks.tsx` – Conditional footer links for super-admin.
+
+### Types (`src/types/`)
+- `database.ts` – TypeScript type definitions for all Supabase tables (Row, Insert, Update).
+- `supabase.ts` – Generated Supabase types (needs regeneration).
 
 ### Library (`src/lib/`)
 - `supabaseClient.ts` – Supabase client initialization (browser and service role).
@@ -164,13 +167,19 @@ Lightweight web app for running casual pickleball leagues: create leagues, invit
 - `next.config.mjs` – Next.js configuration.
 - `tailwind.config.js` – Tailwind CSS with custom color palette.
 - `tsconfig.json` – TypeScript configuration.
+- `.eslintrc.json` – ESLint rules (TypeScript, no-console).
+- `.env.example` – Environment variable template.
 - `wrangler.toml` – Cloudflare Pages configuration.
 - `wrangler.worker.toml` – Cloudflare Workers configuration.
 - `open-next.config.ts` – OpenNext for Cloudflare configuration.
 - `postcss.config.js` – PostCSS configuration.
 
+#### Middleware
+- `admin/middleware.ts` – Server-side admin route protection (JWT verification).
+
 ### Documentation (`docs/`)
 - `prd.md` – Product Requirements Document.
+- `audits/` – Weekly code audit reports.
 
 ---
 
@@ -342,7 +351,7 @@ To configure a different super-admin user:
 ### Session History & Statistics
 
 1. **Sessions Page** (`/sessions`): Shows upcoming sessions (soonest first) and past sessions (most recent first).
-2. **History Page** (`/history`): Complete session history for the user.
+2. **History Page** (`/history`): Planned — currently returns 404.
 3. **Home Page** (`/`): Displays lifetime statistics:
    - Individual wins/losses (personal match record).
    - Team wins/losses/ties (Team A vs Team B record).

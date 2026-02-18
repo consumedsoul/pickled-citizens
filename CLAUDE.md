@@ -56,6 +56,8 @@ src/
   components/           # Shared components (AuthStatus, Navigation, AdminFooterLinks)
   lib/
     supabaseClient.ts   # Exports `supabase` (anon) and `supabaseServiceRole` (bypasses RLS)
+  types/
+    database.ts         # TypeScript types for all Supabase tables (Row/Insert/Update)
 
 supabase/
   schema.sql            # Full DB schema (source of truth)
@@ -95,9 +97,11 @@ Path alias: `@/*` maps to `./src/*`.
 
 ### Super-Admin
 
-Email `hun@ghkim.com` is the super-admin. Checked in:
-- `supabase/schema.sql` — RLS policy on `admin_events`
+Email `hun@ghkim.com` is the super-admin. Hardcoded in 7 locations:
+- `supabase/schema.sql` — RLS policy on `admin_events` + `admin_delete_user` function
+- `app/admin/middleware.ts` — server-side route protection
 - `src/components/AdminFooterLinks.tsx` — conditional admin nav links
+- `app/admin/events/AdminEventsClient.tsx`, `app/admin/leagues/page.tsx`, `app/admin/users/page.tsx`, `app/leagues/[id]/page.tsx`
 
 ## Authentication
 
@@ -134,6 +138,10 @@ Custom colors defined in `tailwind.config.js`:
 
 ## Known Gotchas
 
-- **No `.eslintrc` file**: ESLint runs via `next lint` defaults only. No custom rules configured.
 - **No test suite**: Zero test files exist. Critical paths (team generation, auth flows) are untested.
 - **`history/page.tsx`**: Route exists but returns a 404/not-found page.
+- **`src/types/supabase.ts`**: Corrupted — contains npm error output instead of types. Delete or regenerate.
+- **`share-test/page.tsx`**: Test page still accessible in production at `/share-test`.
+- **Admin email hardcoded in 7 files**: `hun@ghkim.com` appears in schema.sql, middleware, and 5 component files.
+- **Admin user edit broken**: `app/admin/users/page.tsx` uses client-side Supabase (RLS blocks editing other users' profiles).
+- **Account deletion incomplete**: `admin_delete_user` RPC is commented out at `app/profile/page.tsx:390`.
