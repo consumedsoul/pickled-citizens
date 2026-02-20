@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import { Button } from '@/components/ui/Button';
+import { SectionLabel } from '@/components/ui/SectionLabel';
+import { Modal } from '@/components/ui/Modal';
 
 type SessionPlayer = {
   id: string;
@@ -372,7 +375,7 @@ export default function SessionDetailPage() {
         return a.positionInMatch - b.positionInMatch;
       })
       .map(entry => entry.player);
-    
+
     const team2RosterSorted = Array.from(team2Roster.values())
       .sort((a, b) => {
         if (a.firstMatchIndex !== b.firstMatchIndex) {
@@ -578,240 +581,107 @@ export default function SessionDetailPage() {
 
   if (loading) {
     return (
-      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
-        <h1 className="text-base font-medium mb-3">Session</h1>
-        <p className="text-app-muted">Loading session…</p>
+      <div>
+        <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Session</h1>
+        <p className="text-app-muted text-sm">Loading session...</p>
       </div>
     );
   }
 
-  if (error) {
+  if (error && !session) {
     return (
-      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
-        <h1 className="text-base font-medium mb-3">Session</h1>
-        <p className="text-app-muted" style={{ color: '#fca5a5' }}>
-          {error}
-        </p>
+      <div>
+        <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Session</h1>
+        <p className="text-app-danger text-sm">{error}</p>
       </div>
     );
   }
 
   if (!session) {
     return (
-      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
-        <h1 className="text-base font-medium mb-3">Session</h1>
-        <p className="text-app-muted">Session not found.</p>
+      <div>
+        <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Session</h1>
+        <p className="text-app-muted text-sm">Session not found.</p>
       </div>
     );
   }
 
   return (
-    <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '0.75rem',
-          flexWrap: 'wrap',
-        }}
-      >
-        <h1 className="text-base font-medium mb-3">Session details</h1>
+    <div>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Session Details</h1>
         {canEdit && (
-          <button
-            type="button"
-            className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            onClick={openDeleteDialog}
-            style={{
-              background: '#b91c1c',
-              borderColor: '#b91c1c',
-              color: '#fee2e2',
-            }}
-          >
-            Delete session
-          </button>
+          <Button variant="danger" onClick={openDeleteDialog}>
+            Delete Session
+          </Button>
         )}
       </div>
-      <p className="text-app-muted" style={{ marginBottom: '0.5rem' }}>
-        {session.league_name || 'Deleted league'} · {session.player_count} players ·{' '}
+      <p className="text-sm text-app-muted mb-4">
+        {session.league_name || 'Deleted league'} &middot; {session.player_count} players &middot;{' '}
         {formatDateTime(session.scheduled_for ?? session.created_at)}
       </p>
+      {error && (
+        <p className="text-app-danger text-sm mb-4">{error}</p>
+      )}
       {!canEdit && (
-        <p className="text-app-muted" style={{ fontSize: '0.85rem' }}>
+        <p className="text-app-muted text-xs mb-4">
           Only the session creator can update match results. You can still view the
           current standings.
         </p>
       )}
 
-      <div
-        className="mt-6 grid grid-cols-1 gap-0 md:grid-cols-[1fr_2fr] md:gap-x-6"
-      >
+      <div className="mt-6 grid grid-cols-1 gap-0 md:grid-cols-[1fr_2fr] md:gap-x-6">
         {/* Teams section - shows first on mobile */}
-        <div style={{ order: 1 }} className="md:col-start-1 md:row-start-1">
-          <h2 className="text-base font-medium mb-3">Teams</h2>
+        <div className="order-1 md:col-start-1 md:row-start-1">
+          <SectionLabel>TEAMS</SectionLabel>
           {matches.length === 0 ? (
-            <p className="text-app-muted" style={{ fontSize: '0.85rem' }}>
+            <p className="text-app-muted text-sm mt-3">
               No matches found for this session.
             </p>
           ) : (
-            <div
-              style={{
-                marginTop: 0,
-                marginBottom: 0,
-                borderRadius: '0.75rem',
-                overflow: 'hidden',
-                border: '1px solid #d1d5db',
-                background: '#f9fafb',
-              }}
-            >
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
-                  gap: '1px',
-                  background: '#d1d5db',
-                }}
-              >
-                <div
-                  style={{
-                    padding: '0.4rem 0.6rem',
-                    background: '#14532d',
-                    color: '#ffffff',
-                    fontWeight: 800,
-                    textAlign: 'center',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontFamily: '"Courier New", monospace',
-                    letterSpacing: '0.05em',
-                  }}
-                >
+            <div className="mt-3 border border-app-border overflow-hidden">
+              <div className="grid grid-cols-2 gap-px bg-app-border">
+                <div className="bg-team-green text-white font-mono uppercase tracking-label font-bold text-center flex flex-col items-center justify-center py-2 px-3">
                   <span>TEAM</span>
                   <span>GREEN</span>
                 </div>
-                <div
-                  style={{
-                    padding: '0.4rem 0.6rem',
-                    background: '#1e40af',
-                    color: '#ffffff',
-                    fontWeight: 800,
-                    textAlign: 'center',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontFamily: '"Courier New", monospace',
-                    letterSpacing: '0.05em',
-                  }}
-                >
+                <div className="bg-team-blue text-white font-mono uppercase tracking-label font-bold text-center flex flex-col items-center justify-center py-2 px-3">
                   <span>TEAM</span>
                   <span>BLUE</span>
                 </div>
               </div>
 
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
-                  gap: '1px',
-                  background: '#d1d5db',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    background: '#ffffff',
-                  }}
-                >
-                  <div
-                    style={{
-                      padding: '0.5rem 0.6rem',
-                      fontSize: '2rem',
-                      textAlign: 'center',
-                      color: '#14532d',
-                    }}
-                  >
+              <div className="grid grid-cols-2 gap-px bg-app-border">
+                <div className="flex flex-col bg-white">
+                  <div className="py-2 px-3 text-3xl text-center text-team-green font-bold">
                     {teamStats.team1.wins}
                   </div>
-                  {teamStats.team1.roster.map((p) => {
-                    return (
-                      <div
-                        key={p.id}
-                        style={{
-                          padding: '0.25rem 0.6rem',
-                          fontSize: '0.875rem',
-                          display: 'flex',
-                          justifyContent: 'center',
-                          gap: '0.5rem',
-                          textAlign: 'center',
-                          color: '#14532d',
-                          fontWeight: 500,
-                        }}
-                      >
-                        <span
-                          style={{
-                            maxWidth: '120px',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            display: 'inline-block',
-                          }}
-                        >
-                          {displayPlayerName(p)}
-                        </span>
-                      </div>
-                    );
-                  })}
+                  {teamStats.team1.roster.map((p) => (
+                    <div
+                      key={p.id}
+                      className="py-1 px-3 text-sm text-center text-team-green font-medium flex justify-center"
+                    >
+                      <span className="max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap inline-block">
+                        {displayPlayerName(p)}
+                      </span>
+                    </div>
+                  ))}
                 </div>
 
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    background: '#ffffff',
-                  }}
-                >
-                  <div
-                    style={{
-                      padding: '0.5rem 0.6rem',
-                      fontSize: '2rem',
-                      textAlign: 'center',
-                      color: '#1e3a8a',
-                    }}
-                  >
+                <div className="flex flex-col bg-white">
+                  <div className="py-2 px-3 text-3xl text-center text-[#1e3a8a] font-bold">
                     {teamStats.team2.wins}
                   </div>
-                  {teamStats.team2.roster.map((p) => {
-                    return (
-                      <div
-                        key={p.id}
-                        style={{
-                          padding: '0.25rem 0.6rem',
-                          fontSize: '0.875rem',
-                          display: 'flex',
-                          justifyContent: 'center',
-                          gap: '0.5rem',
-                          textAlign: 'center',
-                          color: '#1e3a8a',
-                          fontWeight: 500,
-                        }}
-                      >
-                        <span
-                          style={{
-                            maxWidth: '120px',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            display: 'inline-block',
-                          }}
-                        >
-                          {displayPlayerName(p)}
-                        </span>
-                      </div>
-                    );
-                  })}
+                  {teamStats.team2.roster.map((p) => (
+                    <div
+                      key={p.id}
+                      className="py-1 px-3 text-sm text-center text-[#1e3a8a] font-medium flex justify-center"
+                    >
+                      <span className="max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap inline-block">
+                        {displayPlayerName(p)}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -819,214 +689,123 @@ export default function SessionDetailPage() {
         </div>
 
         {/* Players section - shows second on mobile */}
-        <div style={{ order: 3 }} className="mt-6 md:mt-0 md:col-start-1 md:row-start-2">
-          <h2 className="text-base font-medium mb-3">Players</h2>
+        <div className="order-3 mt-6 md:mt-0 md:col-start-1 md:row-start-2">
+          <SectionLabel>PLAYERS</SectionLabel>
           {playerStats.length === 0 ? (
-            <p className="text-app-muted" style={{ fontSize: '0.85rem' }}>
+            <p className="text-app-muted text-sm mt-3">
               Players will appear here once matches and participants are loaded.
             </p>
           ) : (
-            <div
-              style={{
-                marginTop: 0,
-                borderRadius: '0.75rem',
-                border: '1px solid #d1d5db',
-                background: '#ffffff',
-                padding: '0.5rem 0.6rem',
-              }}
-            >
-              <ul
-                className="list-none pl-0 text-app-muted text-[0.87rem]"
-                style={{ listStyle: 'none', paddingLeft: 0, margin: 0 }}
-              >
-                {playerStats.map((ps) => {
-                  const team1Count = matches.filter((m) =>
-                    m.team1.some((p) => p.id === ps.player.id)
-                  ).length;
-                  const team2Count = matches.filter((m) =>
-                    m.team2.some((p) => p.id === ps.player.id)
-                  ).length;
-                  const isTeam1 = team1Count >= team2Count;
-                  const nameColor = isTeam1 ? '#14532d' : '#1e3a8a';
-                  const recordColor = isTeam1 ? '#14532d' : '#1e3a8a';
+            <ul className="mt-3 list-none p-0 m-0 border border-app-border divide-y divide-app-border">
+              {playerStats.map((ps) => {
+                const team1Count = matches.filter((m) =>
+                  m.team1.some((p) => p.id === ps.player.id)
+                ).length;
+                const team2Count = matches.filter((m) =>
+                  m.team2.some((p) => p.id === ps.player.id)
+                ).length;
+                const isTeam1 = team1Count >= team2Count;
 
-                  return (
+                return (
                   <li
                     key={ps.player.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '0.5rem',
-                      padding: '0.25rem 0',
-                    }}
+                    className="flex items-center justify-between gap-2 px-3 py-2 bg-white"
                   >
-                    <div>
-                      <div style={{ fontSize: '0.875rem', color: nameColor, fontWeight: 500 }}>
-                        {displayPlayerName(ps.player)}
-                        {ps.player.self_reported_dupr != null &&
-                          !Number.isNaN(ps.player.self_reported_dupr) && (
-                            <> ({ps.player.self_reported_dupr.toFixed(2)})</>
-                          )}
-                      </div>
+                    <div className={`text-sm font-medium ${isTeam1 ? 'text-team-green' : 'text-[#1e3a8a]'}`}>
+                      {displayPlayerName(ps.player)}
+                      {ps.player.self_reported_dupr != null &&
+                        !Number.isNaN(ps.player.self_reported_dupr) && (
+                          <> ({ps.player.self_reported_dupr.toFixed(2)})</>
+                        )}
                     </div>
-                    <div
-                      style={{
-                        fontSize: '0.8rem',
-                        color: recordColor,
-                        textAlign: 'right',
-                      }}
-                    >
-                      <div>
-                        {ps.wins}-{ps.losses}
-                      </div>
+                    <div className={`text-xs text-right ${isTeam1 ? 'text-team-green' : 'text-[#1e3a8a]'}`}>
+                      {ps.wins}-{ps.losses}
                     </div>
                   </li>
                 );
-                })}
-              </ul>
-            </div>
+              })}
+            </ul>
           )}
         </div>
 
         {/* Matchups section - shows third on mobile, second column on desktop */}
-        <div style={{ order: 2 }} className="mt-6 md:mt-0 md:col-start-2 md:row-start-1 md:row-span-2">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.75rem' }}>
-            <h2 className="text-base font-medium" style={{ margin: 0 }}>Matchups</h2>
+        <div className="order-2 mt-6 md:mt-0 md:col-start-2 md:row-start-1 md:row-span-2">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <SectionLabel>MATCHUPS</SectionLabel>
             {matches.length > 0 && (
-              <button
-                type="button"
-                onClick={toggleFullscreen}
-                className="rounded-full px-3 py-1.5 text-xs border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
-                title="View matchups fullscreen"
-              >
+              <Button variant="sm" onClick={toggleFullscreen}>
                 Full View
-              </button>
+              </Button>
             )}
           </div>
           {matches.length === 0 ? (
-            <p className="text-app-muted" style={{ fontSize: '0.85rem' }}>
+            <p className="text-app-muted text-sm">
               No matchups to show yet.
             </p>
           ) : (
-            <div
-              style={{
-                marginTop: '0.75rem',
-                borderRadius: '0.75rem',
-                border: '1px solid #d1d5db',
-                background: '#ffffff',
-                padding: '0.5rem 0.6rem',
-              }}
-            >
+            <div className="border border-app-border bg-white px-3 py-2">
               {rounds.map((roundMatches, roundIndex) => (
                 <div
                   key={roundIndex}
-                  style={{
-                    marginTop: roundIndex === 0 ? 0 : '0.5rem',
-                  }}
+                  className={roundIndex === 0 ? '' : 'mt-2'}
                 >
-                  <div
-                    style={{
-                      fontSize: '0.8rem',
-                      fontWeight: 600,
-                      color: '#4b5563',
-                      marginBottom: '0.15rem',
-                      textAlign: 'center',
-                      background: '#f3f4f6',
-                      padding: '0.25rem 0.5rem',
-                      marginLeft: '-0.6rem',
-                      marginRight: '-0.6rem',
-                    }}
-                  >
+                  <div className="font-mono text-xs uppercase tracking-label text-app-muted font-medium text-center bg-app-bg-subtle py-1.5 -mx-3">
                     ROUND {roundIndex + 1}
                   </div>
-                  {roundMatches.map((match, index) => {
-                    return (
-                      <div
-                        key={match.id}
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns:
-                            'auto minmax(0, 1fr) auto minmax(0, 1fr) auto',
-                          gap: '0.25rem',
-                          alignItems: 'center',
-                          justifyItems: 'center',
-                          padding: '0.3rem 0',
-                          borderTop: index === 0 ? undefined : '1px solid #e5e7eb',
-                        }}
+                  {roundMatches.map((match, index) => (
+                    <div
+                      key={match.id}
+                      className={`grid grid-cols-[auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto] gap-1 items-center justify-items-center py-1.5 ${index !== 0 ? 'border-t border-app-border' : ''}`}
+                    >
+                      <button
+                        type="button"
+                        className={`px-2 py-0.5 text-xs border transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                          match.winner === 1
+                            ? 'bg-team-green border-team-green text-white'
+                            : 'bg-transparent border-app-border text-app-muted'
+                        }`}
+                        onClick={
+                          canEdit ? () => handleToggleWinner(match.id, 1) : undefined
+                        }
+                        disabled={!canEdit || updatingMatchId === match.id}
                       >
-                        <button
-                          type="button"
-                          className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
-                          onClick={
-                            canEdit ? () => handleToggleWinner(match.id, 1) : undefined
-                          }
-                          disabled={!canEdit || updatingMatchId === match.id}
-                          style={{
-                            padding: '0.15rem 0.4rem',
-                            fontSize: '0.75rem',
-                            background:
-                              match.winner === 1 ? '#14532d' : '#f9fafb',
-                            borderColor:
-                              match.winner === 1 ? '#14532d' : '#d1d5db',
-                            color: match.winner === 1 ? '#ffffff' : '#4b5563',
-                          }}
-                        >
-                          Win
-                        </button>
-                        <div
-                          className="text-center flex flex-col md:flex-row md:justify-center md:gap-1"
-                          style={{ color: '#14532d', fontSize: '0.875rem', fontWeight: 500 }}
-                        >
-                          {match.team1.map((p, i) => (
-                            <span key={p.id}>
-                              {displayPlayerNameShort(p)}
-                              {i < match.team1.length - 1 && <span className="hidden md:inline"> +</span>}
-                            </span>
-                          ))}
-                        </div>
-                        <span
-                          style={{
-                            fontSize: '0.75rem',
-                            color: '#6b7280',
-                            textAlign: 'center',
-                          }}
-                        >
-                          vs
-                        </span>
-                        <div
-                          className="text-center flex flex-col md:flex-row md:justify-center md:gap-1"
-                          style={{ color: '#1e3a8a', fontSize: '0.875rem', fontWeight: 500 }}
-                        >
-                          {match.team2.map((p, i) => (
-                            <span key={p.id}>
-                              {displayPlayerNameShort(p)}
-                              {i < match.team2.length - 1 && <span className="hidden md:inline"> +</span>}
-                            </span>
-                          ))}
-                        </div>
-                        <button
-                          type="button"
-                          className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
-                          onClick={
-                            canEdit ? () => handleToggleWinner(match.id, 2) : undefined
-                          }
-                          disabled={!canEdit || updatingMatchId === match.id}
-                          style={{
-                            padding: '0.15rem 0.4rem',
-                            fontSize: '0.75rem',
-                            background:
-                              match.winner === 2 ? '#1e40af' : '#f9fafb',
-                            borderColor:
-                              match.winner === 2 ? '#1e40af' : '#d1d5db',
-                            color: match.winner === 2 ? '#ffffff' : '#4b5563',
-                          }}
-                        >
-                          Win
-                        </button>
+                        Win
+                      </button>
+                      <div className="text-center flex flex-col md:flex-row md:justify-center md:gap-1 text-sm font-medium text-team-green">
+                        {match.team1.map((p, i) => (
+                          <span key={p.id}>
+                            {displayPlayerNameShort(p)}
+                            {i < match.team1.length - 1 && <span className="hidden md:inline"> +</span>}
+                          </span>
+                        ))}
                       </div>
-                    );
-                  })}
+                      <span className="text-xs text-app-muted text-center">
+                        vs
+                      </span>
+                      <div className="text-center flex flex-col md:flex-row md:justify-center md:gap-1 text-sm font-medium text-[#1e3a8a]">
+                        {match.team2.map((p, i) => (
+                          <span key={p.id}>
+                            {displayPlayerNameShort(p)}
+                            {i < match.team2.length - 1 && <span className="hidden md:inline"> +</span>}
+                          </span>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        className={`px-2 py-0.5 text-xs border transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                          match.winner === 2
+                            ? 'bg-team-blue border-team-blue text-white'
+                            : 'bg-transparent border-app-border text-app-muted'
+                        }`}
+                        onClick={
+                          canEdit ? () => handleToggleWinner(match.id, 2) : undefined
+                        }
+                        disabled={!canEdit || updatingMatchId === match.id}
+                      >
+                        Win
+                      </button>
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
@@ -1036,181 +815,65 @@ export default function SessionDetailPage() {
       </div>
 
       {isFullscreen && matches.length > 0 && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: '#ffffff',
-            zIndex: 50,
-            overflow: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
+        <div className="fixed inset-0 bg-white z-50 overflow-auto flex flex-col">
           {/* Fullscreen header */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '0.75rem 1.5rem',
-              borderBottom: '1px solid #e5e7eb',
-              background: '#f9fafb',
-              flexShrink: 0,
-            }}
-          >
+          <div className="flex items-center justify-between px-6 py-3 border-b border-app-border flex-shrink-0">
             <div>
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#111827', margin: 0 }}>
+              <h2 className="font-display text-lg font-bold tracking-tight">
                 Matchups
               </h2>
-              <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: '0.15rem 0 0' }}>
-                {session.league_name || 'Session'} · {session.player_count} players · {formatDateTime(session.scheduled_for ?? session.created_at)}
+              <p className="text-sm text-app-muted mt-0.5">
+                {session.league_name || 'Session'} &middot; {session.player_count} players &middot; {formatDateTime(session.scheduled_for ?? session.created_at)}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={toggleFullscreen}
-              className="rounded-full px-4 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-100 transition-colors"
-            >
-              Exit Fullscreen
-            </button>
+            <Button variant="sm" onClick={toggleFullscreen}>
+              Exit Full View
+            </Button>
           </div>
 
           {/* Fullscreen 2-column layout: Teams+Players | Matchups */}
-          <div
-            style={{
-              flex: 1,
-              display: 'grid',
-              gridTemplateColumns: '1fr 2fr',
-              gap: '1.5rem',
-              padding: '1rem 1.5rem',
-              overflow: 'auto',
-            }}
-          >
+          <div className="flex-1 grid grid-cols-[1fr_2fr] gap-6 p-6 overflow-auto">
             {/* Left column: Teams + Players */}
-            <div style={{ overflow: 'auto' }}>
+            <div className="overflow-auto">
               {/* Teams section */}
-              <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#111827', margin: '0 0 0.5rem' }}>Teams</h3>
-              <div
-                style={{
-                  borderRadius: '0.75rem',
-                  overflow: 'hidden',
-                  border: '1px solid #d1d5db',
-                  background: '#f9fafb',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
-                    gap: '1px',
-                    background: '#d1d5db',
-                  }}
-                >
-                  <div
-                    style={{
-                      padding: '0.4rem 0.6rem',
-                      background: '#14532d',
-                      color: '#ffffff',
-                      fontWeight: 800,
-                      textAlign: 'center',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontFamily: '"Courier New", monospace',
-                      letterSpacing: '0.05em',
-                    }}
-                  >
+              <SectionLabel>TEAMS</SectionLabel>
+              <div className="mt-3 border border-app-border overflow-hidden">
+                <div className="grid grid-cols-2 gap-px bg-app-border">
+                  <div className="bg-team-green text-white font-mono uppercase tracking-label font-bold text-center flex flex-col items-center justify-center py-2 px-3">
                     <span>TEAM</span>
                     <span>GREEN</span>
                   </div>
-                  <div
-                    style={{
-                      padding: '0.4rem 0.6rem',
-                      background: '#1e40af',
-                      color: '#ffffff',
-                      fontWeight: 800,
-                      textAlign: 'center',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontFamily: '"Courier New", monospace',
-                      letterSpacing: '0.05em',
-                    }}
-                  >
+                  <div className="bg-team-blue text-white font-mono uppercase tracking-label font-bold text-center flex flex-col items-center justify-center py-2 px-3">
                     <span>TEAM</span>
                     <span>BLUE</span>
                   </div>
                 </div>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
-                    gap: '1px',
-                    background: '#d1d5db',
-                  }}
-                >
-                  <div style={{ display: 'flex', flexDirection: 'column', background: '#ffffff' }}>
-                    <div style={{ padding: '0.5rem 0.6rem', fontSize: '2rem', textAlign: 'center', color: '#14532d' }}>
+                <div className="grid grid-cols-2 gap-px bg-app-border">
+                  <div className="flex flex-col bg-white">
+                    <div className="py-2 px-3 text-3xl text-center text-team-green font-bold">
                       {teamStats.team1.wins}
                     </div>
                     {teamStats.team1.roster.map((p) => (
                       <div
                         key={p.id}
-                        style={{
-                          padding: '0.25rem 0.6rem',
-                          fontSize: '0.875rem',
-                          display: 'flex',
-                          justifyContent: 'center',
-                          gap: '0.5rem',
-                          textAlign: 'center',
-                          color: '#14532d',
-                          fontWeight: 500,
-                        }}
+                        className="py-1 px-3 text-sm text-center text-team-green font-medium flex justify-center"
                       >
-                        <span
-                          style={{
-                            maxWidth: '140px',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            display: 'inline-block',
-                          }}
-                        >
+                        <span className="max-w-[140px] overflow-hidden text-ellipsis whitespace-nowrap inline-block">
                           {displayPlayerName(p)}
                         </span>
                       </div>
                     ))}
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', background: '#ffffff' }}>
-                    <div style={{ padding: '0.5rem 0.6rem', fontSize: '2rem', textAlign: 'center', color: '#1e3a8a' }}>
+                  <div className="flex flex-col bg-white">
+                    <div className="py-2 px-3 text-3xl text-center text-[#1e3a8a] font-bold">
                       {teamStats.team2.wins}
                     </div>
                     {teamStats.team2.roster.map((p) => (
                       <div
                         key={p.id}
-                        style={{
-                          padding: '0.25rem 0.6rem',
-                          fontSize: '0.875rem',
-                          display: 'flex',
-                          justifyContent: 'center',
-                          gap: '0.5rem',
-                          textAlign: 'center',
-                          color: '#1e3a8a',
-                          fontWeight: 500,
-                        }}
+                        className="py-1 px-3 text-sm text-center text-[#1e3a8a] font-medium flex justify-center"
                       >
-                        <span
-                          style={{
-                            maxWidth: '140px',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            display: 'inline-block',
-                          }}
-                        >
+                        <span className="max-w-[140px] overflow-hidden text-ellipsis whitespace-nowrap inline-block">
                           {displayPlayerName(p)}
                         </span>
                       </div>
@@ -1220,17 +883,10 @@ export default function SessionDetailPage() {
               </div>
 
               {/* Players section */}
-              <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#111827', margin: '1rem 0 0.5rem' }}>Players</h3>
-              {playerStats.length > 0 && (
-                <div
-                  style={{
-                    borderRadius: '0.75rem',
-                    border: '1px solid #d1d5db',
-                    background: '#ffffff',
-                    padding: '0.5rem 0.6rem',
-                  }}
-                >
-                  <ul style={{ listStyle: 'none', paddingLeft: 0, margin: 0 }}>
+              <div className="mt-6">
+                <SectionLabel>PLAYERS</SectionLabel>
+                {playerStats.length > 0 && (
+                  <ul className="mt-3 list-none p-0 m-0 border border-app-border divide-y divide-app-border">
                     {playerStats.map((ps) => {
                       const team1Count = matches.filter((m) =>
                         m.team1.some((p) => p.id === ps.player.id)
@@ -1239,176 +895,111 @@ export default function SessionDetailPage() {
                         m.team2.some((p) => p.id === ps.player.id)
                       ).length;
                       const isTeam1 = team1Count >= team2Count;
-                      const nameColor = isTeam1 ? '#14532d' : '#1e3a8a';
-                      const recordColor = isTeam1 ? '#14532d' : '#1e3a8a';
 
                       return (
                         <li
                           key={ps.player.id}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            gap: '0.5rem',
-                            padding: '0.25rem 0',
-                          }}
+                          className="flex items-center justify-between gap-2 px-3 py-2 bg-white"
                         >
-                          <div>
-                            <div style={{ fontSize: '0.875rem', color: nameColor, fontWeight: 500 }}>
-                              {displayPlayerName(ps.player)}
-                              {ps.player.self_reported_dupr != null &&
-                                !Number.isNaN(ps.player.self_reported_dupr) && (
-                                  <> ({ps.player.self_reported_dupr.toFixed(2)})</>
-                                )}
-                            </div>
+                          <div className={`text-sm font-medium ${isTeam1 ? 'text-team-green' : 'text-[#1e3a8a]'}`}>
+                            {displayPlayerName(ps.player)}
+                            {ps.player.self_reported_dupr != null &&
+                              !Number.isNaN(ps.player.self_reported_dupr) && (
+                                <> ({ps.player.self_reported_dupr.toFixed(2)})</>
+                              )}
                           </div>
-                          <div style={{ fontSize: '0.8rem', color: recordColor, textAlign: 'right' }}>
-                            <div>{ps.wins}-{ps.losses}</div>
+                          <div className={`text-xs text-right ${isTeam1 ? 'text-team-green' : 'text-[#1e3a8a]'}`}>
+                            {ps.wins}-{ps.losses}
                           </div>
                         </li>
                       );
                     })}
                   </ul>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             {/* Right column: Matchups */}
-            <div style={{ overflow: 'auto' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#111827', margin: '0 0 0.5rem' }}>Matchups</h3>
-              {rounds.map((roundMatches, roundIndex) => (
-                <div
-                  key={roundIndex}
-                  style={{ marginTop: roundIndex === 0 ? 0 : '0.75rem' }}
-                >
+            <div className="overflow-auto">
+              <SectionLabel>MATCHUPS</SectionLabel>
+              <div className="mt-3">
+                {rounds.map((roundMatches, roundIndex) => (
                   <div
-                    style={{
-                      fontSize: '0.9rem',
-                      fontWeight: 600,
-                      color: '#4b5563',
-                      marginBottom: '0.25rem',
-                      textAlign: 'center',
-                      background: '#f3f4f6',
-                      padding: '0.35rem 0.5rem',
-                      borderRadius: '0.5rem',
-                    }}
+                    key={roundIndex}
+                    className={roundIndex === 0 ? '' : 'mt-3'}
                   >
-                    ROUND {roundIndex + 1}
-                  </div>
-                  {roundMatches.map((match, index) => (
-                    <div
-                      key={match.id}
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'auto minmax(0, 1fr) auto minmax(0, 1fr) auto',
-                        gap: '0.5rem',
-                        alignItems: 'center',
-                        justifyItems: 'center',
-                        padding: '0.4rem 0',
-                        borderTop: index === 0 ? undefined : '1px solid #e5e7eb',
-                      }}
-                    >
-                      <button
-                        type="button"
-                        className="rounded-full px-5 py-2 text-sm border cursor-pointer transition-colors"
-                        onClick={canEdit ? () => handleToggleWinner(match.id, 1) : undefined}
-                        disabled={!canEdit || updatingMatchId === match.id}
-                        style={{
-                          padding: '0.25rem 0.6rem',
-                          fontSize: '0.85rem',
-                          background: match.winner === 1 ? '#14532d' : '#f9fafb',
-                          borderColor: match.winner === 1 ? '#14532d' : '#d1d5db',
-                          color: match.winner === 1 ? '#ffffff' : '#4b5563',
-                        }}
-                      >
-                        Win
-                      </button>
-                      <div style={{ color: '#14532d', fontSize: '1rem', fontWeight: 500, textAlign: 'center' }}>
-                        {match.team1.map(displayPlayerNameShort).join(' + ')}
-                      </div>
-                      <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>vs</span>
-                      <div style={{ color: '#1e3a8a', fontSize: '1rem', fontWeight: 500, textAlign: 'center' }}>
-                        {match.team2.map(displayPlayerNameShort).join(' + ')}
-                      </div>
-                      <button
-                        type="button"
-                        className="rounded-full px-5 py-2 text-sm border cursor-pointer transition-colors"
-                        onClick={canEdit ? () => handleToggleWinner(match.id, 2) : undefined}
-                        disabled={!canEdit || updatingMatchId === match.id}
-                        style={{
-                          padding: '0.25rem 0.6rem',
-                          fontSize: '0.85rem',
-                          background: match.winner === 2 ? '#1e40af' : '#f9fafb',
-                          borderColor: match.winner === 2 ? '#1e40af' : '#d1d5db',
-                          color: match.winner === 2 ? '#ffffff' : '#4b5563',
-                        }}
-                      >
-                        Win
-                      </button>
+                    <div className="font-mono text-xs uppercase tracking-label text-app-muted font-medium text-center bg-app-bg-subtle py-1.5">
+                      ROUND {roundIndex + 1}
                     </div>
-                  ))}
-                </div>
-              ))}
+                    {roundMatches.map((match, index) => (
+                      <div
+                        key={match.id}
+                        className={`grid grid-cols-[auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto] gap-2 items-center justify-items-center py-2 ${index !== 0 ? 'border-t border-app-border' : ''}`}
+                      >
+                        <button
+                          type="button"
+                          className={`px-3 py-1 text-sm border transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                            match.winner === 1
+                              ? 'bg-team-green border-team-green text-white'
+                              : 'bg-transparent border-app-border text-app-muted'
+                          }`}
+                          onClick={canEdit ? () => handleToggleWinner(match.id, 1) : undefined}
+                          disabled={!canEdit || updatingMatchId === match.id}
+                        >
+                          Win
+                        </button>
+                        <div className="text-team-green text-base font-medium text-center">
+                          {match.team1.map(displayPlayerNameShort).join(' + ')}
+                        </div>
+                        <span className="text-sm text-app-muted">vs</span>
+                        <div className="text-[#1e3a8a] text-base font-medium text-center">
+                          {match.team2.map(displayPlayerNameShort).join(' + ')}
+                        </div>
+                        <button
+                          type="button"
+                          className={`px-3 py-1 text-sm border transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                            match.winner === 2
+                              ? 'bg-team-blue border-team-blue text-white'
+                              : 'bg-transparent border-app-border text-app-muted'
+                          }`}
+                          onClick={canEdit ? () => handleToggleWinner(match.id, 2) : undefined}
+                          disabled={!canEdit || updatingMatchId === match.id}
+                        >
+                          Win
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       )}
 
       {canEdit && deleteOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(15,23,42,0.85)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 40,
-          }}
-        >
-          <div
-            className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5"
-            style={{
-              maxWidth: 420,
-              width: '90%',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
-            }}
-          >
-            <h2 className="text-base font-medium mb-3">Delete session</h2>
-            <p className="text-app-muted">
-              Are you sure you want to delete this session? This action cannot be undone.
-            </p>
-            <div
-              style={{
-                marginTop: '1rem',
-                display: 'flex',
-                justifyContent: 'flex-end',
-                gap: '0.5rem',
-              }}
-            >
-              <button
-                type="button"
-                className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={closeDeleteDialog}
-              >
+        <Modal
+          title="DELETE SESSION"
+          onClose={closeDeleteDialog}
+          footer={
+            <>
+              <Button variant="secondary" onClick={closeDeleteDialog}>
                 Cancel
-              </button>
-              <button
-                type="button"
-                className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              </Button>
+              <Button
+                variant="danger"
                 onClick={handleDeleteSession}
                 disabled={deleteLoading}
-                style={{
-                  background: '#b91c1c',
-                  borderColor: '#b91c1c',
-                  color: '#fee2e2',
-                }}
               >
-                {deleteLoading ? 'Deleting…' : 'Confirm delete'}
-              </button>
-            </div>
-          </div>
-        </div>
+                {deleteLoading ? 'Deleting...' : 'Confirm Delete'}
+              </Button>
+            </>
+          }
+        >
+          <p>
+            Are you sure you want to delete this session? This action cannot be undone.
+          </p>
+        </Modal>
       )}
     </div>
   );
