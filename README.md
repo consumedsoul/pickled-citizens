@@ -52,7 +52,7 @@ Lightweight web app for running casual pickleball leagues: create leagues, invit
     - **Current / upcoming sessions** at the top (soonest first).
     - **Past sessions** below (most recent first).
   - Uses scheduled time when available, otherwise creation time.
-  - History page (`/history`) — planned (currently returns 404).
+  - History page (`/history`) — placeholder (not yet implemented).
   - Lifetime statistics tracking:
     - Individual wins/losses (personal match record).
     - Team wins/losses/ties (Team A vs Team B record).
@@ -118,7 +118,7 @@ Lightweight web app for running casual pickleball leagues: create leagues, invit
 
 #### User Pages
 - `profile/page.tsx` – User profile management with deletion protection.
-- `history/page.tsx` – Complete session history for the user.
+- `history/page.tsx` – Session history placeholder (not yet implemented).
 - `account-deleted/page.tsx` – Confirmation page after account deletion.
 
 #### League Management (`leagues/`)
@@ -351,7 +351,7 @@ To configure a different super-admin user:
 ### Session History & Statistics
 
 1. **Sessions Page** (`/sessions`): Shows upcoming sessions (soonest first) and past sessions (most recent first).
-2. **History Page** (`/history`): Planned — currently returns 404.
+2. **History Page** (`/history`): Placeholder — not yet implemented.
 3. **Home Page** (`/`): Displays lifetime statistics:
    - Individual wins/losses (personal match record).
    - Team wins/losses/ties (Team A vs Team B record).
@@ -390,7 +390,6 @@ To configure a different super-admin user:
 - **Better session length**: More playtime for 8-player groups.
 
 ### Session History & Statistics
-- **History page**: Dedicated `/history` route for complete session history.
 - **Lifetime stats**: Individual and team win/loss tracking on home page.
 - **Win percentages**: Automatic calculation of performance metrics.
 
