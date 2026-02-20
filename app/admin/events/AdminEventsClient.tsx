@@ -11,7 +11,7 @@ type AdminEvent = {
   event_type: string;
   user_email: string | null;
   league_id: string | null;
-  payload: any;
+  payload: Record<string, unknown> | null;
 };
 
 const PAGE_SIZE = 100;
@@ -36,7 +36,7 @@ export default function AdminEventsClient() {
 
   const filterParam = searchParams.get('filter') || 'all';
   const selectedFilter =
-    filterParam === 'all' || !EVENT_TYPES.includes(filterParam as any) ? 'all' : filterParam;
+    filterParam === 'all' || !EVENT_TYPES.includes(filterParam as typeof EVENT_TYPES[number]) ? 'all' : filterParam;
 
   useEffect(() => {
     let active = true;

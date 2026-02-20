@@ -87,16 +87,32 @@ export default function AdminUsersPage() {
       }
 
       const leagueMap = new Map<string, League[]>();
-      (membershipRows ?? []).forEach((row: any) => {
+      type MembershipRow = {
+        user_id: string;
+        league: { id: string; name: string }[] | { id: string; name: string } | null;
+      };
+      (membershipRows as MembershipRow[] ?? []).forEach((row) => {
         const userId: string = row.user_id;
-        const league: League | null = row.league ?? null;
+        const leagueRel = row.league;
+        // Supabase join may return array or object
+        const league: League | null = Array.isArray(leagueRel)
+          ? leagueRel[0] ?? null
+          : leagueRel ?? null;
         if (!league) return;
         const list = leagueMap.get(userId) ?? [];
         list.push({ id: league.id, name: league.name });
         leagueMap.set(userId, list);
       });
 
-      const mapped: AdminUser[] = (profileRows ?? []).map((p: any) => {
+      type ProfileRow = {
+        id: string;
+        email: string | null;
+        first_name: string | null;
+        last_name: string | null;
+        self_reported_dupr: number | null;
+        updated_at: string | null;
+      };
+      const mapped: AdminUser[] = (profileRows ?? []).map((p: ProfileRow) => {
         let dupr: number | null = null;
         if (p.self_reported_dupr != null) {
           const n = Number(p.self_reported_dupr);
@@ -171,18 +187,34 @@ export default function AdminUsersPage() {
     setSaving(true);
     setError(null);
 
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({
+    // Use the admin API route which bypasses RLS via service role
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+
+    if (!accessToken) {
+      setError('You must be signed in.');
+      setSaving(false);
+      return;
+    }
+
+    const response = await fetch('/api/admin/users', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        userId: editing.id,
         first_name: first || null,
         last_name: last || null,
         self_reported_dupr: dupr,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', editing.id);
+      }),
+    });
 
-    if (updateError) {
-      setError(updateError.message);
+    const json = (await response.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+
+    if (!response.ok) {
+      setError(json?.error ?? 'Failed to update user profile.');
       setSaving(false);
       return;
     }
@@ -215,22 +247,31 @@ export default function AdminUsersPage() {
     setDeletingId(user.id);
     setError(null);
 
-    const email = user.email ?? '';
+    // Use the admin API route which calls admin_delete_user() RPC for transactional safety
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
 
-    const operations = [
-      supabase.from('league_members').delete().eq('user_id', user.id),
-      supabase.from('league_invites').delete().eq('email', email),
-      supabase.from('leagues').delete().eq('owner_id', user.id),
-      supabase.from('profiles').delete().eq('id', user.id),
-    ];
+    if (!accessToken) {
+      setError('You must be signed in.');
+      setDeletingId(null);
+      return;
+    }
 
-    for (const op of operations) {
-      const { error: opError } = await op;
-      if (opError) {
-        setError(opError.message);
-        setDeletingId(null);
-        return;
-      }
+    const response = await fetch('/api/admin/users', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ userId: user.id }),
+    });
+
+    const json = (await response.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+
+    if (!response.ok) {
+      setError(json?.error ?? 'Failed to delete user.');
+      setDeletingId(null);
+      return;
     }
 
     setUsers((prev) => prev.filter((u) => u.id !== user.id));

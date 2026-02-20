@@ -56,7 +56,7 @@ export default function LeaguesPage() {
       if (membershipError) {
         setError(membershipError.message);
       } else {
-        const memberships = (membershipData as any[]) || [];
+        const memberships = (membershipData as { league_id: string; role: string }[]) || [];
         
         // Get all league IDs to fetch league details and member counts
         const leagueIds = memberships.map(m => m.league_id);
@@ -84,15 +84,16 @@ export default function LeaguesPage() {
 
         const memberCounts = new Map<string, number>();
         if (!countsError && memberCountsData) {
-          (memberCountsData as any[]).forEach((row: any) => {
-            const leagueId = row.league_id as string;
+          (memberCountsData as { league_id: string }[]).forEach((row) => {
+            const leagueId = row.league_id;
             memberCounts.set(leagueId, (memberCounts.get(leagueId) ?? 0) + 1);
           });
         }
 
         // Process leagues and separate by role
-        const leagues = (leaguesData as any[]) || [];
-        const allLeagues: League[] = leagues.map((league: any) => ({
+        type LeagueQueryRow = { id: string; name: string; owner_id: string };
+        const leagues = (leaguesData as LeagueQueryRow[]) || [];
+        const allLeagues: League[] = leagues.map((league) => ({
           id: league.id,
           name: league.name,
           created_at: '', // Will be set later if needed
@@ -212,8 +213,8 @@ export default function LeaguesPage() {
           payload: { league_name: trimmedName },
         });
       }
-    } catch (e: any) {
-      setError(e?.message ?? 'Unexpected error creating league.');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Unexpected error creating league.');
     } finally {
       setCreating(false);
     }

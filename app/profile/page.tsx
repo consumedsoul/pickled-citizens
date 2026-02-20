@@ -102,9 +102,15 @@ export default function ProfilePage() {
       if (!active) return;
 
       if (!leaguesError && memberRows) {
-        const mapped: League[] = (memberRows as any[])
-          .map((row) => row.league)
-          .filter(Boolean);
+        type LeagueJoinRow = {
+          league: League[] | League | null;
+        };
+        const mapped: League[] = (memberRows as unknown as LeagueJoinRow[])
+          .map((row) => {
+            const rel = row.league;
+            return Array.isArray(rel) ? rel[0] ?? null : rel;
+          })
+          .filter((l): l is League => l !== null);
         setLeagues(mapped);
       }
 

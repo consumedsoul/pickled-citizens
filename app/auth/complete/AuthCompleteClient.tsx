@@ -43,7 +43,7 @@ export default function AuthCompleteClient() {
       const gender = searchParams.get('gender') ?? '';
       const selfDuprParam = searchParams.get('selfDupr') ?? '';
 
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         id: user.id,
         email: user.email,
         updated_at: new Date().toISOString(),

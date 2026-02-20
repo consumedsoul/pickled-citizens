@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseServiceRole } from '@/lib/supabaseClient';
 
+const DISPLAY_TIMEZONE = process.env.DISPLAY_TIMEZONE || 'America/Los_Angeles';
+
 // Define types for the Supabase response
 type SessionRow = {
   id: string;
@@ -28,12 +30,9 @@ export async function GET(
         'id, league_id, created_by, created_at, scheduled_for, player_count, league:leagues(name)'
       )
       .eq('id', sessionId)
-      .single() as { data: SessionRow | null, error: any };
+      .single() as { data: SessionRow | null, error: { message: string } | null };
 
     if (sessionError || !sessionRow) {
-      console.error('Session fetch error:', sessionError);
-      console.error('Session ID being queried:', sessionId);
-      console.error('Using service role:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
@@ -48,7 +47,7 @@ export async function GET(
         day: 'numeric',
         hour: 'numeric',
         minute: '2-digit',
-        timeZone: 'America/Los_Angeles', // Force Pacific timezone
+        timeZone: DISPLAY_TIMEZONE,
         hour12: true,
       });
     };
@@ -64,7 +63,7 @@ export async function GET(
         day: 'numeric',
         hour: 'numeric',
         minute: '2-digit',
-        timeZone: 'America/Los_Angeles', // Force Pacific timezone
+        timeZone: DISPLAY_TIMEZONE,
         hour12: true,
       }).replace(',', '').replace(/:\d{2}\s/, ' ');
     };
@@ -82,8 +81,7 @@ export async function GET(
 
     return NextResponse.json(sessionData);
 
-  } catch (error) {
-    console.error('Error fetching session metadata:', error);
+  } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

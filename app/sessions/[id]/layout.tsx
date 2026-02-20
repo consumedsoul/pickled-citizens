@@ -1,6 +1,8 @@
 import { Metadata } from 'next';
 import { supabaseServiceRole } from '@/lib/supabaseClient';
 
+const DISPLAY_TIMEZONE = process.env.DISPLAY_TIMEZONE || 'America/Los_Angeles';
+
 // Helper function to format date for OG image
 const formatDateTimeForTitle = (value: string | null) => {
   if (!value) return 'Not scheduled';
@@ -12,7 +14,7 @@ const formatDateTimeForTitle = (value: string | null) => {
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
-    timeZone: 'America/Los_Angeles',
+    timeZone: DISPLAY_TIMEZONE,
     hour12: true,
   }).replace(',', '').replace(/:\d{2}\s/, ' ');
 };
@@ -35,11 +37,16 @@ export async function generateMetadata({ params }: SessionLayoutProps): Promise<
       .maybeSingle();
 
     if (!sessionError && sessionRow) {
-      const leagueRel: any = (sessionRow as any).league;
+      const leagueRel = (sessionRow as Record<string, unknown>).league as
+        | { name: string }[]
+        | { name: string }
+        | null;
       const leagueName =
         Array.isArray(leagueRel) && leagueRel.length > 0
           ? leagueRel[0]?.name ?? null
-          : leagueRel?.name ?? null;
+          : !Array.isArray(leagueRel) && leagueRel
+            ? leagueRel.name ?? null
+            : null;
 
       const title = 'Pickleball Session - Pickled Citizens';
       const description = `${leagueName || 'Pickleball Session'} | ${sessionRow.player_count} Players | ${formatDateTimeForTitle(sessionRow.scheduled_for)}`;
@@ -71,8 +78,8 @@ export async function generateMetadata({ params }: SessionLayoutProps): Promise<
         },
       };
     }
-  } catch (error) {
-    console.error('Failed to load session metadata:', error);
+  } catch {
+    // Fall through to fallback metadata
   }
   
   // Fallback metadata - with logo and updated description format

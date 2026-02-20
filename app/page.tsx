@@ -62,8 +62,10 @@ export default function HomePage() {
   const [auth, setAuth] = useState<HomeAuthState>({ loading: true, email: null, userId: null });
   const [leagues, setLeagues] = useState<League[]>([]);
   const [leaguesLoading, setLeaguesLoading] = useState(false);
+  const [leaguesError, setLeaguesError] = useState<string | null>(null);
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [sessionsError, setSessionsError] = useState<string | null>(null);
   const [lifetimeStats, setLifetimeStats] = useState<LifetimeStats>({
     individualWins: 0,
     individualLosses: 0,
@@ -131,6 +133,7 @@ export default function HomePage() {
       return;
     }
         setLeaguesLoading(true);
+    setLeaguesError(null);
 
     try {
       // Get all leagues where user is a member with their role
@@ -207,11 +210,8 @@ export default function HomePage() {
       setLeagues(sortedLeagues);
       loadedUserIdRef.current = userId;
       setLeaguesLoading(false);
-    } catch (error) {
-      console.error('Failed to load user leagues:', error);
-      if (error instanceof Error && error.message === 'API timeout after 3 seconds') {
-        console.log('🏆 loadUserLeagues: Connection issue - showing empty state');
-      }
+    } catch {
+      setLeaguesError('Failed to load leagues. Please refresh the page.');
       setLeagues([]);
       setLeaguesLoading(false);
     }
@@ -222,6 +222,7 @@ export default function HomePage() {
       return;
     }
         setSessionsLoading(true);
+    setSessionsError(null);
 
     try {
       const { data: ownedSessionRows, error: ownedSessionsError } = await supabase
@@ -330,11 +331,8 @@ export default function HomePage() {
     setSessions(mapped);
     loadedUserIdRef.current = userId;
     setSessionsLoading(false);
-    } catch (error) {
-      console.error('Failed to load user sessions:', error);
-      if (error instanceof Error && error.message === 'API timeout after 3 seconds') {
-        console.log('📅 loadUserSessions: Connection issue - showing empty state');
-      }
+    } catch {
+      setSessionsError('Failed to load sessions. Please refresh the page.');
       setSessions([]);
       setSessionsLoading(false);
     }
@@ -572,7 +570,11 @@ export default function HomePage() {
         <>
           <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
             <h2 className="text-base font-medium mb-3">Your Leagues</h2>
-            {leaguesLoading ? (
+            {leaguesError ? (
+              <p className="text-red-300 text-[0.85rem]">
+                {leaguesError}
+              </p>
+            ) : leaguesLoading ? (
               <p className="text-app-muted text-[0.85rem]">
                 Loading leagues...
               </p>
@@ -620,7 +622,11 @@ export default function HomePage() {
 
           <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
             <h2 className="text-base font-medium mb-3">Your Upcoming Sessions</h2>
-            {sessionsLoading ? (
+            {sessionsError ? (
+              <p className="text-red-300 text-[0.85rem]">
+                {sessionsError}
+              </p>
+            ) : sessionsLoading ? (
               <p className="text-app-muted text-[0.85rem]">
                 Loading sessions...
               </p>

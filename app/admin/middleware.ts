@@ -12,7 +12,6 @@ export async function middleware(request: NextRequest) {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    console.error('Missing Supabase credentials in middleware');
     return NextResponse.redirect(new URL('/', request.url));
   }
 
@@ -43,8 +42,7 @@ export async function middleware(request: NextRequest) {
 
     // User is admin, allow access
     return NextResponse.next();
-  } catch (error) {
-    console.error('Admin middleware error:', error);
+  } catch {
     return NextResponse.redirect(new URL('/', request.url));
   }
 }

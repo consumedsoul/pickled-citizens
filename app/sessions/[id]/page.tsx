@@ -168,11 +168,16 @@ export default function SessionDetailPage() {
         return;
       }
 
-      const leagueRel: any = (sessionRow as any).league;
+      const leagueRel = (sessionRow as Record<string, unknown>).league as
+        | { name: string }[]
+        | { name: string }
+        | null;
       const leagueName =
         Array.isArray(leagueRel) && leagueRel.length > 0
           ? leagueRel[0]?.name ?? null
-          : leagueRel?.name ?? null;
+          : !Array.isArray(leagueRel) && leagueRel
+            ? leagueRel.name ?? null
+            : null;
 
       const baseSession: Session = {
         id: sessionRow.id,
@@ -204,8 +209,20 @@ export default function SessionDetailPage() {
       }
 
       const playerIds = new Set<string>();
-      (matchRows ?? []).forEach((row: any) => {
-        const mps = (row.match_players ?? []) as { user_id: string; team: number; position: number }[];
+      type MatchQueryRow = {
+        id: string;
+        session_id: string;
+        court_number: number | null;
+        scheduled_order: number | null;
+        status: string;
+        match_players: { user_id: string; team: number; position: number }[];
+        result:
+          | { team1_score: number | null; team2_score: number | null; completed_at: string | null }
+          | { team1_score: number | null; team2_score: number | null; completed_at: string | null }[]
+          | null;
+      };
+      ((matchRows ?? []) as MatchQueryRow[]).forEach((row) => {
+        const mps = row.match_players ?? [];
         mps.forEach((mp) => {
           if (mp.user_id) playerIds.add(mp.user_id);
         });
@@ -227,7 +244,14 @@ export default function SessionDetailPage() {
           return;
         }
 
-        (profileRows ?? []).forEach((p: any) => {
+        type ProfileQueryRow = {
+          id: string;
+          first_name: string | null;
+          last_name: string | null;
+          email: string | null;
+          self_reported_dupr: number | null;
+        };
+        ((profileRows ?? []) as ProfileQueryRow[]).forEach((p) => {
           let dupr: number | null = null;
           if (p.self_reported_dupr != null) {
             const n = Number(p.self_reported_dupr);
@@ -255,8 +279,8 @@ export default function SessionDetailPage() {
         };
       }
 
-      const loadedMatches: MatchWithPlayers[] = (matchRows ?? []).map((row: any) => {
-        const mps = (row.match_players ?? []) as { user_id: string; team: number; position: number }[];
+      const loadedMatches: MatchWithPlayers[] = ((matchRows ?? []) as MatchQueryRow[]).map((row) => {
+        const mps = row.match_players ?? [];
         const team1 = mps
           .filter((mp) => mp.team === 1)
           .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
@@ -266,11 +290,7 @@ export default function SessionDetailPage() {
           .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
           .map((mp) => toPlayer(mp.user_id));
 
-        const rawResult = (row as any).result as
-          | { team1_score: number | null; team2_score: number | null; completed_at: string | null }
-          | { team1_score: number | null; team2_score: number | null; completed_at: string | null }[]
-          | null
-          | undefined;
+        const rawResult = row.result;
 
         let result: MatchResult = null;
         if (rawResult) {
@@ -503,8 +523,8 @@ export default function SessionDetailPage() {
             : m
         )
       );
-    } catch (e: any) {
-      setError(e?.message ?? 'Unable to update match result.');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Unable to update match result.');
     } finally {
       setUpdatingMatchId(null);
     }
@@ -550,8 +570,8 @@ export default function SessionDetailPage() {
 
       closeDeleteDialog();
       router.replace('/sessions');
-    } catch (e: any) {
-      setError(e?.message ?? 'Unable to delete session.');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Unable to delete session.');
       setDeleteLoading(false);
     }
   }

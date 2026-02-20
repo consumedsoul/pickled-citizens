@@ -165,11 +165,20 @@ export default function SessionsPage() {
         return;
       }
 
-      let participantSessionRows: any[] = [];
+      type SessionQueryRow = {
+        id: string;
+        league_id: string | null;
+        created_by: string;
+        created_at: string;
+        scheduled_for: string | null;
+        player_count: number;
+        league: { name: string }[] | { name: string } | null;
+      };
+      let participantSessionRows: SessionQueryRow[] = [];
 
       if (mpRows && mpRows.length) {
         const matchIds = Array.from(
-          new Set((mpRows as any[]).map((row) => row.match_id))
+          new Set(mpRows.map((row) => row.match_id))
         );
 
         if (matchIds.length) {
@@ -191,8 +200,8 @@ export default function SessionsPage() {
           const sessionIds = Array.from(
             new Set(
               (matchRows ?? [])
-                .map((m: any) => m.session_id)
-                .filter((id: string | null) => !!id)
+                .map((m) => m.session_id)
+                .filter((id): id is string => !!id)
             )
           );
 
@@ -221,18 +230,20 @@ export default function SessionsPage() {
       }
 
       const allRows = [...(ownedSessionRows ?? []), ...participantSessionRows];
-      const byId = new Map<string, any>();
+      const byId = new Map<string, SessionQueryRow>();
       allRows.forEach((row) => {
         if (!row || !row.id) return;
-        byId.set(row.id, row);
+        byId.set(row.id, row as SessionQueryRow);
       });
 
-      const mapped: SessionSummary[] = Array.from(byId.values()).map((row: any) => {
-        const leagueRel: any = row.league;
+      const mapped: SessionSummary[] = Array.from(byId.values()).map((row) => {
+        const leagueRel = row.league;
         const leagueName =
           Array.isArray(leagueRel) && leagueRel.length > 0
             ? leagueRel[0]?.name ?? null
-            : leagueRel?.name ?? null;
+            : !Array.isArray(leagueRel) && leagueRel
+              ? leagueRel.name ?? null
+              : null;
 
         return {
           id: row.id,
@@ -270,15 +281,19 @@ export default function SessionsPage() {
         if (!matchResultsError && matchRows) {
           const bySession: Record<string, { teamGreenWins: number; teamBlueWins: number }> = {};
 
-          (matchRows as any[]).forEach((row) => {
-            const sessionId = (row as any).session_id as string | null;
-            if (!sessionId) return;
-
-            const rawResult = (row as any).result as
+          type MatchWithResult = {
+            id: string;
+            session_id: string | null;
+            result:
               | { team1_score: number | null; team2_score: number | null }[]
               | { team1_score: number | null; team2_score: number | null }
-              | null
-              | undefined;
+              | null;
+          };
+          (matchRows as MatchWithResult[]).forEach((row) => {
+            const sessionId = row.session_id;
+            if (!sessionId) return;
+
+            const rawResult = row.result;
 
             let result: { team1_score: number | null; team2_score: number | null } | null = null;
             if (rawResult) {
@@ -792,7 +807,7 @@ export default function SessionsPage() {
         return;
       }
 
-      const sortedMatches = [...(matchRows as any[])].sort(
+      const sortedMatches = [...matchRows].sort(
         (a, b) => (a.scheduled_order ?? 0) - (b.scheduled_order ?? 0)
       );
 
@@ -840,8 +855,8 @@ export default function SessionsPage() {
       setGenerating(false);
 
       router.push(`/sessions/${session.id}`);
-    } catch (e: any) {
-      setError(e?.message ?? "Unexpected error creating session.");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Unexpected error creating session.");
       setGenerating(false);
     }
   }
