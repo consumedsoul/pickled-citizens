@@ -4,6 +4,7 @@ import { useEffect, useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { ADMIN_EMAIL } from '@/lib/constants';
+import { Button } from '@/components/ui/Button';
 
 type League = {
   id: string;
@@ -94,7 +95,6 @@ export default function AdminUsersPage() {
       (membershipRows as MembershipRow[] ?? []).forEach((row) => {
         const userId: string = row.user_id;
         const leagueRel = row.league;
-        // Supabase join may return array or object
         const league: League | null = Array.isArray(leagueRel)
           ? leagueRel[0] ?? null
           : leagueRel ?? null;
@@ -187,7 +187,6 @@ export default function AdminUsersPage() {
     setSaving(true);
     setError(null);
 
-    // Use the admin API route which bypasses RLS via service role
     const { data: sessionData } = await supabase.auth.getSession();
     const accessToken = sessionData.session?.access_token;
 
@@ -247,7 +246,6 @@ export default function AdminUsersPage() {
     setDeletingId(user.id);
     setError(null);
 
-    // Use the admin API route which calls admin_delete_user() RPC for transactional safety
     const { data: sessionData } = await supabase.auth.getSession();
     const accessToken = sessionData.session?.access_token;
 
@@ -279,259 +277,145 @@ export default function AdminUsersPage() {
   }
 
   function formatDate(value: string | null) {
-    if (!value) return '—';
+    if (!value) return '\u2014';
     const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return '—';
+    if (Number.isNaN(d.getTime())) return '\u2014';
     return d.toLocaleString();
   }
 
   function displayName(user: AdminUser) {
     const full = `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim();
-    return full || '—';
+    return full || '\u2014';
   }
 
   if (loading) {
     return (
-      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
-        <h1 className="text-base font-medium mb-3">Admin users</h1>
-        <p className="text-app-muted">Loading users…</p>
+      <div>
+        <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Admin Users</h1>
+        <p className="text-app-muted text-sm">Loading users...</p>
       </div>
     );
   }
 
-  if (error) {
+  if (error && !users.length) {
     return (
-      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
-        <h1 className="text-base font-medium mb-3">Admin users</h1>
-        <p className="text-app-muted" style={{ color: '#fca5a5' }}>
-          {error}
-        </p>
+      <div>
+        <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Admin Users</h1>
+        <p className="text-app-danger text-sm">{error}</p>
       </div>
     );
   }
 
   return (
-    <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
-      <h1 className="text-base font-medium mb-3">Admin users</h1>
+    <div>
+      <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Admin Users</h1>
       {userEmail && (
-        <p className="text-app-muted" style={{ marginBottom: '0.5rem' }}>
-          Signed in as {userEmail}
-        </p>
+        <p className="text-app-muted text-sm mb-1">{userEmail}</p>
       )}
-      <p className="text-app-muted">
+      <p className="text-app-muted text-sm mb-6">
         View and manage all user profiles. Only your admin account can access this page.
       </p>
 
+      {error && (
+        <p className="text-app-danger text-sm mb-4">{error}</p>
+      )}
+
       {users.length === 0 ? (
-        <p className="text-app-muted" style={{ marginTop: '1rem' }}>
-          No profiles found.
-        </p>
+        <p className="text-app-muted text-sm">No profiles found.</p>
       ) : (
-        <div
-          style={{
-            marginTop: '1rem',
-            borderRadius: '0.75rem',
-            border: '1px solid #1f2937',
-            padding: '0.5rem 0.6rem',
-          }}
-        >
-          <ul
-            className="list-none pl-0 text-app-muted text-[0.87rem]"
-            style={{ listStyle: 'none', paddingLeft: 0, margin: 0 }}
-          >
-            {users.map((user) => {
-              const isEditing = editing?.id === user.id;
-              const leaguesLabel =
-                user.leagues.length === 0
-                  ? 'None'
-                  : user.leagues.map((l) => l.name).join(', ');
+        <div className="divide-y divide-app-border">
+          {users.map((user) => {
+            const isEditing = editing?.id === user.id;
+            const leaguesLabel =
+              user.leagues.length === 0
+                ? 'None'
+                : user.leagues.map((l) => l.name).join(', ');
 
-              return (
-                <li
-                  key={user.id}
-                  style={{
-                    padding: '0.5rem 0',
-                    borderBottom: '1px solid #1f2937',
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'flex-start',
-                      gap: '0.75rem',
-                    }}
-                  >
-                    <div style={{ flex: '1 1 auto' }}>
-                      <div style={{ fontSize: '0.95rem', fontWeight: 500 }}>
-                        {displayName(user)}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: '0.8rem',
-                          color: '#9ca3af',
-                          marginTop: '0.15rem',
-                        }}
-                      >
-                        {user.email ?? 'No email'}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: '0.8rem',
-                          color: '#9ca3af',
-                          marginTop: '0.15rem',
-                        }}
-                      >
-                        Self-reported DUPR:{' '}
-                        {user.self_reported_dupr != null
-                          ? user.self_reported_dupr.toFixed(2)
-                          : '—'}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: '0.8rem',
-                          color: '#9ca3af',
-                          marginTop: '0.15rem',
-                        }}
-                      >
-                        Leagues: {leaguesLabel}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: '0.8rem',
-                          color: '#9ca3af',
-                          marginTop: '0.15rem',
-                        }}
-                      >
-                        Last login (approx): {formatDate(user.updated_at)}
-                      </div>
-                    </div>
-
-                    <div style={{ flex: '0 0 auto', minWidth: 220 }}>
-                      {isEditing ? (
-                        <form
-                          onSubmit={handleEditSubmit}
-                          style={{ display: 'grid', gap: '0.35rem', fontSize: '0.8rem' }}
-                        >
-                          <input
-                            type="text"
-                            placeholder="First name"
-                            value={editing.first_name}
-                            onChange={(e) =>
-                              setEditing((prev) =>
-                                prev
-                                  ? { ...prev, first_name: e.target.value }
-                                  : prev
-                              )
-                            }
-                            style={{
-                              width: '100%',
-                              padding: '0.35rem 0.5rem',
-                              borderRadius: '0.5rem',
-                              border: '1px solid #d1d5db',
-                              background: '#f9fafb',
-                              color: '#111827',
-                            }}
-                          />
-                          <input
-                            type="text"
-                            placeholder="Last name"
-                            value={editing.last_name}
-                            onChange={(e) =>
-                              setEditing((prev) =>
-                                prev
-                                  ? { ...prev, last_name: e.target.value }
-                                  : prev
-                              )
-                            }
-                            style={{
-                              width: '100%',
-                              padding: '0.35rem 0.5rem',
-                              borderRadius: '0.5rem',
-                              border: '1px solid #d1d5db',
-                              background: '#f9fafb',
-                              color: '#111827',
-                            }}
-                          />
-                          <input
-                            type="text"
-                            placeholder="Self-reported DUPR (x.xx)"
-                            value={editing.self_reported_dupr}
-                            onChange={(e) =>
-                              setEditing((prev) =>
-                                prev
-                                  ? { ...prev, self_reported_dupr: e.target.value }
-                                  : prev
-                              )
-                            }
-                            style={{
-                              width: '100%',
-                              padding: '0.35rem 0.5rem',
-                              borderRadius: '0.5rem',
-                              border: '1px solid #d1d5db',
-                              background: '#f9fafb',
-                              color: '#111827',
-                            }}
-                          />
-                          <div
-                            className="user-actions"
-                            style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.35rem' }}
-                          >
-                            <button
-                              type="button"
-                              className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
-                              onClick={cancelEdit}
-                              disabled={saving}
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              type="submit"
-                              className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              disabled={saving}
-                            >
-                              {saving ? 'Saving…' : 'Save'}
-                            </button>
-                          </div>
-                        </form>
-                      ) : (
-                        <div
-                          className="user-actions"
-                          style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '0.35rem',
-                            alignItems: 'flex-end',
-                          }}
-                        >
-                          <button
-                            type="button"
-                            className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
-                            onClick={() => startEdit(user)}
-                          >
-                            Edit profile
-                          </button>
-                          <button
-                            type="button"
-                            className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            onClick={() => handleDelete(user)}
-                            disabled={deletingId === user.id}
-                            style={{
-                              background: '#b91c1c',
-                              borderColor: '#b91c1c',
-                              color: '#fee2e2',
-                            }}
-                          >
-                            {deletingId === user.id ? 'Deleting…' : 'Delete profile'}
-                          </button>
-                        </div>
-                      )}
-                    </div>
+            return (
+              <div
+                key={user.id}
+                className="py-4 flex justify-between items-start gap-4"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium">{displayName(user)}</div>
+                  <div className="text-xs text-app-muted mt-0.5">
+                    {user.email ?? 'No email'}
                   </div>
-                </li>
-              );
-            })}
-          </ul>
+                  <div className="text-xs text-app-muted mt-0.5">
+                    DUPR: {user.self_reported_dupr != null ? user.self_reported_dupr.toFixed(2) : '\u2014'}
+                  </div>
+                  <div className="text-xs text-app-muted mt-0.5">
+                    Leagues: {leaguesLabel}
+                  </div>
+                  <div className="text-xs text-app-muted mt-0.5">
+                    Last login: {formatDate(user.updated_at)}
+                  </div>
+                </div>
+
+                <div className="flex-shrink-0" style={{ minWidth: 220 }}>
+                  {isEditing ? (
+                    <form onSubmit={handleEditSubmit} className="grid gap-2 text-xs">
+                      <input
+                        type="text"
+                        placeholder="First name"
+                        value={editing.first_name}
+                        onChange={(e) =>
+                          setEditing((prev) =>
+                            prev ? { ...prev, first_name: e.target.value } : prev
+                          )
+                        }
+                        className="w-full px-2 py-1.5 border border-app-border bg-transparent text-app-text text-xs focus:outline-none focus:border-app-text transition-colors"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Last name"
+                        value={editing.last_name}
+                        onChange={(e) =>
+                          setEditing((prev) =>
+                            prev ? { ...prev, last_name: e.target.value } : prev
+                          )
+                        }
+                        className="w-full px-2 py-1.5 border border-app-border bg-transparent text-app-text text-xs focus:outline-none focus:border-app-text transition-colors"
+                      />
+                      <input
+                        type="text"
+                        placeholder="DUPR (x.xx)"
+                        value={editing.self_reported_dupr}
+                        onChange={(e) =>
+                          setEditing((prev) =>
+                            prev ? { ...prev, self_reported_dupr: e.target.value } : prev
+                          )
+                        }
+                        className="w-full px-2 py-1.5 border border-app-border bg-transparent text-app-text text-xs focus:outline-none focus:border-app-text transition-colors"
+                      />
+                      <div className="flex justify-end gap-2">
+                        <Button variant="sm" onClick={cancelEdit} disabled={saving}>
+                          Cancel
+                        </Button>
+                        <Button variant="sm" type="submit" disabled={saving}>
+                          {saving ? 'Saving...' : 'Save'}
+                        </Button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="flex flex-col gap-2 items-end">
+                      <Button variant="sm" onClick={() => startEdit(user)}>
+                        Edit
+                      </Button>
+                      <Button
+                        variant="danger"
+                        className="text-[0.65rem] px-3 py-1.5"
+                        onClick={() => handleDelete(user)}
+                        disabled={deletingId === user.id}
+                      >
+                        {deletingId === user.id ? 'Deleting...' : 'Delete'}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

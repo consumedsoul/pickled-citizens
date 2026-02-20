@@ -2,6 +2,8 @@
 
 import { FormEvent, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 
 type Mode = 'password' | 'magic';
 
@@ -41,7 +43,7 @@ export default function SignInPage() {
           setMessage(error.message);
         } else {
           setStatus('success');
-          setMessage('Signed in. Redirecting…');
+          setMessage('Signed in. Redirecting...');
           window.location.href = '/';
         }
       } else {
@@ -71,89 +73,83 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5 max-w-[420px]">
-      <h1 className="text-base font-medium mb-3">Sign in</h1>
-      <p className="text-app-muted mb-4">
+    <div className="max-w-[420px]">
+      <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Sign In</h1>
+      <p className="text-app-muted text-sm mb-6">
         Sign in with your password or request a magic link.
       </p>
 
-      <div className="flex gap-2 mb-3">
+      <div className="flex gap-2 mb-6">
         <button
           type="button"
-          className="rounded-full px-2.5 py-1 text-sm border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
+          className={`px-3 py-1.5 font-mono text-[0.65rem] uppercase tracking-button font-medium border transition-colors cursor-pointer ${
+            mode === 'password'
+              ? 'border-app-text bg-app-text text-white'
+              : 'border-app-border bg-transparent text-app-muted hover:text-app-text'
+          }`}
           onClick={() => setMode('password')}
-          style={{
-            borderColor: mode === 'password' ? '#14532d' : '#1f2937',
-          }}
         >
           Password
         </button>
         <button
           type="button"
-          className="rounded-full px-2.5 py-1 text-sm border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
+          className={`px-3 py-1.5 font-mono text-[0.65rem] uppercase tracking-button font-medium border transition-colors cursor-pointer ${
+            mode === 'magic'
+              ? 'border-app-text bg-app-text text-white'
+              : 'border-app-border bg-transparent text-app-muted hover:text-app-text'
+          }`}
           onClick={() => setMode('magic')}
-          style={{
-            borderColor: mode === 'magic' ? '#14532d' : '#1f2937',
-          }}
         >
-          Magic link
+          Magic Link
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="grid gap-3">
-        <label className="text-[0.8rem]">
-          Email
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1.5 w-full px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-app-text"
-          />
-        </label>
+      <form onSubmit={handleSubmit} className="grid gap-4">
+        <Input
+          label="Email"
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
 
         {mode === 'password' && (
-          <label className="text-[0.8rem]">
-            Password
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1.5 w-full px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-app-text"
-            />
-          </label>
+          <Input
+            label="Password"
+            type="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
         )}
 
-        <button
-          type="submit"
-          className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed justify-self-start"
-          disabled={status === 'loading'}
-        >
-          {status === 'loading'
-            ? mode === 'password'
-              ? 'Signing in…'
-              : 'Sending link…'
-            : mode === 'password'
-            ? 'Sign in'
-            : 'Send magic link'}
-        </button>
+        <div>
+          <Button type="submit" disabled={status === 'loading'}>
+            {status === 'loading'
+              ? mode === 'password'
+                ? 'Signing In...'
+                : 'Sending Link...'
+              : mode === 'password'
+              ? 'Sign In'
+              : 'Send Magic Link'}
+          </Button>
+        </div>
       </form>
 
       {mode === 'password' && (
-        <p className="text-app-muted mt-3 text-[0.8rem]">
-          <a href="/auth/reset" className="underline">
+        <p className="text-app-muted mt-4 text-sm">
+          <a href="/auth/reset" className="text-app-text underline">
             Forgot password?
           </a>
         </p>
       )}
 
       {message && (
-        <p className={`mt-3 text-[0.8rem] ${status === 'error' ? 'text-red-300' : 'text-app-muted'}`}>
+        <p className={`mt-4 text-sm ${status === 'error' ? 'text-app-danger' : 'text-app-muted'}`}>
           {status === 'success' && message.includes('Check your email') ? (
             <span>
               Magic link sent.{' '}
-              <span className="bg-yellow-100 text-yellow-800 font-bold px-1.5 py-0.5 rounded">
+              <span className="font-mono text-xs uppercase tracking-label font-semibold border border-app-text px-2 py-0.5">
                 Check your email
               </span>{' '}
               to finish signing in.

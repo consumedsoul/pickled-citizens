@@ -4,6 +4,9 @@ import { useEffect, useState, FormEvent } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { ADMIN_EMAIL } from '@/lib/constants';
+import { Button } from '@/components/ui/Button';
+import { SectionLabel } from '@/components/ui/SectionLabel';
+import { Modal } from '@/components/ui/Modal';
 
 type League = {
   id: string;
@@ -101,12 +104,12 @@ export default function LeagueMembersPage() {
         return;
       }
 
-      const rows = (memberRows ?? []) as { 
-        user_id: string; 
-        email: string | null; 
+      const rows = (memberRows ?? []) as {
+        user_id: string;
+        email: string | null;
         role: 'player' | 'admin';
       }[];
-      
+
       const isMember = rows.some((m) => m.user_id === user.id);
       const isAdmin = rows.some((m) => m.user_id === user.id && m.role === 'admin');
 
@@ -116,7 +119,6 @@ export default function LeagueMembersPage() {
         return;
       }
 
-      // Update admin status based on role, not just ownership
       const finalCanManage = isAdmin || owner || isSuperAdmin;
       setIsOwner(finalCanManage);
 
@@ -126,7 +128,6 @@ export default function LeagueMembersPage() {
         return;
       }
 
-      // Fetch profile data separately
       const userIds = rows.map((m) => m.user_id);
       const { data: profileRows, error: profilesError } = await supabase
         .from('profiles')
@@ -159,30 +160,21 @@ export default function LeagueMembersPage() {
       membersWithNames.sort((a, b) => {
         const an = `${a.first_name ?? ''} ${a.last_name ?? ''}`.trim().toLowerCase();
         const bn = `${b.first_name ?? ''} ${b.last_name ?? ''}`.trim().toLowerCase();
-
         if (an && bn) {
           const cmp = an.localeCompare(bn);
           if (cmp !== 0) return cmp;
-        } else if (an) {
-          return -1;
-        } else if (bn) {
-          return 1;
-        }
-
+        } else if (an) return -1;
+        else if (bn) return 1;
         const ae = (a.email ?? '').toLowerCase();
         const be = (b.email ?? '').toLowerCase();
         return ae.localeCompare(be);
       });
       setMembers(membersWithNames);
-
       setLoading(false);
     }
 
     load();
-
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [leagueId, router]);
 
   async function handleRename(event: FormEvent) {
@@ -260,7 +252,7 @@ export default function LeagueMembersPage() {
     }
 
     const {
-      id: userId,
+      id: foundUserId,
       email: profileEmail,
       first_name,
       last_name,
@@ -275,7 +267,7 @@ export default function LeagueMembersPage() {
 
     const { data: insertData, error: insertError } = await supabase
       .from('league_members')
-      .insert({ league_id: leagueId, user_id: userId, email: profileEmail ?? email })
+      .insert({ league_id: leagueId, user_id: foundUserId, email: profileEmail ?? email })
       .select('user_id, email')
       .single();
 
@@ -299,16 +291,11 @@ export default function LeagueMembersPage() {
         next.sort((a, b) => {
           const an = `${a.first_name ?? ''} ${a.last_name ?? ''}`.trim().toLowerCase();
           const bn = `${b.first_name ?? ''} ${b.last_name ?? ''}`.trim().toLowerCase();
-
           if (an && bn) {
             const cmp = an.localeCompare(bn);
             if (cmp !== 0) return cmp;
-          } else if (an) {
-            return -1;
-          } else if (bn) {
-            return 1;
-          }
-
+          } else if (an) return -1;
+          else if (bn) return 1;
           const ae = (a.email ?? '').toLowerCase();
           const be = (b.email ?? '').toLowerCase();
           return ae.localeCompare(be);
@@ -337,15 +324,14 @@ export default function LeagueMembersPage() {
   }
 
   function openDeleteDialog() {
-    // Check if current user is the sole admin
     const admins = members.filter(member => member.role === 'admin');
     const isCurrentUserAdmin = admins.some(admin => admin.user_id === currentUserId);
-    
+
     if (isCurrentUserAdmin && admins.length === 1 && members.length > 1) {
       setDeleteLeagueError('You are the sole admin of this league. Please promote another member to admin before deleting the league.');
       return;
     }
-    
+
     setDeleteOpen(true);
     setDeleteConfirm('');
     setDeleteLeagueError(null);
@@ -365,10 +351,7 @@ export default function LeagueMembersPage() {
     setDeleteLoading(true);
     setError(null);
 
-    const {
-      data: userData,
-      error: userError,
-    } = await supabase.auth.getUser();
+    const { data: userData, error: userError } = await supabase.auth.getUser();
 
     if (userError || !userData.user) {
       setError(userError?.message ?? 'You must be signed in.');
@@ -402,7 +385,6 @@ export default function LeagueMembersPage() {
   async function handleRemoveMember(member: Member) {
     if (!leagueId) return;
 
-    // Add confirmation prompt
     const confirmed = window.confirm(`Are you sure you want to remove ${member.first_name || member.email || member.user_id} from the league?`);
     if (!confirmed) return;
 
@@ -444,7 +426,6 @@ export default function LeagueMembersPage() {
   async function handlePromoteToAdmin(member: Member) {
     if (!leagueId) return;
 
-    // Add confirmation prompt
     const confirmed = window.confirm(`Are you sure you want to make ${member.first_name || member.email || member.user_id} an admin?`);
     if (!confirmed) return;
 
@@ -463,12 +444,10 @@ export default function LeagueMembersPage() {
       return;
     }
 
-    // Update local state
-    setMembers(prev => prev.map(m => 
+    setMembers(prev => prev.map(m =>
       m.user_id === member.user_id ? { ...m, role: 'admin' } : m
     ));
 
-    // Log admin event
     const { data: currentUser } = await supabase.auth.getUser();
     if (currentUser?.user) {
       await supabase.from('admin_events').insert({
@@ -490,7 +469,6 @@ export default function LeagueMembersPage() {
   async function handleDemoteToMember(member: Member) {
     if (!leagueId) return;
 
-    // Check if this is the last admin
     const adminCount = members.filter(m => m.role === 'admin').length;
     if (adminCount <= 1) {
       setError('Cannot demote the last admin. Please promote another member first.');
@@ -512,12 +490,10 @@ export default function LeagueMembersPage() {
       return;
     }
 
-    // Update local state
-    setMembers(prev => prev.map(m => 
+    setMembers(prev => prev.map(m =>
       m.user_id === member.user_id ? { ...m, role: 'player' } : m
     ));
 
-    // Log admin event
     const { data: currentUser } = await supabase.auth.getUser();
     if (currentUser?.user) {
       await supabase.from('admin_events').insert({
@@ -536,383 +512,227 @@ export default function LeagueMembersPage() {
     setRoleUpdating(false);
   }
 
+  function formatMemberName(member: Member) {
+    const fullName = [member.first_name, member.last_name].filter(Boolean).join(' ');
+    const base = fullName || member.user_id;
+    if (member.self_reported_dupr != null) {
+      const dupr = Number(member.self_reported_dupr);
+      if (!Number.isNaN(dupr)) return `${base} (${dupr.toFixed(2)})`;
+    }
+    return base;
+  }
+
   if (loading) {
     return (
-      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
-        <h1 className="text-base font-medium mb-3">League</h1>
-        <p className="text-app-muted">Loading league members…</p>
+      <div>
+        <h1 className="font-display text-2xl font-bold tracking-tight mb-2">League</h1>
+        <p className="text-app-muted text-sm">Loading league members...</p>
       </div>
     );
   }
 
-  if (error) {
+  if (error && !league) {
     return (
-      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
-        <h1 className="text-base font-medium mb-3">League</h1>
-        <p className="text-app-muted" style={{ color: '#fca5a5' }}>
-          {error}
-        </p>
+      <div>
+        <h1 className="font-display text-2xl font-bold tracking-tight mb-2">League</h1>
+        <p className="text-app-danger text-sm">{error}</p>
       </div>
     );
   }
 
   if (!league) {
     return (
-      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
-        <h1 className="text-base font-medium mb-3">League</h1>
-        <p className="text-app-muted">League not found.</p>
+      <div>
+        <h1 className="font-display text-2xl font-bold tracking-tight mb-2">League</h1>
+        <p className="text-app-muted text-sm">League not found.</p>
       </div>
     );
   }
 
+  const admins = members.filter(member => member.role === 'admin');
+  const regularMembers = members.filter(member => member.role === 'player');
+
   return (
-    <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
-      <h1 className="text-base font-medium mb-3">{league.name} - League Details</h1>
+    <div>
+      <h1 className="font-display text-2xl font-bold tracking-tight mb-2">{league.name}</h1>
+
+      {error && <p className="text-app-danger text-sm mt-2">{error}</p>}
+
       {isOwner && (
         <>
-          <form
-            onSubmit={handleRename}
-            style={{
-              marginTop: '0.75rem',
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '0.5rem',
-            }}
-          >
-            <input
-              type="text"
-              placeholder="League name"
-              value={renameInput}
-              onChange={(e) => setRenameInput(e.target.value)}
-              style={{
-                flex: '1 1 220px',
-                padding: '0.45rem 0.6rem',
-                borderRadius: '0.5rem',
-                border: '1px solid #d1d5db',
-                background: '#f9fafb',
-                color: '#111827',
-              }}
-            />
-            <button
-              type="submit"
-              className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
-              disabled={
-                renaming ||
-                !renameInput.trim() ||
-                renameInput.trim() === league.name.trim()
-              }
-            >
-              {renaming ? 'Renaming…' : 'Rename league'}
-            </button>
-          </form>
-          <p className="text-app-muted">
-            Add or remove authenticated players from this league by email. Players must
-            have already signed up and saved their profile so their email is stored.
-          </p>
+          {/* Rename */}
+          <div className="border-t border-app-border mt-6 pt-6">
+            <SectionLabel>Rename League</SectionLabel>
+            <form onSubmit={handleRename} className="mt-3 flex flex-wrap gap-2">
+              <input
+                type="text"
+                placeholder="League name"
+                value={renameInput}
+                onChange={(e) => setRenameInput(e.target.value)}
+                className="flex-1 min-w-[220px] px-3 py-2.5 border border-app-border bg-transparent text-app-text text-sm placeholder:text-app-light-gray focus:outline-none focus:border-app-text transition-colors"
+              />
+              <Button
+                type="submit"
+                variant="secondary"
+                disabled={renaming || !renameInput.trim() || renameInput.trim() === league.name.trim()}
+              >
+                {renaming ? 'Renaming...' : 'Rename'}
+              </Button>
+            </form>
+          </div>
 
-          <form
-            onSubmit={handleAddMember}
-            style={{
-              marginTop: '1rem',
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '0.5rem',
-            }}
-          >
-            <input
-              type="email"
-              placeholder="Player email"
-              value={emailInput}
-              onChange={(e) => setEmailInput(e.target.value)}
-              style={{
-                flex: '1 1 220px',
-                padding: '0.45rem 0.6rem',
-                borderRadius: '0.5rem',
-                border: '1px solid #d1d5db',
-                background: '#f9fafb',
-                color: '#111827',
-              }}
-            />
-            <button
-              type="submit"
-              className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={saving || !emailInput.trim()}
-            >
-              {saving ? 'Saving…' : 'Add player'}
-            </button>
-          </form>
+          {/* Add Player */}
+          <div className="border-t border-app-border mt-6 pt-6">
+            <SectionLabel>Add Player</SectionLabel>
+            <p className="text-sm text-app-muted mt-2">
+              Add authenticated players by email. They must have signed up and saved their profile.
+            </p>
+            <form onSubmit={handleAddMember} className="mt-3 flex flex-wrap gap-2">
+              <input
+                type="email"
+                placeholder="Player email"
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                className="flex-1 min-w-[220px] px-3 py-2.5 border border-app-border bg-transparent text-app-text text-sm placeholder:text-app-light-gray focus:outline-none focus:border-app-text transition-colors"
+              />
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={saving || !emailInput.trim()}
+              >
+                {saving ? 'Saving...' : 'Add Player'}
+              </Button>
+            </form>
+          </div>
         </>
       )}
 
-      <div style={{ marginTop: '1.5rem' }}>
-        {(() => {
-          const admins = members.filter(member => member.role === 'admin');
-          const regularMembers = members.filter(member => member.role === 'player');
-          
-          return (
-            <>
-              {/* League Admins Section */}
-              <div>
-                <h2 className="text-base font-medium mb-3">
-                  League Admin{admins.length !== 1 ? 's' : ''} ({admins.length})
-                </h2>
-                {admins.length === 0 ? (
-                  <p className="text-app-muted">No league admins found.</p>
-                ) : (
-                  <ul className="list-none pl-0 text-app-muted text-[0.87rem]" style={{ listStyle: 'none', paddingLeft: 0 }}>
-                    {admins.map((admin) => (
-                      <li
-                        key={admin.user_id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: '0.75rem',
-                          padding: '0.25rem 0',
-                        }}
-                      >
-                        <span>
-                          {(() => {
-                            const fullName = [admin.first_name, admin.last_name]
-                              .filter(Boolean)
-                              .join(' ');
-                            const base = fullName || admin.user_id;
-
-                            if (admin.self_reported_dupr != null) {
-                              const dupr = Number(admin.self_reported_dupr);
-                              if (!Number.isNaN(dupr)) {
-                                return `👑 ${base} (${dupr.toFixed(2)})`;
-                              }
-                            }
-
-                            return `👑 ${base}`;
-                          })()}
-                        </span>
-                        {isOwner && admin.user_id !== currentUserId && (
-                          <div className="admin-actions">
-                            <button
-                              type="button"
-                              className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
-                              onClick={() => handleDemoteToMember(admin)}
-                              disabled={roleUpdating || admins.length <= 1}
-                              style={{
-                                background: '#f59e0b',
-                                borderColor: '#f59e0b',
-                                color: '#ffffff',
-                                opacity: (roleUpdating || admins.length <= 1) ? 0.5 : 1,
-                              }}
-                              title={admins.length <= 1 ? "Cannot demote the last admin" : "Make member"}
-                            >
-                              Make Member
-                            </button>
-                          </div>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-
-              {/* Regular Members Section */}
-              <div style={{ marginTop: '2rem' }}>
-                <h2 className="text-base font-medium mb-3">Members ({regularMembers.length})</h2>
-                {regularMembers.length === 0 ? (
-                  <p className="text-app-muted">No members yet.</p>
-                ) : (
-                  <ul className="list-none pl-0 text-app-muted text-[0.87rem]" style={{ listStyle: 'none', paddingLeft: 0 }}>
-                    {regularMembers.map((member) => (
-                      <li
-                        key={member.user_id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: '0.75rem',
-                          padding: '0.25rem 0',
-                        }}
-                      >
-                        <span>
-                          {(() => {
-                            const fullName = [member.first_name, member.last_name]
-                              .filter(Boolean)
-                              .join(' ');
-                            const base = fullName || member.user_id;
-
-                            if (member.self_reported_dupr != null) {
-                              const dupr = Number(member.self_reported_dupr);
-                              if (!Number.isNaN(dupr)) {
-                                return `👤 ${base} (${dupr.toFixed(2)})`;
-                              }
-                            }
-
-                            return `👤 ${base}`;
-                          })()}
-                        </span>
-                        {isOwner && (
-                          <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                            <button
-                              type="button"
-                              className="rounded-full text-xs border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              onClick={() => handlePromoteToAdmin(member)}
-                              disabled={roleUpdating}
-                              style={{
-                                padding: '0.25rem 0.5rem',
-                                fontSize: '0.7rem',
-                                minWidth: 'auto',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              Make admin
-                            </button>
-                            <button
-                              type="button"
-                              className="rounded-full text-xs border cursor-pointer hover:opacity-80 transition-colors"
-                              onClick={() => handleRemoveMember(member)}
-                              disabled={saving}
-                              style={{
-                                background: '#b91c1c',
-                                borderColor: '#b91c1c',
-                                color: '#fee2e2',
-                                padding: '0.25rem 0.5rem',
-                                fontSize: '0.7rem',
-                                minWidth: 'auto',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </>
-          );
-        })()}
-      </div>
-
-      {isOwner && (
-        <>
-          <div
-            style={{
-              marginTop: '2rem',
-              paddingTop: '1rem',
-              borderTop: '1px solid #1f2937',
-            }}
-          >
-            <h2 className="text-base font-medium mb-3">Delete league</h2>
-            <p className="text-app-muted">
-              This will permanently delete this league and its data. This action cannot be
-              undone.
-            </p>
-            <button
-              type="button"
-              className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={openDeleteDialog}
-              style={{
-                marginTop: '0.75rem',
-                background: '#b91c1c',
-                borderColor: '#b91c1c',
-                color: '#fee2e2',
-              }}
-            >
-              Delete league
-            </button>
-            
-            {deleteLeagueError && (
-              <div
-                style={{
-                  marginTop: '0.75rem',
-                  padding: '0.75rem',
-                  background: '#991b1b',
-                  border: '1px solid #b91c1c',
-                  borderRadius: '0.5rem',
-                  color: '#fee2e2',
-                  fontSize: '0.875rem',
-                  lineHeight: '1.4',
-                }}
-              >
-                {deleteLeagueError}
-              </div>
-            )}
-          </div>
-
-          {deleteOpen && (
-            <div
-              style={{
-                position: 'fixed',
-                inset: 0,
-                background: 'rgba(15,23,42,0.85)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 40,
-              }}
-            >
-              <div
-                className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5"
-                style={{
-                  maxWidth: 420,
-                  width: '90%',
-                  boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
-                }}
-              >
-                <h2 className="text-base font-medium mb-3">Delete league</h2>
-                <p className="text-app-muted">
-                  This will permanently delete this league and its data. Type
-                  <span style={{ fontWeight: 600 }}> delete </span>
-                  to confirm.
-                </p>
-                <input
-                  type="text"
-                  value={deleteConfirm}
-                  onChange={(e) => setDeleteConfirm(e.target.value)}
-                  placeholder="Type delete to confirm"
-                  style={{
-                    marginTop: '0.75rem',
-                    width: '100%',
-                    padding: '0.45rem 0.6rem',
-                    borderRadius: '0.5rem',
-                    border: '1px solid #d1d5db',
-                    background: '#f9fafb',
-                    color: '#111827',
-                  }}
-                />
-                <div
-                  style={{
-                    marginTop: '1rem',
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                    gap: '0.5rem',
-                  }}
-                >
-                  <button
-                    type="button"
-                    className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
-                    onClick={closeDeleteDialog}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={handleDeleteLeague}
-                    disabled={deleteLoading || deleteConfirm !== 'delete'}
-                    style={{
-                      background: '#b91c1c',
-                      borderColor: '#b91c1c',
-                      color: '#fee2e2',
-                    }}
-                  >
-                    {deleteLoading ? 'Deleting…' : 'Confirm delete'}
-                  </button>
+      {/* League Admins */}
+      <div className="border-t border-app-border mt-6 pt-6">
+        <SectionLabel>League Admins ({admins.length})</SectionLabel>
+        <div className="mt-4">
+          {admins.length === 0 ? (
+            <p className="text-app-muted text-sm">No league admins found.</p>
+          ) : (
+            <div className="divide-y divide-app-border">
+              {admins.map((admin) => (
+                <div key={admin.user_id} className="flex items-center justify-between gap-3 py-3">
+                  <div>
+                    <div className="text-sm font-medium text-app-text">
+                      {formatMemberName(admin)}
+                    </div>
+                    <span className="inline-block font-mono text-[0.6rem] uppercase tracking-button px-1.5 py-0.5 border border-app-text text-app-text mt-1">
+                      Admin
+                    </span>
+                  </div>
+                  {isOwner && admin.user_id !== currentUserId && (
+                    <Button
+                      variant="sm"
+                      onClick={() => handleDemoteToMember(admin)}
+                      disabled={roleUpdating || admins.length <= 1}
+                    >
+                      Make Member
+                    </Button>
+                  )}
                 </div>
-              </div>
+              ))}
             </div>
           )}
-        </>
+        </div>
+      </div>
+
+      {/* Members */}
+      <div className="border-t border-app-border mt-6 pt-6">
+        <SectionLabel>Members ({regularMembers.length})</SectionLabel>
+        <div className="mt-4">
+          {regularMembers.length === 0 ? (
+            <p className="text-app-muted text-sm">No members yet.</p>
+          ) : (
+            <div className="divide-y divide-app-border">
+              {regularMembers.map((member) => (
+                <div key={member.user_id} className="flex items-center justify-between gap-3 py-3">
+                  <div className="text-sm font-medium text-app-text">
+                    {formatMemberName(member)}
+                  </div>
+                  {isOwner && (
+                    <div className="flex gap-2">
+                      <Button
+                        variant="sm"
+                        onClick={() => handlePromoteToAdmin(member)}
+                        disabled={roleUpdating}
+                      >
+                        Make Admin
+                      </Button>
+                      <Button
+                        variant="sm"
+                        className="border-app-danger text-app-danger hover:bg-red-50"
+                        onClick={() => handleRemoveMember(member)}
+                        disabled={saving}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Danger Zone */}
+      {isOwner && (
+        <div className="border-t border-app-border mt-8 pt-6">
+          <SectionLabel>Danger Zone</SectionLabel>
+          <p className="text-sm text-app-muted mt-3">
+            This will permanently delete this league and its data. This action cannot be undone.
+          </p>
+          <Button
+            variant="danger"
+            onClick={openDeleteDialog}
+            className="mt-3"
+          >
+            Delete League
+          </Button>
+
+          {deleteLeagueError && (
+            <div className="mt-3 p-3 border border-app-danger text-app-danger text-sm">
+              {deleteLeagueError}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Delete Modal */}
+      {deleteOpen && (
+        <Modal
+          title="Delete League"
+          onClose={closeDeleteDialog}
+          footer={
+            <>
+              <Button variant="secondary" onClick={closeDeleteDialog}>Cancel</Button>
+              <Button
+                variant="danger"
+                onClick={handleDeleteLeague}
+                disabled={deleteLoading || deleteConfirm !== 'delete'}
+              >
+                {deleteLoading ? 'Deleting...' : 'Confirm Delete'}
+              </Button>
+            </>
+          }
+        >
+          <p className="mb-4">
+            This will permanently delete this league and its data. Type{' '}
+            <span className="font-semibold">delete</span> to confirm.
+          </p>
+          <input
+            type="text"
+            value={deleteConfirm}
+            onChange={(e) => setDeleteConfirm(e.target.value)}
+            placeholder="Type delete to confirm"
+            className="w-full px-3 py-2.5 border border-app-border bg-transparent text-app-text text-sm placeholder:text-app-light-gray focus:outline-none focus:border-app-text transition-colors"
+          />
+        </Modal>
       )}
     </div>
   );

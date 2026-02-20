@@ -4,7 +4,24 @@
 
 @layer base {
   body {
-    @apply m-0 bg-gradient-to-b from-white via-app-bg to-app-bg text-app-text;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+    @apply m-0 bg-white text-app-text antialiased;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    @apply outline-none border-app-text;
+  }
+}
+
+@layer components {
+  .section-label {
+    @apply font-mono text-xs uppercase font-medium text-app-muted;
+    letter-spacing: 0.15em;
+  }
+
+  .form-label {
+    @apply block font-mono text-xs uppercase font-medium text-app-muted mb-1.5;
+    letter-spacing: 0.08em;
   }
 }

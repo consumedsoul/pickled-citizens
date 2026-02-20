@@ -2,6 +2,8 @@
 
 import { FormEvent, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 
 export default function ResetPasswordPage() {
   const [email, setEmail] = useState('');
@@ -41,35 +43,30 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5 max-w-[420px]">
-      <h1 className="text-base font-medium mb-3">Reset password</h1>
-      <p className="text-app-muted mb-4">
+    <div className="max-w-[420px]">
+      <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Reset Password</h1>
+      <p className="text-app-muted text-sm mb-6">
         Enter your email and we&apos;ll send you a link to set a new password.
       </p>
 
-      <form onSubmit={handleSubmit} className="grid gap-3">
-        <label className="text-[0.8rem]">
-          Email
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1.5 w-full px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-app-text"
-          />
-        </label>
+      <form onSubmit={handleSubmit} className="grid gap-4">
+        <Input
+          label="Email"
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
 
-        <button
-          type="submit"
-          className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed justify-self-start"
-          disabled={status === 'loading'}
-        >
-          {status === 'loading' ? 'Sending link…' : 'Send reset link'}
-        </button>
+        <div>
+          <Button type="submit" disabled={status === 'loading'}>
+            {status === 'loading' ? 'Sending Link...' : 'Send Reset Link'}
+          </Button>
+        </div>
       </form>
 
       {message && (
-        <p className={`mt-3 text-[0.8rem] ${status === 'error' ? 'text-red-300' : 'text-app-muted'}`}>
+        <p className={`mt-4 text-sm ${status === 'error' ? 'text-app-danger' : 'text-app-muted'}`}>
           {message}
         </p>
       )}

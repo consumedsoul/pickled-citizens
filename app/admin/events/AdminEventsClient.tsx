@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { ADMIN_EMAIL } from '@/lib/constants';
+import { Button } from '@/components/ui/Button';
+import { SectionLabel } from '@/components/ui/SectionLabel';
 
 type AdminEvent = {
   id: string;
@@ -112,20 +114,18 @@ export default function AdminEventsClient() {
 
   if (loading) {
     return (
-      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
-        <h1 className="text-base font-medium mb-3">Admin events</h1>
-        <p className="text-app-muted">Loading admin event log...</p>
+      <div>
+        <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Admin Events</h1>
+        <p className="text-app-muted text-sm">Loading admin event log...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
-        <h1 className="text-base font-medium mb-3">Admin events</h1>
-        <p className="text-app-muted" style={{ color: '#fca5a5' }}>
-          {error}
-        </p>
+      <div>
+        <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Admin Events</h1>
+        <p className="text-app-danger text-sm">{error}</p>
       </div>
     );
   }
@@ -134,75 +134,52 @@ export default function AdminEventsClient() {
     totalCount != null && totalCount > 0 ? Math.ceil(totalCount / PAGE_SIZE) : null;
 
   return (
-    <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
-      <h1 className="text-base font-medium mb-3">Admin events</h1>
+    <div>
+      <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Admin Events</h1>
       {userEmail && (
-        <p className="text-app-muted" style={{ marginBottom: '0.5rem' }}>
-          Signed in as {userEmail}
-        </p>
+        <p className="text-app-muted text-sm mb-1">{userEmail}</p>
       )}
-      <p className="text-app-muted">
+      <p className="text-app-muted text-sm mb-6">
         Internal audit log of key system events. Showing newest first, up to {PAGE_SIZE} per page.
       </p>
 
-      <div style={{ marginTop: '1rem' }}>
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '0.5rem',
-            alignItems: 'center',
-          }}
+      <div className="flex flex-wrap gap-2 items-center mb-6">
+        <SectionLabel>Filter</SectionLabel>
+        <button
+          type="button"
+          onClick={() => setFilter('all')}
+          className={`font-mono text-[0.65rem] uppercase tracking-button px-2.5 py-1 border transition-colors cursor-pointer ${
+            selectedFilter === 'all'
+              ? 'border-app-text bg-app-text text-white font-medium'
+              : 'border-app-border bg-transparent text-app-muted hover:text-app-text'
+          }`}
         >
-          <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>Filter:</span>
-          <button
-            type="button"
-            onClick={() => setFilter('all')}
-            style={{
-              fontSize: '0.75rem',
-              padding: '0.35rem 0.6rem',
-              borderRadius: '0.5rem',
-              border: '1px solid #d1d5db',
-              background: selectedFilter === 'all' ? '#10b981' : '#f9fafb',
-              color: selectedFilter === 'all' ? '#ffffff' : '#111827',
-              cursor: 'pointer',
-              fontWeight: selectedFilter === 'all' ? 500 : 400,
-            }}
-          >
-            All
-          </button>
-          {EVENT_TYPES.map((eventType) => {
-            const isSelected = selectedFilter === eventType;
-            return (
-              <button
-                key={eventType}
-                type="button"
-                onClick={() => setFilter(eventType)}
-                style={{
-                  fontSize: '0.75rem',
-                  padding: '0.35rem 0.6rem',
-                  borderRadius: '0.5rem',
-                  border: '1px solid #d1d5db',
-                  background: isSelected ? '#10b981' : '#f9fafb',
-                  color: isSelected ? '#ffffff' : '#111827',
-                  cursor: 'pointer',
-                  fontWeight: isSelected ? 500 : 400,
-                }}
-              >
-                {eventType}
-              </button>
-            );
-          })}
-        </div>
+          All
+        </button>
+        {EVENT_TYPES.map((eventType) => {
+          const isSelected = selectedFilter === eventType;
+          return (
+            <button
+              key={eventType}
+              type="button"
+              onClick={() => setFilter(eventType)}
+              className={`font-mono text-[0.65rem] uppercase tracking-button px-2.5 py-1 border transition-colors cursor-pointer ${
+                isSelected
+                  ? 'border-app-text bg-app-text text-white font-medium'
+                  : 'border-app-border bg-transparent text-app-muted hover:text-app-text'
+              }`}
+            >
+              {eventType}
+            </button>
+          );
+        })}
       </div>
 
       {events.length === 0 ? (
-        <p className="text-app-muted" style={{ marginTop: '1rem' }}>
-          No events recorded yet.
-        </p>
+        <p className="text-app-muted text-sm">No events recorded yet.</p>
       ) : (
         <>
-          <ul className="list-none pl-0 text-app-muted text-[0.87rem]" style={{ listStyle: 'none', paddingLeft: 0, marginTop: '1rem' }}>
+          <div className="divide-y divide-app-border">
             {events.map((event) => {
               const created = new Date(event.created_at);
               const timestamp = created.toLocaleString();
@@ -213,71 +190,40 @@ export default function AdminEventsClient() {
               const summary = parts.join(' - ');
 
               return (
-                <li
-                  key={event.id}
-                  style={{
-                    padding: '0.5rem 0',
-                    borderBottom: '1px solid #1f2937',
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      gap: '0.5rem',
-                      alignItems: 'baseline',
-                    }}
-                  >
-                    <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{timestamp}</span>
-                    <span style={{ fontSize: '0.8rem', color: '#111827' }}>{summary}</span>
+                <div key={event.id} className="py-3">
+                  <div className="flex justify-between gap-2 items-baseline">
+                    <span className="text-xs text-app-muted font-mono">{timestamp}</span>
+                    <span className="text-xs text-app-text">{summary}</span>
                   </div>
                   {event.payload && (
-                    <pre
-                      style={{
-                        marginTop: '0.25rem',
-                        fontSize: '0.75rem',
-                        whiteSpace: 'pre-wrap',
-                        wordBreak: 'break-word',
-                        color: '#4b5563',
-                      }}
-                    >
+                    <pre className="mt-1 text-xs whitespace-pre-wrap break-words text-app-muted font-mono">
                       {JSON.stringify(event.payload, null, 2)}
                     </pre>
                   )}
-                </li>
+                </div>
               );
             })}
-          </ul>
+          </div>
 
-          <div
-            style={{
-              marginTop: '1rem',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: '0.75rem',
-            }}
-          >
-            <button
-              type="button"
-              className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
+          <div className="mt-6 flex justify-between items-center gap-3">
+            <Button
+              variant="sm"
               disabled={page === 0}
               onClick={() => setPage((p) => Math.max(0, p - 1))}
             >
-              Previous page
-            </button>
-            <span className="text-app-muted" style={{ fontSize: '0.8rem' }}>
+              Previous
+            </Button>
+            <span className="text-app-muted text-xs font-mono">
               Page {page + 1}
               {totalPages != null ? ` of ${totalPages}` : ''}
             </span>
-            <button
-              type="button"
-              className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
+            <Button
+              variant="sm"
               disabled={events.length < PAGE_SIZE}
               onClick={() => setPage((p) => p + 1)}
             >
-              Next page
-            </button>
+              Next
+            </Button>
           </div>
         </>
       )}

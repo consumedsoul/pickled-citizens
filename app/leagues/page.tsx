@@ -3,6 +3,8 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import { Button } from '@/components/ui/Button';
+import { SectionLabel } from '@/components/ui/SectionLabel';
 
 type League = {
   id: string;
@@ -42,10 +44,8 @@ export default function LeaguesPage() {
       }
 
       const user = userData.user;
-
       setUserId(user.id);
 
-      // Get all leagues where user is a member with their role
       const { data: membershipData, error: membershipError } = await supabase
         .from('league_members')
         .select('league_id, role')
@@ -57,11 +57,8 @@ export default function LeaguesPage() {
         setError(membershipError.message);
       } else {
         const memberships = (membershipData as { league_id: string; role: string }[]) || [];
-        
-        // Get all league IDs to fetch league details and member counts
         const leagueIds = memberships.map(m => m.league_id);
-        
-        // Get league details
+
         const { data: leaguesData, error: leaguesError } = await supabase
           .from('leagues')
           .select('id, name, owner_id')
@@ -74,7 +71,6 @@ export default function LeaguesPage() {
           return;
         }
 
-        // Get member counts for all leagues
         const { data: memberCountsData, error: countsError } = await supabase
           .from('league_members')
           .select('league_id')
@@ -90,31 +86,28 @@ export default function LeaguesPage() {
           });
         }
 
-        // Process leagues and separate by role
         type LeagueQueryRow = { id: string; name: string; owner_id: string };
-        const leagues = (leaguesData as LeagueQueryRow[]) || [];
-        const allLeagues: League[] = leagues.map((league) => ({
+        const leaguesList = (leaguesData as LeagueQueryRow[]) || [];
+        const allLeagues: League[] = leaguesList.map((league) => ({
           id: league.id,
           name: league.name,
-          created_at: '', // Will be set later if needed
+          created_at: '',
           owner_id: league.owner_id,
           memberCount: memberCounts.get(league.id) ?? 0,
         }));
 
-        // Separate into admin and regular member leagues
-        const adminLeagues = allLeagues.filter(league => 
+        const adminLeagues = allLeagues.filter(league =>
           memberships.some(m => m.league_id === league.id && m.role === 'admin')
         );
-        const memberLeagues = allLeagues.filter(league => 
+        const memberLeaguesList = allLeagues.filter(league =>
           memberships.some(m => m.league_id === league.id && m.role === 'player')
         );
 
-        // Sort each group alphabetically by name (case-insensitive)
         adminLeagues.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
-        memberLeagues.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+        memberLeaguesList.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
 
         setLeagues(adminLeagues);
-        setMemberLeagues(memberLeagues);
+        setMemberLeagues(memberLeaguesList);
       }
 
       setLoading(false);
@@ -181,7 +174,6 @@ export default function LeaguesPage() {
         return;
       }
 
-      // Add the creator as an admin in league_members
       const { error: memberError } = await supabase
         .from('league_members')
         .insert({
@@ -200,7 +192,6 @@ export default function LeaguesPage() {
       setLeagues((prev) => [leagueWithCount, ...prev]);
       setName('');
 
-      // Log admin event
       const { data: userData, error: userError } = await supabase.auth.getUser();
 
       if (!userError && userData.user) {
@@ -222,123 +213,117 @@ export default function LeaguesPage() {
 
   if (loading) {
     return (
-      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
-        <h1 className="text-base font-medium mb-3">Leagues</h1>
-        <p className="text-app-muted">Loading your leagues...</p>
+      <div>
+        <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Leagues</h1>
+        <p className="text-app-muted text-sm">Loading your leagues...</p>
       </div>
     );
   }
 
   return (
-    <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
-      <h1 className="text-base font-medium mb-3">Leagues</h1>
-      {error && (
-        <p className="text-red-300">
-          {error}
-        </p>
-      )}
+    <div>
+      <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Leagues</h1>
+
+      {error && <p className="text-app-danger text-sm mt-2">{error}</p>}
+
       {!error && (
         <>
-          <p className="text-app-muted">
+          <p className="text-sm text-app-muted">
             Create a league you can manage and schedule sessions.
           </p>
           {reachedLimit && (
-            <p className="text-app-muted mt-2 text-yellow-400">
-              You have reached the limit of {MAX_LEAGUES} leagues. Delete one to create
-              another.
+            <p className="text-sm text-yellow-600 mt-2">
+              You have reached the limit of {MAX_LEAGUES} leagues. Delete one to create another.
             </p>
           )}
         </>
       )}
 
-      <form
-        onSubmit={handleCreate}
-        className="mt-4 flex flex-wrap gap-2"
-      >
+      <form onSubmit={handleCreate} className="mt-4 flex flex-wrap gap-2">
         <input
           type="text"
           placeholder="League name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           disabled={reachedLimit}
-          className="flex-1 min-w-[200px] px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-app-text disabled:opacity-60"
+          className="flex-1 min-w-[200px] px-3 py-2.5 border border-app-border bg-transparent text-app-text text-sm placeholder:text-app-light-gray focus:outline-none focus:border-app-text transition-colors disabled:opacity-60"
         />
-        <button
+        <Button
           type="submit"
-          className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          variant="primary"
           disabled={creating || reachedLimit}
         >
-          {creating ? 'Creating…' : 'Create league'}
-        </button>
+          {creating ? 'Creating...' : 'Create League'}
+        </Button>
       </form>
 
-      <div className="mt-6">
-        <h2 className="text-base font-medium mb-3">Leagues you manage</h2>
-        {leagues.length === 0 ? (
-          <p className="text-app-muted">You don&apos;t manage any leagues yet.</p>
-        ) : (
-          <ul className="list-none pl-0 text-app-muted text-[0.87rem]">
-            {leagues.map((league) => (
-              <li
-                key={league.id}
-                className="flex items-center justify-between gap-3 py-1"
-              >
-                <span>
-                  👑 {league.name}{' '}
-                  {typeof league.memberCount === 'number'
-                    ? `(${league.memberCount} ${
-                        league.memberCount === 1 ? 'member' : 'members'
-                      })`
-                    : ''}
-                </span>
-                <a
-                  href={`/leagues/${league.id}`}
-                  className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer no-underline hover:bg-gray-50 transition-colors"
+      {/* Leagues you manage */}
+      <div className="border-t border-app-border mt-8 pt-8">
+        <SectionLabel>Leagues You Manage</SectionLabel>
+        <div className="mt-4">
+          {leagues.length === 0 ? (
+            <p className="text-app-muted text-sm">You don&apos;t manage any leagues yet.</p>
+          ) : (
+            <div className="divide-y divide-app-border">
+              {leagues.map((league) => (
+                <div
+                  key={league.id}
+                  className="flex items-center justify-between gap-3 py-3"
                 >
-                  Manage
-                </a>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <div className="mt-6">
-        <h2 className="text-base font-medium mb-3">Leagues you&apos;re a member of</h2>
-        {memberLeagues.length === 0 ? (
-          <p className="text-app-muted">You are not a member of any leagues yet.</p>
-        ) : (
-          <ul className="list-none pl-0 text-app-muted text-[0.87rem]">
-            {memberLeagues.map((league) => (
-              <li
-                key={league.id}
-                className="flex items-center justify-between gap-3 py-1"
-              >
-                <span>
-                  👤 {league.name}{' '}
-                  {typeof league.memberCount === 'number'
-                    ? `(${league.memberCount} ${
-                        league.memberCount === 1 ? 'member' : 'members'
-                      })`
-                    : ''}
-                </span>
-                <div className="flex gap-2">
-                  <a
-                    href={`/leagues/${league.id}`}
-                    className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer no-underline hover:bg-gray-50 transition-colors"
-                  >
-                    {league.owner_id && userId && league.owner_id === userId
-                      ? 'Manage'
-                      : 'View'}
+                  <div>
+                    <div className="text-sm font-medium text-app-text">
+                      {league.name}
+                    </div>
+                    {typeof league.memberCount === 'number' && (
+                      <div className="text-xs text-app-muted mt-0.5">
+                        {league.memberCount} {league.memberCount === 1 ? 'member' : 'members'}
+                      </div>
+                    )}
+                  </div>
+                  <a href={`/leagues/${league.id}`} className="no-underline">
+                    <Button variant="sm" arrow>Manage</Button>
                   </a>
                 </div>
-              </li>
-            ))}
-          </ul>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
+      {/* Leagues you're a member of */}
+      <div className="border-t border-app-border mt-8 pt-8">
+        <SectionLabel>Leagues You&apos;re a Member Of</SectionLabel>
+        <div className="mt-4">
+          {memberLeagues.length === 0 ? (
+            <p className="text-app-muted text-sm">You are not a member of any leagues yet.</p>
+          ) : (
+            <div className="divide-y divide-app-border">
+              {memberLeagues.map((league) => (
+                <div
+                  key={league.id}
+                  className="flex items-center justify-between gap-3 py-3"
+                >
+                  <div>
+                    <div className="text-sm font-medium text-app-text">
+                      {league.name}
+                    </div>
+                    {typeof league.memberCount === 'number' && (
+                      <div className="text-xs text-app-muted mt-0.5">
+                        {league.memberCount} {league.memberCount === 1 ? 'member' : 'members'}
+                      </div>
+                    )}
+                  </div>
+                  <a href={`/leagues/${league.id}`} className="no-underline">
+                    <Button variant="sm" arrow>
+                      {league.owner_id && userId && league.owner_id === userId ? 'Manage' : 'View'}
+                    </Button>
+                  </a>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
-

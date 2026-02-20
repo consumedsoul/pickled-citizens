@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { ADMIN_EMAIL } from '@/lib/constants';
+import { Button } from '@/components/ui/Button';
 
 type League = {
   id: string;
@@ -80,80 +80,58 @@ export default function AdminLeaguesPage() {
 
   if (loading) {
     return (
-      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
-        <h1 className="text-base font-medium mb-3">Admin: Leagues</h1>
-        <p className="text-app-muted">Loading leagues…</p>
+      <div>
+        <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Admin Leagues</h1>
+        <p className="text-app-muted text-sm">Loading leagues...</p>
       </div>
     );
   }
 
   if (!isAdmin) {
     return (
-      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
-        <h1 className="text-base font-medium mb-3">Admin: Leagues</h1>
-        <p className="text-app-muted">You do not have access to this page.</p>
+      <div>
+        <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Admin Leagues</h1>
+        <p className="text-app-muted text-sm">You do not have access to this page.</p>
       </div>
     );
   }
 
   return (
-    <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
-      <h1 className="text-base font-medium mb-3">Admin: Leagues</h1>
+    <div>
+      <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Admin Leagues</h1>
       {error && (
-        <p className="text-app-muted" style={{ color: '#fca5a5' }}>
-          {error}
-        </p>
+        <p className="text-app-danger text-sm mb-4">{error}</p>
       )}
       {!error && (
-        <p className="text-app-muted">
+        <p className="text-app-muted text-sm mb-6">
           This view lists all leagues in the system. Open a league to rename it, manage
           members, or delete it.
         </p>
       )}
 
       {leagues.length === 0 ? (
-        <p className="text-app-muted" style={{ marginTop: '1rem' }}>
-          No leagues found.
-        </p>
+        <p className="text-app-muted text-sm">No leagues found.</p>
       ) : (
-        <div style={{ marginTop: '1rem' }}>
-          <ul
-            className="list-none pl-0 text-app-muted text-[0.87rem]"
-            style={{ listStyle: 'none', paddingLeft: 0, margin: 0 }}
-          >
-            {leagues.map((league) => (
-              <li
-                key={league.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '0.75rem',
-                  padding: '0.25rem 0',
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: '0.9rem' }}>{league.name}</div>
-                  <div
-                    style={{
-                      fontSize: '0.75rem',
-                      color: '#9ca3af',
-                      marginTop: '0.1rem',
-                    }}
-                  >
-                    ID: {league.id}
-                  </div>
+        <div className="divide-y divide-app-border">
+          {leagues.map((league) => (
+            <div
+              key={league.id}
+              className="flex items-center justify-between gap-3 py-3"
+            >
+              <div>
+                <div className="text-sm">{league.name}</div>
+                <div className="text-xs text-app-muted mt-0.5 font-mono">
+                  {league.id}
                 </div>
-                <button
-                  type="button"
-                  className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors"
-                  onClick={() => router.push(`/leagues/${league.id}`)}
-                >
-                  Open
-                </button>
-              </li>
-            ))}
-          </ul>
+              </div>
+              <Button
+                variant="sm"
+                onClick={() => router.push(`/leagues/${league.id}`)}
+              >
+                Open
+              </Button>
+            </div>
+          ))}
         </div>
       )}
     </div>

@@ -78,7 +78,7 @@ export default function AuthCompleteClient() {
       }
 
       setStatus('success');
-      setMessage('Signed in. Redirecting to your profile…');
+      setMessage('Signed in. Redirecting to your profile...');
 
       setTimeout(() => {
         router.replace('/profile');
@@ -92,17 +92,17 @@ export default function AuthCompleteClient() {
     };
   }, [router, searchParams]);
 
-  let text = 'Finishing your sign-in…';
+  let text = 'Finishing your sign-in...';
   if (status === 'success') {
-    text = message ?? 'Signed in. Redirecting…';
+    text = message ?? 'Signed in. Redirecting...';
   } else if (status === 'error') {
     text = message ?? 'There was a problem completing sign-in.';
   }
 
   return (
-    <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5 max-w-[420px]">
-      <h1 className="text-base font-medium mb-3">Completing sign-in</h1>
-      <p className="text-app-muted">{text}</p>
+    <div className="max-w-[420px]">
+      <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Completing Sign-in</h1>
+      <p className={`text-sm ${status === 'error' ? 'text-app-danger' : 'text-app-muted'}`}>{text}</p>
     </div>
   );
 }

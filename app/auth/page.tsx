@@ -2,6 +2,8 @@
 
 import { FormEvent, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { Button } from '@/components/ui/Button';
+import { Input, Select } from '@/components/ui/Input';
 
 export default function AuthPage() {
   const [email, setEmail] = useState('');
@@ -110,92 +112,73 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5 max-w-[420px]">
-      <h1 className="text-base font-medium mb-3">Sign up</h1>
-      <p className="text-app-muted mb-4">
+    <div className="max-w-[420px]">
+      <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Sign Up</h1>
+      <p className="text-app-muted text-sm mb-6">
         Create your Pickled Citizens account with a password. You can also send yourself a
         magic link instead if you prefer passwordless sign-in.
       </p>
 
-      <form onSubmit={handleSubmit} className="grid gap-3">
-        <div className="grid gap-2 grid-cols-2">
-          <label className="text-[0.8rem]">
-            First name (required)
-            <input
-              type="text"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              required
-              className="mt-1.5 w-full px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-app-text"
-            />
-          </label>
-          <label className="text-[0.8rem]">
-            Last name (required)
-            <input
-              type="text"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              required
-              className="mt-1.5 w-full px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-app-text"
-            />
-          </label>
+      <form onSubmit={handleSubmit} className="grid gap-4">
+        <div className="grid gap-4 grid-cols-2">
+          <Input
+            label="First name"
+            type="text"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            required
+          />
+          <Input
+            label="Last name"
+            type="text"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            required
+          />
         </div>
 
-        <label className="text-[0.8rem]">
-          Gender (required)
-          <select
-            value={gender}
-            onChange={(e) => setGender(e.target.value)}
-            required
-            className="mt-1.5 w-full px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-app-text"
-          >
-            <option value="">Select gender</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-          </select>
-        </label>
+        <Select
+          label="Gender"
+          value={gender}
+          onChange={(e) => setGender(e.target.value)}
+          required
+        >
+          <option value="">Select gender</option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </Select>
 
-        <label className="text-[0.8rem]">
-          Email
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1.5 w-full px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-app-text"
-          />
-        </label>
+        <Input
+          label="Email"
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
 
-        <label className="text-[0.8rem]">
-          Password (min 8 characters)
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-1.5 w-full px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-app-text"
-          />
-        </label>
+        <Input
+          label="Password (min 8 characters)"
+          type="password"
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
 
-        <label className="text-[0.8rem]">
-          Confirm password
-          <input
-            type="password"
-            required
-            value={passwordConfirm}
-            onChange={(e) => setPasswordConfirm(e.target.value)}
-            className="mt-1.5 w-full px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-app-text"
-          />
-        </label>
+        <Input
+          label="Confirm password"
+          type="password"
+          required
+          value={passwordConfirm}
+          onChange={(e) => setPasswordConfirm(e.target.value)}
+        />
 
-        <label className="text-[0.8rem]">
-          Self-reported DUPR (required, x.xx)
-          <input
+        <div>
+          <Input
+            label="Self-reported DUPR"
             type="text"
             value={selfDupr}
             onChange={(e) => setSelfDupr(e.target.value)}
             placeholder="e.g. 3.75"
-            className="mt-1.5 w-full px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-app-text"
           />
           <p className="text-app-muted text-xs mt-1.5">
             Need help estimating your rating? See{' '}
@@ -203,28 +186,26 @@ export default function AuthPage() {
               href="https://www.pickleheads.com/guides/pickleball-rating"
               target="_blank"
               rel="noreferrer"
-              className="text-blue-400 underline"
+              className="text-app-text underline"
             >
               this guide
             </a>
             .
           </p>
-        </label>
+        </div>
 
-        <button
-          type="submit"
-          className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed justify-self-start"
-          disabled={status === 'loading'}
-        >
-          {status === 'loading' ? 'Creating account…' : 'Create account'}
-        </button>
+        <div>
+          <Button type="submit" disabled={status === 'loading'}>
+            {status === 'loading' ? 'Creating Account...' : 'Create Account'}
+          </Button>
+        </div>
       </form>
 
       {message && (
-        <p className={`mt-3 text-[0.8rem] ${status === 'error' ? 'text-red-300' : 'text-app-muted'}`}>
+        <p className={`mt-4 text-sm ${status === 'error' ? 'text-app-danger' : 'text-app-muted'}`}>
           {status === 'success' && message.includes('Check your email') ? (
             <span>
-              <span className="bg-yellow-100 text-yellow-800 font-bold px-1.5 py-0.5 rounded">
+              <span className="font-mono text-xs uppercase tracking-label font-semibold border border-app-text px-2 py-0.5">
                 Check your email
               </span>{' '}
               to confirm your account and finish signing up.
@@ -234,16 +215,16 @@ export default function AuthPage() {
           )}
         </p>
       )}
-      <p className="text-app-muted mt-4 text-[0.8rem]">
+      <p className="text-app-muted mt-6 text-sm">
         Already have an account?{' '}
-        <a href="/auth/signin" className="underline">
+        <a href="/auth/signin" className="text-app-text underline">
           Sign in with email only
         </a>
         .
       </p>
-      <p className="text-app-muted mt-2 text-[0.8rem]">
+      <p className="text-app-muted mt-2 text-sm">
         Prefer passwordless sign-up? You can use the{' '}
-        <a href="/auth/signin" className="underline">
+        <a href="/auth/signin" className="text-app-text underline">
           magic link sign-in
         </a>{' '}
         page instead.

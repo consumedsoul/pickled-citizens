@@ -22,17 +22,19 @@ export function Navigation() {
   }, []);
 
   function getLinkClassName(href: string) {
-    const isActive = 
+    const isActive =
       (href === '/' && pathname === '/') ||
       (href !== '/' && pathname.startsWith(href));
-    
-    return `px-2 py-1 rounded no-underline transition-all duration-200 ${
-      isActive ? 'text-app-link font-bold' : ''
+
+    return `no-underline text-sm font-medium transition-colors ${
+      isActive
+        ? 'text-app-text underline underline-offset-4 decoration-1'
+        : 'text-app-muted hover:text-app-text'
     }`;
   }
 
   return (
-    <nav className="flex gap-4 text-sm md:w-auto w-full md:justify-start justify-center flex-wrap md:gap-y-0 gap-y-1">
+    <nav className="flex gap-5 md:w-auto w-full md:justify-start justify-center flex-wrap md:gap-y-0 gap-y-1">
       <Link href="/" className={getLinkClassName('/')}>
         Home
       </Link>
