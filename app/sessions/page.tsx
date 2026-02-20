@@ -4,6 +4,8 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { Button } from "@/components/ui/Button";
+import { SectionLabel } from "@/components/ui/SectionLabel";
 
 type League = {
   id: string;
@@ -84,10 +86,10 @@ export default function SessionsPage() {
 
   const getAvailablePlayersForSlot = useMemo(() => {
     return (slotIndex: number) => {
-      const selectedIds = selectedPlayerIds.filter((id, index) => 
+      const selectedIds = selectedPlayerIds.filter((id, index) =>
         id && index !== slotIndex
       );
-      return sortedMembersForSelect.filter(member => 
+      return sortedMembersForSelect.filter(member =>
         !selectedIds.includes(member.user_id)
       );
     };
@@ -483,22 +485,22 @@ export default function SessionsPage() {
 
     const date = new Date(value);
     const minutes = date.getMinutes();
-    
+
     if (minutes !== 0 && minutes !== 30) {
       const roundedMinutes = minutes < 15 ? 0 : minutes < 45 ? 30 : 0;
       const hourAdjustment = minutes >= 45 ? 1 : 0;
-      
+
       date.setMinutes(roundedMinutes);
       date.setHours(date.getHours() + hourAdjustment);
       date.setSeconds(0);
       date.setMilliseconds(0);
-      
+
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
       const hours = String(date.getHours()).padStart(2, '0');
       const mins = String(date.getMinutes()).padStart(2, '0');
-      
+
       setScheduledFor(`${year}-${month}-${day}T${hours}:${mins}`);
     } else {
       setScheduledFor(value);
@@ -863,18 +865,18 @@ export default function SessionsPage() {
 
   if (loading) {
     return (
-      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
-        <h1 className="text-base font-medium mb-3">Create session</h1>
-        <p className="text-app-muted">Loading your sessions...</p>
+      <div className="mt-8">
+        <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Sessions</h1>
+        <p className="text-app-muted text-sm">Loading your sessions...</p>
       </div>
     );
   }
 
   if (!userId) {
     return (
-      <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
-        <h1 className="text-base font-medium mb-3">Create session</h1>
-        <p className="text-app-muted">You must be signed in to create sessions.</p>
+      <div className="mt-8">
+        <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Sessions</h1>
+        <p className="text-app-muted text-sm">You must be signed in to create sessions.</p>
       </div>
     );
   }
@@ -905,20 +907,20 @@ export default function SessionsPage() {
     .map((item) => item.session);
 
   return (
-    <div className="mt-5 rounded-xl border border-app-border/90 bg-app-bg-alt p-5">
-      <h1 className="text-base font-medium mb-3">Create session</h1>
+    <div className="mt-8">
+      <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Sessions</h1>
       {userEmail && (
-        <p className="text-app-muted mb-2">
+        <p className="text-app-muted text-sm mb-4">
           Signed in as {userEmail}
         </p>
       )}
       {error && (
-        <p className="text-red-300">
+        <p className="text-app-danger text-sm mb-4">
           {error}
         </p>
       )}
       {!error && (
-        <p className="text-app-muted">
+        <p className="text-app-muted text-sm mb-6">
           {leagues.length
             ? "Create a session for one of your leagues, pick 6 / 8 / 10 / 12 players, and generate balanced teams and matchups."
             : "You do not own any leagues yet. You can still view sessions you play in below."}
@@ -929,15 +931,17 @@ export default function SessionsPage() {
         <>
           <form
             onSubmit={handleGenerate}
-            className="mt-4 grid gap-3"
+            className="grid gap-4"
           >
-            <div className="grid gap-2 grid-cols-2">
-              <label className="text-[0.8rem]">
-                League
+            <div className="grid gap-4 grid-cols-2">
+              <div>
+                <label className="form-label">
+                  League
+                </label>
                 <select
                   value={selectedLeagueId}
                   onChange={(e) => handleLeagueChange(e.target.value)}
-                  className="mt-1.5 w-full px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-app-text"
+                  className="w-full px-3 py-2.5 border border-app-border bg-transparent text-app-text text-sm placeholder:text-app-light-gray focus:outline-none focus:border-app-text transition-colors"
                 >
                   <option value="">Select League</option>
                   {sortedLeaguesForSelect.map((league) => (
@@ -946,26 +950,30 @@ export default function SessionsPage() {
                     </option>
                   ))}
                 </select>
-              </label>
+              </div>
 
-              <label className="text-[0.8rem]">
-                Date and time (Required)
+              <div>
+                <label className="form-label">
+                  Date and time (Required)
+                </label>
                 <input
                   type="datetime-local"
                   value={scheduledFor}
                   onChange={(e) => handleScheduledForChange(e.target.value)}
-                  className="mt-1.5 w-full px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-app-text"
+                  className="w-full px-3 py-2.5 border border-app-border bg-transparent text-app-text text-sm placeholder:text-app-light-gray focus:outline-none focus:border-app-text transition-colors"
                 />
-              </label>
+              </div>
             </div>
 
-            <div className="grid gap-2 grid-cols-[1fr_2fr] items-start">
-              <label className="text-[0.8rem]">
-                Player count
+            <div className="grid gap-4 grid-cols-[1fr_2fr] items-start">
+              <div>
+                <label className="form-label">
+                  Player count
+                </label>
                 <select
                   value={playerCount}
                   onChange={(e) => handlePlayerCountChange(e.target.value)}
-                  className="mt-1.5 w-full px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-app-text"
+                  className="w-full px-3 py-2.5 border border-app-border bg-transparent text-app-text text-sm placeholder:text-app-light-gray focus:outline-none focus:border-app-text transition-colors"
                 >
                   {PLAYER_COUNTS.map((n) => (
                     <option key={n} value={n}>
@@ -973,19 +981,19 @@ export default function SessionsPage() {
                     </option>
                   ))}
                 </select>
-              </label>
+              </div>
 
               <div>
-                <p className="text-app-muted mb-1">
+                <label className="form-label">
                   Select players
-                </p>
+                </label>
                 {membersLoading && (
-                  <p className="text-app-muted text-[0.8rem]">
-                    Loading league members…
+                  <p className="text-app-muted text-sm">
+                    Loading league members...
                   </p>
                 )}
                 {!membersLoading && !members.length && (
-                  <p className="text-app-muted text-[0.8rem]">
+                  <p className="text-app-muted text-sm">
                     {selectedLeagueId ? "This league has no members yet." : "Please select a league in the drop-down above."}
                   </p>
                 )}
@@ -996,7 +1004,7 @@ export default function SessionsPage() {
                         key={i}
                         value={selectedPlayerIds[i] ?? ""}
                         onChange={(e) => handlePlayerSelect(i, e.target.value)}
-                        className="px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-app-text"
+                        className="w-full px-3 py-2.5 border border-app-border bg-transparent text-app-text text-sm placeholder:text-app-light-gray focus:outline-none focus:border-app-text transition-colors"
                       >
                         <option value="">Select Player {i + 1}</option>
                         {getAvailablePlayersForSlot(i).map((member) => (
@@ -1011,129 +1019,119 @@ export default function SessionsPage() {
               </div>
             </div>
 
-            <button
-              type="submit"
-              className="rounded-full px-5 py-2 text-sm border border-transparent cursor-pointer bg-app-accent text-white hover:bg-app-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed justify-self-start mt-2"
-              disabled={generating || membersLoading}
-            >
-              {generating ? "Creating session..." : "Create session"}
-            </button>
+            <div className="mt-2">
+              <Button type="submit" variant="primary" disabled={generating || membersLoading}>
+                {generating ? "Creating session..." : "Create session"}
+              </Button>
+            </div>
           </form>
-          <div className="mt-6">
-            <h2 className="text-base font-medium mb-3">Players (snaking order)</h2>
+
+          <div className="mt-10">
+            <SectionLabel>PLAYERS (SNAKING ORDER)</SectionLabel>
             {!orderedPlayers.length ? (
-              <p className="text-app-muted text-[0.85rem]">
+              <p className="text-app-muted text-sm mt-3">
                 After selecting players, they will appear here sorted by DUPR. Use the
                 arrows to adjust the order; teams and matchups will be based on this
                 list.
               </p>
             ) : (
-              <div className="mt-3 rounded-xl border border-app-dark p-2">
-                <ul className="list-none pl-0 m-0 text-app-muted text-[0.87rem]">
-                  {orderedPlayers.map((member, index) => (
-                    <li
-                      key={member.user_id}
-                      className="flex items-center justify-between gap-2 py-1.5"
-                    >
-                      <div className="text-[0.85rem]">
-                        {index + 1}. {displayPlayer(member)}
-                      </div>
-                      <div className="flex gap-1">
-                        <button
-                          type="button"
-                          className="rounded-full px-1.5 py-0.5 text-xs border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          onClick={() => movePlayer(index, index - 1)}
-                          disabled={index === 0}
-                        >
-                          ↑
-                        </button>
-                        <button
-                          type="button"
-                          className="rounded-full px-1.5 py-0.5 text-xs border border-app-border bg-transparent text-app-muted cursor-pointer hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          onClick={() => movePlayer(index, index + 1)}
-                          disabled={index === orderedPlayers.length - 1}
-                        >
-                          ↓
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+              <div className="mt-3 divide-y divide-app-border border-t border-b border-app-border">
+                {orderedPlayers.map((member, index) => (
+                  <div
+                    key={member.user_id}
+                    className="flex items-center justify-between gap-2 py-2.5"
+                  >
+                    <span className="text-sm text-app-text">
+                      {index + 1}. {displayPlayer(member)}
+                    </span>
+                    <div className="flex gap-1">
+                      <Button
+                        type="button"
+                        variant="sm"
+                        onClick={() => movePlayer(index, index - 1)}
+                        disabled={index === 0}
+                      >
+                        ↑
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="sm"
+                        onClick={() => movePlayer(index, index + 1)}
+                        disabled={index === orderedPlayers.length - 1}
+                      >
+                        ↓
+                      </Button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
         </>
       )}
 
-      <div className="mt-6">
-        <h2 className="text-base font-medium mb-3">Sessions</h2>
+      <div className="mt-10">
         {sessionsLoading ? (
-          <p className="text-app-muted text-[0.85rem]">
+          <p className="text-app-muted text-sm">
             Loading sessions...
           </p>
         ) : sessions.length === 0 ? (
-          <p className="text-app-muted text-[0.85rem]">
+          <p className="text-app-muted text-sm">
             {leagues.length
               ? "No sessions yet. Create one above to see it here."
               : "No sessions yet. You'll see sessions you play in here."}
           </p>
         ) : (
-          <div className="mt-3 rounded-xl border border-app-dark p-2">
+          <>
             {upcomingSessions.length > 0 && (
-              <div className={pastSessions.length ? "mb-3" : ""}>
-                <h3 className="text-[0.8rem] font-semibold m-0 mb-1.5 text-app-text">
-                  Current / upcoming sessions
-                </h3>
-                <ul className="list-none pl-0 m-0 text-app-muted text-[0.87rem]">
+              <div className={pastSessions.length ? "mb-10" : ""}>
+                <SectionLabel>CURRENT / UPCOMING</SectionLabel>
+                <div className="mt-3 divide-y divide-app-border border-t border-b border-app-border">
                   {upcomingSessions.map((session) => (
-                    <li
+                    <div
                       key={session.id}
-                      className="flex items-center justify-between gap-3 py-1.5"
+                      className="flex items-center justify-between gap-3 py-3"
                     >
-                      <div className="text-[0.85rem]">
-                        <div className="font-semibold text-app-dark">
-                          🗓️ {session.league_name || "Unknown league"} -
-                          {" "}
+                      <div>
+                        <div className="text-sm font-medium text-app-text">
+                          {session.league_name || "Unknown league"} &mdash;{" "}
                           {session.player_count} players
                         </div>
-                        <div className="text-app-light-gray mt-0.5">
+                        <div className="text-app-light-gray text-sm mt-0.5">
                           {formatDateTime(
                             session.scheduled_for ?? session.created_at
                           )}
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Link
-                          className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer no-underline hover:bg-gray-50 transition-colors"
-                          href={`/sessions/${session.id}`}
-                          prefetch={false}
-                        >
+                      <Link
+                        href={`/sessions/${session.id}`}
+                        prefetch={false}
+                        className="no-underline"
+                      >
+                        <Button variant="sm" arrow>
                           {session.created_by === userId ? "Manage" : "View"}
-                        </Link>
-                      </div>
-                    </li>
+                        </Button>
+                      </Link>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </div>
             )}
             {pastSessions.length > 0 && (
               <div>
-                <h3 className="text-[0.8rem] font-semibold m-0 mb-1.5 text-app-text">
-                  Past sessions
-                </h3>
-                <ul className="list-none pl-0 m-0 text-app-muted text-[0.87rem]">
+                <SectionLabel>PAST SESSIONS</SectionLabel>
+                <div className="mt-3 divide-y divide-app-border border-t border-b border-app-border">
                   {pastSessions.map((session) => (
-                    <li
+                    <div
                       key={session.id}
-                      className="flex items-center justify-between gap-3 py-1.5"
+                      className="flex items-center justify-between gap-3 py-3"
                     >
-                      <div className="text-[0.85rem]">
-                        <div className="font-semibold text-app-dark">
-                          🗓️ {session.league_name || "Unknown league"} -
-                          {" "}
+                      <div>
+                        <div className="text-sm font-medium text-app-text">
+                          {session.league_name || "Unknown league"} &mdash;{" "}
                           {session.player_count} players
                         </div>
-                        <div className="text-app-light-gray mt-0.5">
+                        <div className="text-app-light-gray text-sm mt-0.5">
                           {formatDateTime(
                             session.scheduled_for ?? session.created_at
                           )}
@@ -1146,36 +1144,40 @@ export default function SessionsPage() {
                           if (green === 0 && blue === 0) return null;
 
                           let label: string;
+                          let colorClass: string;
                           if (green > blue) {
                             label = `Team Green won ${green}-${blue}`;
+                            colorClass = "text-team-green";
                           } else if (blue > green) {
                             label = `Team Blue won ${blue}-${green}`;
+                            colorClass = "text-team-blue";
                           } else {
                             label = `Teams tied ${green}-${blue}`;
+                            colorClass = "text-app-muted";
                           }
 
                           return (
-                            <div className="text-app-accent mt-0.5 text-[0.8rem]">
+                            <span className={`font-mono text-[0.65rem] uppercase tracking-button mt-1 inline-block ${colorClass}`}>
                               {label}
-                            </div>
+                            </span>
                           );
                         })()}
                       </div>
-                      <div className="flex gap-2">
-                        <Link
-                          className="rounded-full px-5 py-2 text-sm border border-app-border bg-transparent text-app-muted cursor-pointer no-underline hover:bg-gray-50 transition-colors"
-                          href={`/sessions/${session.id}`}
-                          prefetch={false}
-                        >
+                      <Link
+                        href={`/sessions/${session.id}`}
+                        prefetch={false}
+                        className="no-underline"
+                      >
+                        <Button variant="sm" arrow>
                           {session.created_by === userId ? "Manage" : "View"}
-                        </Link>
-                      </div>
-                    </li>
+                        </Button>
+                      </Link>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </div>
             )}
-          </div>
+          </>
         )}
       </div>
     </div>
