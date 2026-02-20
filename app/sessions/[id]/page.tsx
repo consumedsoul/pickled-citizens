@@ -641,27 +641,27 @@ export default function SessionDetailPage() {
           ) : (
             <div className="mt-3 border border-app-border overflow-hidden">
               <div className="grid grid-cols-2 gap-px bg-app-border">
-                <div className="bg-team-green text-white font-mono uppercase tracking-label font-bold text-center flex flex-col items-center justify-center py-2 px-3">
-                  <span>TEAM</span>
-                  <span>GREEN</span>
+                <div className="bg-team-green text-white font-mono text-xs uppercase tracking-label font-bold text-center py-2 px-3">
+                  <span className="block">TEAM</span>
+                  <span className="block">GREEN</span>
                 </div>
-                <div className="bg-team-blue text-white font-mono uppercase tracking-label font-bold text-center flex flex-col items-center justify-center py-2 px-3">
-                  <span>TEAM</span>
-                  <span>BLUE</span>
+                <div className="bg-team-blue text-white font-mono text-xs uppercase tracking-label font-bold text-center py-2 px-3">
+                  <span className="block">TEAM</span>
+                  <span className="block">BLUE</span>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-px bg-app-border">
                 <div className="flex flex-col bg-white">
-                  <div className="py-2 px-3 text-3xl text-center text-team-green font-bold">
+                  <div className="font-display text-3xl text-center py-2 text-team-green font-bold">
                     {teamStats.team1.wins}
                   </div>
                   {teamStats.team1.roster.map((p) => (
                     <div
                       key={p.id}
-                      className="py-1 px-3 text-sm text-center text-team-green font-medium flex justify-center"
+                      className="flex justify-center"
                     >
-                      <span className="max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap inline-block">
+                      <span className="text-sm text-team-green font-medium text-center py-1 px-3 truncate max-w-[120px] inline-block">
                         {displayPlayerName(p)}
                       </span>
                     </div>
@@ -669,15 +669,15 @@ export default function SessionDetailPage() {
                 </div>
 
                 <div className="flex flex-col bg-white">
-                  <div className="py-2 px-3 text-3xl text-center text-[#1e3a8a] font-bold">
+                  <div className="font-display text-3xl text-center py-2 text-team-blue font-bold">
                     {teamStats.team2.wins}
                   </div>
                   {teamStats.team2.roster.map((p) => (
                     <div
                       key={p.id}
-                      className="py-1 px-3 text-sm text-center text-[#1e3a8a] font-medium flex justify-center"
+                      className="flex justify-center"
                     >
-                      <span className="max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap inline-block">
+                      <span className="text-sm text-team-blue font-medium text-center py-1 px-3 truncate max-w-[120px] inline-block">
                         {displayPlayerName(p)}
                       </span>
                     </div>
@@ -711,14 +711,14 @@ export default function SessionDetailPage() {
                     key={ps.player.id}
                     className="flex items-center justify-between gap-2 px-3 py-2 bg-white"
                   >
-                    <div className={`text-sm font-medium ${isTeam1 ? 'text-team-green' : 'text-[#1e3a8a]'}`}>
+                    <div className={`text-sm font-medium ${isTeam1 ? 'text-team-green' : 'text-team-blue'}`}>
                       {displayPlayerName(ps.player)}
                       {ps.player.self_reported_dupr != null &&
                         !Number.isNaN(ps.player.self_reported_dupr) && (
                           <> ({ps.player.self_reported_dupr.toFixed(2)})</>
                         )}
                     </div>
-                    <div className={`text-xs text-right ${isTeam1 ? 'text-team-green' : 'text-[#1e3a8a]'}`}>
+                    <div className={`text-xs text-right ${isTeam1 ? 'text-team-green' : 'text-team-blue'}`}>
                       {ps.wins}-{ps.losses}
                     </div>
                   </li>
@@ -749,7 +749,7 @@ export default function SessionDetailPage() {
                   key={roundIndex}
                   className={roundIndex === 0 ? '' : 'mt-2'}
                 >
-                  <div className="font-mono text-xs uppercase tracking-label text-app-muted font-medium text-center bg-app-bg-subtle py-1.5 -mx-3">
+                  <div className="font-mono text-xs uppercase tracking-label font-medium text-app-muted text-center bg-app-bg-subtle py-1.5 -mx-3 px-3">
                     ROUND {roundIndex + 1}
                   </div>
                   {roundMatches.map((match, index) => (
@@ -759,10 +759,10 @@ export default function SessionDetailPage() {
                     >
                       <button
                         type="button"
-                        className={`px-2 py-0.5 text-xs border transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                        className={`font-mono text-[0.65rem] uppercase tracking-button px-2 py-1 cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed border ${
                           match.winner === 1
                             ? 'bg-team-green border-team-green text-white'
-                            : 'bg-transparent border-app-border text-app-muted'
+                            : 'border-app-border bg-transparent text-app-muted'
                         }`}
                         onClick={
                           canEdit ? () => handleToggleWinner(match.id, 1) : undefined
@@ -782,7 +782,7 @@ export default function SessionDetailPage() {
                       <span className="text-xs text-app-muted text-center">
                         vs
                       </span>
-                      <div className="text-center flex flex-col md:flex-row md:justify-center md:gap-1 text-sm font-medium text-[#1e3a8a]">
+                      <div className="text-center flex flex-col md:flex-row md:justify-center md:gap-1 text-sm font-medium text-team-blue">
                         {match.team2.map((p, i) => (
                           <span key={p.id}>
                             {displayPlayerNameShort(p)}
@@ -792,10 +792,10 @@ export default function SessionDetailPage() {
                       </div>
                       <button
                         type="button"
-                        className={`px-2 py-0.5 text-xs border transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                        className={`font-mono text-[0.65rem] uppercase tracking-button px-2 py-1 cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed border ${
                           match.winner === 2
                             ? 'bg-team-blue border-team-blue text-white'
-                            : 'bg-transparent border-app-border text-app-muted'
+                            : 'border-app-border bg-transparent text-app-muted'
                         }`}
                         onClick={
                           canEdit ? () => handleToggleWinner(match.id, 2) : undefined
@@ -817,9 +817,9 @@ export default function SessionDetailPage() {
       {isFullscreen && matches.length > 0 && (
         <div className="fixed inset-0 bg-white z-50 overflow-auto flex flex-col">
           {/* Fullscreen header */}
-          <div className="flex items-center justify-between px-6 py-3 border-b border-app-border flex-shrink-0">
+          <div className="border-b border-app-border bg-app-bg-subtle px-6 py-3 flex items-center justify-between flex-shrink-0">
             <div>
-              <h2 className="font-display text-lg font-bold tracking-tight">
+              <h2 className="font-display text-lg font-bold">
                 Matchups
               </h2>
               <p className="text-sm text-app-muted mt-0.5">
@@ -832,48 +832,48 @@ export default function SessionDetailPage() {
           </div>
 
           {/* Fullscreen 2-column layout: Teams+Players | Matchups */}
-          <div className="flex-1 grid grid-cols-[1fr_2fr] gap-6 p-6 overflow-auto">
+          <div className="grid grid-cols-[1fr_2fr] gap-6 p-6 overflow-auto flex-1">
             {/* Left column: Teams + Players */}
             <div className="overflow-auto">
               {/* Teams section */}
               <SectionLabel>TEAMS</SectionLabel>
               <div className="mt-3 border border-app-border overflow-hidden">
                 <div className="grid grid-cols-2 gap-px bg-app-border">
-                  <div className="bg-team-green text-white font-mono uppercase tracking-label font-bold text-center flex flex-col items-center justify-center py-2 px-3">
-                    <span>TEAM</span>
-                    <span>GREEN</span>
+                  <div className="bg-team-green text-white font-mono text-xs uppercase tracking-label font-bold text-center py-2 px-3">
+                    <span className="block">TEAM</span>
+                    <span className="block">GREEN</span>
                   </div>
-                  <div className="bg-team-blue text-white font-mono uppercase tracking-label font-bold text-center flex flex-col items-center justify-center py-2 px-3">
-                    <span>TEAM</span>
-                    <span>BLUE</span>
+                  <div className="bg-team-blue text-white font-mono text-xs uppercase tracking-label font-bold text-center py-2 px-3">
+                    <span className="block">TEAM</span>
+                    <span className="block">BLUE</span>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-px bg-app-border">
                   <div className="flex flex-col bg-white">
-                    <div className="py-2 px-3 text-3xl text-center text-team-green font-bold">
+                    <div className="font-display text-3xl text-center py-2 text-team-green font-bold">
                       {teamStats.team1.wins}
                     </div>
                     {teamStats.team1.roster.map((p) => (
                       <div
                         key={p.id}
-                        className="py-1 px-3 text-sm text-center text-team-green font-medium flex justify-center"
+                        className="flex justify-center"
                       >
-                        <span className="max-w-[140px] overflow-hidden text-ellipsis whitespace-nowrap inline-block">
+                        <span className="text-sm text-team-green font-medium text-center py-1 px-3 truncate max-w-[120px] inline-block">
                           {displayPlayerName(p)}
                         </span>
                       </div>
                     ))}
                   </div>
                   <div className="flex flex-col bg-white">
-                    <div className="py-2 px-3 text-3xl text-center text-[#1e3a8a] font-bold">
+                    <div className="font-display text-3xl text-center py-2 text-team-blue font-bold">
                       {teamStats.team2.wins}
                     </div>
                     {teamStats.team2.roster.map((p) => (
                       <div
                         key={p.id}
-                        className="py-1 px-3 text-sm text-center text-[#1e3a8a] font-medium flex justify-center"
+                        className="flex justify-center"
                       >
-                        <span className="max-w-[140px] overflow-hidden text-ellipsis whitespace-nowrap inline-block">
+                        <span className="text-sm text-team-blue font-medium text-center py-1 px-3 truncate max-w-[120px] inline-block">
                           {displayPlayerName(p)}
                         </span>
                       </div>
@@ -901,14 +901,14 @@ export default function SessionDetailPage() {
                           key={ps.player.id}
                           className="flex items-center justify-between gap-2 px-3 py-2 bg-white"
                         >
-                          <div className={`text-sm font-medium ${isTeam1 ? 'text-team-green' : 'text-[#1e3a8a]'}`}>
+                          <div className={`text-sm font-medium ${isTeam1 ? 'text-team-green' : 'text-team-blue'}`}>
                             {displayPlayerName(ps.player)}
                             {ps.player.self_reported_dupr != null &&
                               !Number.isNaN(ps.player.self_reported_dupr) && (
                                 <> ({ps.player.self_reported_dupr.toFixed(2)})</>
                               )}
                           </div>
-                          <div className={`text-xs text-right ${isTeam1 ? 'text-team-green' : 'text-[#1e3a8a]'}`}>
+                          <div className={`text-xs text-right ${isTeam1 ? 'text-team-green' : 'text-team-blue'}`}>
                             {ps.wins}-{ps.losses}
                           </div>
                         </li>
@@ -938,7 +938,7 @@ export default function SessionDetailPage() {
                       >
                         <button
                           type="button"
-                          className={`px-3 py-1 text-sm border transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                          className={`font-mono text-[0.65rem] uppercase tracking-button px-2 py-1 cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed border ${
                             match.winner === 1
                               ? 'bg-team-green border-team-green text-white'
                               : 'bg-transparent border-app-border text-app-muted'
@@ -952,12 +952,12 @@ export default function SessionDetailPage() {
                           {match.team1.map(displayPlayerNameShort).join(' + ')}
                         </div>
                         <span className="text-sm text-app-muted">vs</span>
-                        <div className="text-[#1e3a8a] text-base font-medium text-center">
+                        <div className="text-team-blue text-base font-medium text-center">
                           {match.team2.map(displayPlayerNameShort).join(' + ')}
                         </div>
                         <button
                           type="button"
-                          className={`px-3 py-1 text-sm border transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                          className={`font-mono text-[0.65rem] uppercase tracking-button px-2 py-1 cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed border ${
                             match.winner === 2
                               ? 'bg-team-blue border-team-blue text-white'
                               : 'bg-transparent border-app-border text-app-muted'
