@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/Button";
+import { Input, Select } from "@/components/ui/Input";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 
 type League = {
@@ -934,59 +935,42 @@ export default function SessionsPage() {
             className="grid gap-4"
           >
             <div className="grid gap-4 grid-cols-2">
-              <div>
-                <label className="form-label">
-                  League
-                </label>
-                <select
-                  value={selectedLeagueId}
-                  onChange={(e) => handleLeagueChange(e.target.value)}
-                  className="w-full px-3 py-2.5 border border-app-border bg-transparent text-app-text text-sm placeholder:text-app-light-gray focus:outline-none focus:border-app-text transition-colors"
-                >
-                  <option value="">Select League</option>
-                  {sortedLeaguesForSelect.map((league) => (
-                    <option key={league.id} value={league.id}>
-                      {league.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <Select
+                label="League"
+                value={selectedLeagueId}
+                onChange={(e) => handleLeagueChange(e.target.value)}
+              >
+                <option value="">Select League</option>
+                {sortedLeaguesForSelect.map((league) => (
+                  <option key={league.id} value={league.id}>
+                    {league.name}
+                  </option>
+                ))}
+              </Select>
 
-              <div>
-                <label className="form-label">
-                  Date and time (Required)
-                </label>
-                <input
-                  type="datetime-local"
-                  value={scheduledFor}
-                  onChange={(e) => handleScheduledForChange(e.target.value)}
-                  className="w-full px-3 py-2.5 border border-app-border bg-transparent text-app-text text-sm placeholder:text-app-light-gray focus:outline-none focus:border-app-text transition-colors"
-                />
-              </div>
+              <Input
+                label="Date and time (Required)"
+                type="datetime-local"
+                value={scheduledFor}
+                onChange={(e) => handleScheduledForChange(e.target.value)}
+              />
             </div>
 
             <div className="grid gap-4 grid-cols-[1fr_2fr] items-start">
-              <div>
-                <label className="form-label">
-                  Player count
-                </label>
-                <select
-                  value={playerCount}
-                  onChange={(e) => handlePlayerCountChange(e.target.value)}
-                  className="w-full px-3 py-2.5 border border-app-border bg-transparent text-app-text text-sm placeholder:text-app-light-gray focus:outline-none focus:border-app-text transition-colors"
-                >
-                  {PLAYER_COUNTS.map((n) => (
-                    <option key={n} value={n}>
-                      {n} players
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <Select
+                label="Player count"
+                value={playerCount}
+                onChange={(e) => handlePlayerCountChange(e.target.value)}
+              >
+                {PLAYER_COUNTS.map((n) => (
+                  <option key={n} value={n}>
+                    {n} players
+                  </option>
+                ))}
+              </Select>
 
               <div>
-                <label className="form-label">
-                  Select players
-                </label>
+                <span className="form-label">Select players</span>
                 {membersLoading && (
                   <p className="text-app-muted text-sm">
                     Loading league members...
@@ -1000,11 +984,10 @@ export default function SessionsPage() {
                 {!membersLoading && members.length > 0 && (
                   <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-2">
                     {Array.from({ length: playerCount }).map((_, i) => (
-                      <select
+                      <Select
                         key={i}
                         value={selectedPlayerIds[i] ?? ""}
                         onChange={(e) => handlePlayerSelect(i, e.target.value)}
-                        className="w-full px-3 py-2.5 border border-app-border bg-transparent text-app-text text-sm placeholder:text-app-light-gray focus:outline-none focus:border-app-text transition-colors"
                       >
                         <option value="">Select Player {i + 1}</option>
                         {getAvailablePlayersForSlot(i).map((member) => (
@@ -1012,7 +995,7 @@ export default function SessionsPage() {
                             {displayPlayerForDropdown(member)}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                     ))}
                   </div>
                 )}
@@ -1026,7 +1009,7 @@ export default function SessionsPage() {
             </div>
           </form>
 
-          <div className="mt-10">
+          <div className="mt-10 border-t border-app-border pt-8">
             <SectionLabel>PLAYERS (SNAKING ORDER)</SectionLabel>
             {!orderedPlayers.length ? (
               <p className="text-app-muted text-sm mt-3">
@@ -1047,19 +1030,19 @@ export default function SessionsPage() {
                     <div className="flex gap-1">
                       <Button
                         type="button"
-                        variant="sm"
+                        variant="ghost"
                         onClick={() => movePlayer(index, index - 1)}
                         disabled={index === 0}
                       >
-                        ↑
+                        Up
                       </Button>
                       <Button
                         type="button"
-                        variant="sm"
+                        variant="ghost"
                         onClick={() => movePlayer(index, index + 1)}
                         disabled={index === orderedPlayers.length - 1}
                       >
-                        ↓
+                        Down
                       </Button>
                     </div>
                   </div>
@@ -1070,7 +1053,7 @@ export default function SessionsPage() {
         </>
       )}
 
-      <div className="mt-10">
+      <div className="mt-10 border-t border-app-border pt-8">
         {sessionsLoading ? (
           <p className="text-app-muted text-sm">
             Loading sessions...
@@ -1097,7 +1080,7 @@ export default function SessionsPage() {
                           {session.league_name || "Unknown league"} &mdash;{" "}
                           {session.player_count} players
                         </div>
-                        <div className="text-app-light-gray text-sm mt-0.5">
+                        <div className="text-app-muted text-sm mt-0.5">
                           {formatDateTime(
                             session.scheduled_for ?? session.created_at
                           )}
@@ -1131,7 +1114,7 @@ export default function SessionsPage() {
                           {session.league_name || "Unknown league"} &mdash;{" "}
                           {session.player_count} players
                         </div>
-                        <div className="text-app-light-gray text-sm mt-0.5">
+                        <div className="text-app-muted text-sm mt-0.5">
                           {formatDateTime(
                             session.scheduled_for ?? session.created_at
                           )}
