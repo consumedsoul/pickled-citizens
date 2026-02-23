@@ -41,6 +41,7 @@ Environment variables are set in `wrangler.toml` `[vars]` for public keys. The `
 ```
 app/                    # Next.js App Router pages & API routes
   api/                  # API route handlers
+    admin/users/        # PATCH/DELETE — admin user management (service role)
     dupr-score/         # DUPR score stub
     leagues/leave/      # POST — leave a league
     og/                 # Open Graph image generation
@@ -49,11 +50,14 @@ app/                    # Next.js App Router pages & API routes
   auth/                 # Auth flow pages (signup, signin, complete, reset)
   leagues/[id]/         # League detail page
   sessions/[id]/        # Session detail page
-  history/              # Full session history
   profile/              # User profile management
 
 src/
-  components/           # Shared components (AuthStatus, Navigation, AdminFooterLinks)
+  components/
+    ui/                 # Reusable UI components (Button, Input, Select, SectionLabel, Modal)
+    AuthStatus.tsx      # Header auth indicator
+    Navigation.tsx      # Main nav with active highlighting
+    AdminFooterLinks.tsx # Conditional admin nav links
   lib/
     supabaseClient.ts   # Exports `supabase` (anon) and `supabaseServiceRole` (bypasses RLS)
     constants.ts        # Shared constants (ADMIN_EMAIL)
@@ -98,11 +102,13 @@ Path alias: `@/*` maps to `./src/*`.
 
 ### Super-Admin
 
-Email `hun@ghkim.com` is the super-admin. Hardcoded in 7 locations:
+Email `hun@ghkim.com` is the super-admin. Referenced in:
 - `supabase/schema.sql` — RLS policy on `admin_events` + `admin_delete_user` function
-- `app/admin/middleware.ts` — server-side route protection
+- `src/lib/constants.ts` — `ADMIN_EMAIL` constant (imported by all admin pages)
 - `src/components/AdminFooterLinks.tsx` — conditional admin nav links
 - `app/admin/events/AdminEventsClient.tsx`, `app/admin/leagues/page.tsx`, `app/admin/users/page.tsx`, `app/leagues/[id]/page.tsx`
+- `app/admin/middleware.ts` — intended server-side route protection (**non-functional**, see Known Gotchas)
+- `app/api/admin/users/route.ts` — admin user management API
 
 ## Authentication
 
@@ -113,21 +119,35 @@ Email `hun@ghkim.com` is the super-admin. Hardcoded in 7 locations:
   - `supabase` — anon key, for client-side and server components
   - `supabaseServiceRole` — service role, for API routes only
 
-## API Routes
+## Design System & Tailwind Theme
 
-| Method | Path | Notes |
-|---|---|---|
-| GET | `/api/dupr-score` | Stub — returns `{ score: null }`. Awaits mydupr.com integration |
-| POST | `/api/leagues/leave` | Bearer token auth. Body: `{ leagueId }` |
-| GET | `/api/session/[id]/metadata` | Uses service role. Returns session info for OG tags |
-| GET | `/api/og` | Generates Open Graph images |
+Editorial-inspired B&W design: sharp edges (no border-radius), monospace uppercase labels, generous whitespace.
 
-## Tailwind Theme
+**Fonts** (loaded via `next/font/google` in `app/layout.tsx`):
+- `font-sans` — Inter (body text)
+- `font-display` — Space Grotesk (headings, large numbers)
+- `font-mono` — IBM Plex Mono (labels, buttons, code)
 
-Custom colors defined in `tailwind.config.js`:
-- `app-bg`, `app-bg-alt`, `app-border`, `app-text`, `app-muted`
-- `app-accent` (#14532d), `app-dark`, `app-light-gray`, `app-link` (#263FA9)
+**Color palette** (defined in `tailwind.config.js`):
+- `app-bg` (#fff), `app-bg-subtle` (#fafafa), `app-border` (rgba(26,26,26,0.12))
+- `app-text` (#1a1a1a), `app-muted` (rgba(26,26,26,0.52)), `app-accent` (#1a1a1a)
+- `app-danger` (#dc2626), `app-success` (#16a34a)
+- `team-green` (#14532d), `team-blue` (#1e40af) — preserved for match/session views
 - Max-width utility: `max-w-app` (960px)
+
+**Letter spacing**: `tracking-label` (0.15em), `tracking-button` (0.08em)
+
+**UI Components** (`src/components/ui/`):
+- `Button` — variants: primary, secondary, danger, sm, ghost. All monospace uppercase.
+- `Input` + `Select` — sharp borders, transparent bg, monospace labels.
+- `SectionLabel` — monospace uppercase `text-xs` labels.
+- `Modal` — overlay dialog with backdrop.
+
+**Design patterns**:
+- Section separators: `border-t border-app-border pt-8 mt-8`
+- List items: `divide-y divide-app-border`
+- Page headings: `font-display text-2xl font-bold tracking-tight`
+- No emojis — use text badges or monospace labels instead
 
 ## Key Business Logic
 
@@ -137,10 +157,20 @@ Custom colors defined in `tailwind.config.js`:
 - **Session history** sorts upcoming sessions first (by scheduled time), then past sessions most-recent-first.
 - **Sole-admin protection**: a league's last admin cannot leave or delete the league.
 
+## API Routes
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/dupr-score` | Stub — returns `{ score: null }`. Awaits mydupr.com integration |
+| POST | `/api/leagues/leave` | Bearer token auth. Body: `{ leagueId }` |
+| GET | `/api/session/[id]/metadata` | Uses service role. Returns session info for OG tags |
+| GET | `/api/og` | Generates Open Graph images |
+| PATCH | `/api/admin/users` | Admin-only. Bearer token + email check. Updates user profiles via service role |
+| DELETE | `/api/admin/users` | Admin-only. Bearer token + email check. Deletes user and cascading data |
+
 ## Known Gotchas
 
 - **No test suite**: Zero test files exist. Critical paths (team generation, auth flows) are untested.
-- **`history/page.tsx`**: Route exists but returns a 404/not-found page.
-- **`share-test/page.tsx`**: Test page still accessible in production at `/share-test`.
+- **Admin middleware non-functional**: `app/admin/middleware.ts` is NOT at the project root — Next.js never executes it. Admin routes rely on client-side email checks + RLS only.
 - **Admin email**: Hardcoded in `supabase/schema.sql` (RLS + functions). Client-side code imports from `src/lib/constants.ts`.
-- **Admin user edit broken**: `app/admin/users/page.tsx` uses client-side Supabase (RLS blocks editing other users' profiles).
+- **Supabase client not typed**: `createClient` in `supabaseClient.ts` does not pass the `Database` generic — queries return implicitly typed data.

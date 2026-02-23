@@ -20,7 +20,7 @@ Lightweight web app for running casual pickleball leagues: create leagues, invit
   - Minimum 1 admin required per league (enforced at database and UI level).
   - Admins cannot demote themselves if they're the sole admin.
   - Automatic admin assignment for league creators.
-  - Visual distinction between admins (👑) and regular members (👤).
+  - Visual distinction between admins and regular members via monospace text badges.
   - League owner retains ultimate control while delegating admin responsibilities.
 
 - **League Management**
@@ -52,7 +52,7 @@ Lightweight web app for running casual pickleball leagues: create leagues, invit
     - **Current / upcoming sessions** at the top (soonest first).
     - **Past sessions** below (most recent first).
   - Uses scheduled time when available, otherwise creation time.
-  - History page (`/history`) — placeholder (not yet implemented).
+  - Session history accessible from home page and sessions list.
   - Lifetime statistics tracking:
     - Individual wins/losses (personal match record).
     - Team wins/losses/ties (Team A vs Team B record).
@@ -74,15 +74,17 @@ Lightweight web app for running casual pickleball leagues: create leagues, invit
   - Footer shows `Logs`, `Users`, and `Leagues` links only for the super-admin.
   - Admin function for deleting users from auth system.
 
-- **Branding & UX**
+- **Design System & UX**
+  - Editorial-inspired minimal design: sharp edges (no border-radius), B&W palette, monospace uppercase labels.
+  - Custom typography: Inter (body), Space Grotesk (headings), IBM Plex Mono (labels/buttons) via `next/font`.
+  - Reusable UI component library: Button, Input, Select, SectionLabel, Modal.
+  - Custom Tailwind design tokens for colors, spacing, and typography.
   - Custom logo in the header using `next/image` for crisp rendering.
-  - Clean, modern design with custom color palette (Tailwind CSS).
   - Favicon and social media preview images.
   - Landing page with clear CTA for sign up / sign in.
   - Contextual error messages displayed at relevant action points.
-  - Visual indicators for user roles and permissions.
   - Responsive design for mobile and desktop.
-  - Active navigation highlighting.
+  - Active navigation highlighting with underline offset.
 
 ---
 
@@ -90,7 +92,7 @@ Lightweight web app for running casual pickleball leagues: create leagues, invit
 
 - **Framework**: [Next.js 14](https://nextjs.org/) (App Router, React Server Components)
 - **Language**: TypeScript 5.6, React 18
-- **Styling**: [Tailwind CSS 3.4](https://tailwindcss.com/) with custom design tokens
+- **Styling**: [Tailwind CSS 3.4](https://tailwindcss.com/) with custom B&W design tokens, editorial typography
 - **Backend / DB**: [Supabase](https://supabase.com/) (PostgreSQL, Auth, Row Level Security)
 - **Client DB Access**: `@supabase/supabase-js` v2.48
 - **Hosting**: [Cloudflare Workers](https://workers.cloudflare.com/) (SSR) via [OpenNext for Cloudflare](https://opennext.js.org/) v1.3
@@ -118,8 +120,8 @@ Lightweight web app for running casual pickleball leagues: create leagues, invit
 
 #### User Pages
 - `profile/page.tsx` – User profile management with deletion protection.
-- `history/page.tsx` – Session history placeholder (not yet implemented).
 - `account-deleted/page.tsx` – Confirmation page after account deletion.
+- `error.tsx` – Error boundary with retry button.
 
 #### League Management (`leagues/`)
 - `page.tsx` – List all leagues with role-based sorting.
@@ -139,19 +141,27 @@ Lightweight web app for running casual pickleball leagues: create leagues, invit
 - `leagues/page.tsx` – League oversight and management.
 
 #### API Routes (`api/`)
+- `admin/users/route.ts` – Admin user management (PATCH/DELETE, service role).
 - `dupr-score/route.ts` – DUPR score lookup/validation.
 - `leagues/leave/route.ts` – Leave league endpoint.
 - `session/[id]/metadata/route.ts` – Session metadata for social sharing.
 - `og/route.tsx` – Open Graph image generation.
 
 ### Components (`src/components/`)
+
+#### UI Library (`ui/`)
+- `Button.tsx` – Reusable button with variants: primary, secondary, danger, sm, ghost. Monospace uppercase.
+- `Input.tsx` – Input and Select components with sharp borders, monospace labels.
+- `SectionLabel.tsx` – Monospace uppercase section label.
+- `Modal.tsx` – Overlay dialog with backdrop.
+
+#### Shared
 - `AuthStatus.tsx` – Header auth indicator with sign in/out button.
 - `Navigation.tsx` – Main navigation with active route highlighting.
 - `AdminFooterLinks.tsx` – Conditional footer links for super-admin.
 
 ### Types (`src/types/`)
 - `database.ts` – TypeScript type definitions for all Supabase tables (Row, Insert, Update).
-- `supabase.ts` – Generated Supabase types (needs regeneration).
 
 ### Library (`src/lib/`)
 - `supabaseClient.ts` – Supabase client initialization (browser and service role).
@@ -325,8 +335,8 @@ To configure a different super-admin user:
 ### League Display & Sorting
 
 1. **Home page** (`/`) and **leagues page** (`/leagues`) display:
-   - **Managed leagues first** (where user is admin), sorted A-Z with 👑 icon.
-   - **Member leagues below** (where user is regular member), sorted A-Z with 👤 icon.
+   - **Managed leagues first** (where user is admin), sorted A-Z.
+   - **Member leagues below** (where user is regular member), sorted A-Z.
 2. Each league shows member count and creation year.
 3. Role-based access controls throughout the application.
 
@@ -376,6 +386,16 @@ To configure a different super-admin user:
 ---
 
 ## Recent Updates
+
+### Complete UI Redesign (Feb 2026)
+- **Design system**: Migrated to editorial-inspired B&W design with sharp edges and monospace typography.
+- **Component library**: New reusable UI components (Button, Input, Select, SectionLabel, Modal).
+- **Typography**: Inter (body), Space Grotesk (headings), IBM Plex Mono (labels/buttons) via `next/font`.
+- **Type safety**: Eliminated all 32 `any` type usages across the codebase.
+- **Inline styles**: Converted 80+ inline styles to Tailwind utility classes.
+- **Error handling**: Added `app/error.tsx` error boundary with retry button.
+- **Admin API**: Created `app/api/admin/users/route.ts` for admin user management.
+- **Cleanup**: Removed unused routes (`/share-test`, `/history`), debug console.log statements.
 
 ### Multi-Admin System
 - **Database**: Added `role` column to `league_members` table with 'player'/'admin' constraints.
@@ -483,10 +503,14 @@ npm run deploy
 4. Document migrations in schema file comments
 
 ### Styling Guidelines
-- Use Tailwind utility classes
-- Follow custom color palette defined in `tailwind.config.js`
+- Use Tailwind utility classes with custom design tokens
+- Follow the editorial design system: sharp edges (no border-radius), monospace uppercase labels
+- Use reusable UI components from `src/components/ui/` (Button, Input, Select, SectionLabel, Modal)
+- Use `font-display` for headings, `font-mono` for labels/buttons, `font-sans` for body text
+- Section separators: `border-t border-app-border pt-8 mt-8`
+- List patterns: `divide-y divide-app-border`
+- No emojis in UI — use text badges or monospace labels
 - Maintain responsive design (mobile-first approach)
-- Keep consistent spacing and typography
 
 ### Testing Deployment
 ```bash
