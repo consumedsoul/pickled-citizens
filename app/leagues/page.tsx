@@ -9,7 +9,6 @@ import { SectionLabel } from '@/components/ui/SectionLabel';
 type League = {
   id: string;
   name: string;
-  created_at: string;
   memberCount?: number;
   owner_id?: string;
 };
@@ -46,9 +45,10 @@ export default function LeaguesPage() {
       const user = userData.user;
       setUserId(user.id);
 
+      // Single joined query: get user's memberships with league details and member counts
       const { data: membershipData, error: membershipError } = await supabase
         .from('league_members')
-        .select('league_id, role')
+        .select('league_id, role, leagues(id, name, owner_id, league_members(count))')
         .eq('user_id', user.id);
 
       if (!active) return;
@@ -56,52 +56,27 @@ export default function LeaguesPage() {
       if (membershipError) {
         setError(membershipError.message);
       } else {
-        const memberships = (membershipData as { league_id: string; role: string }[]) || [];
-        const leagueIds = memberships.map(m => m.league_id);
+        type MembershipRow = {
+          league_id: string;
+          role: 'player' | 'admin';
+          leagues: {
+            id: string;
+            name: string;
+            owner_id: string;
+            league_members: { count: number }[];
+          };
+        };
+        const memberships = (membershipData as unknown as MembershipRow[]) || [];
 
-        const { data: leaguesData, error: leaguesError } = await supabase
-          .from('leagues')
-          .select('id, name, owner_id')
-          .in('id', leagueIds);
-
-        if (!active) return;
-
-        if (leaguesError) {
-          setError(leaguesError.message);
-          return;
-        }
-
-        const { data: memberCountsData, error: countsError } = await supabase
-          .from('league_members')
-          .select('league_id')
-          .in('league_id', leagueIds);
-
-        if (!active) return;
-
-        const memberCounts = new Map<string, number>();
-        if (!countsError && memberCountsData) {
-          (memberCountsData as { league_id: string }[]).forEach((row) => {
-            const leagueId = row.league_id;
-            memberCounts.set(leagueId, (memberCounts.get(leagueId) ?? 0) + 1);
-          });
-        }
-
-        type LeagueQueryRow = { id: string; name: string; owner_id: string };
-        const leaguesList = (leaguesData as LeagueQueryRow[]) || [];
-        const allLeagues: League[] = leaguesList.map((league) => ({
-          id: league.id,
-          name: league.name,
-          created_at: '',
-          owner_id: league.owner_id,
-          memberCount: memberCounts.get(league.id) ?? 0,
+        const allLeagues: League[] = memberships.map((m) => ({
+          id: m.leagues.id,
+          name: m.leagues.name,
+          owner_id: m.leagues.owner_id,
+          memberCount: m.leagues.league_members[0]?.count ?? 0,
         }));
 
-        const adminLeagues = allLeagues.filter(league =>
-          memberships.some(m => m.league_id === league.id && m.role === 'admin')
-        );
-        const memberLeaguesList = allLeagues.filter(league =>
-          memberships.some(m => m.league_id === league.id && m.role === 'player')
-        );
+        const adminLeagues = allLeagues.filter((_, i) => memberships[i].role === 'admin');
+        const memberLeaguesList = allLeagues.filter((_, i) => memberships[i].role === 'player');
 
         adminLeagues.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
         memberLeaguesList.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
@@ -147,6 +122,7 @@ export default function LeaguesPage() {
 
       if (existingError) {
         setError(existingError.message);
+        setCreating(false);
         return;
       }
 
@@ -157,13 +133,14 @@ export default function LeaguesPage() {
 
       if (duplicate) {
         setError('A league with that name already exists.');
+        setCreating(false);
         return;
       }
 
       const { data, error } = await supabase
         .from('leagues')
         .insert({ name: trimmedName, owner_id: userId })
-        .select('id, name, created_at')
+        .select('id, name, owner_id')
         .single();
 
       if (error || !data) {
