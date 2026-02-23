@@ -11,3 +11,4 @@ tsconfig.tsbuildinfo
 cloudflare-env.d.ts
 
 .wrangler
+*.bak

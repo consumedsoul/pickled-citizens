@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseServiceRole } from '@/lib/supabaseClient';
 import { ADMIN_EMAIL } from '@/lib/constants';
+import type { Database } from '@/types/database';
+
+type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
 
 /**
  * PATCH /api/admin/users — Update a user's profile (admin only).
@@ -50,7 +53,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Missing userId.' }, { status: 400 });
     }
 
-    const updatePayload: Record<string, unknown> = {
+    const updatePayload: ProfileUpdate = {
       updated_at: new Date().toISOString(),
     };
 

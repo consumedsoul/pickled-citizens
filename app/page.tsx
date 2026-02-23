@@ -321,17 +321,15 @@ export default function HomePage() {
     type MatchPlayerWithMatch = {
       match_id: string;
       team: 1 | 2;
-      matches: { session_id: string }[];
+      matches: { session_id: string };
     };
+    const typedRows = mpRows as unknown as MatchPlayerWithMatch[];
     const matchIds = Array.from(
-      new Set((mpRows as MatchPlayerWithMatch[]).map((row) => row.match_id))
+      new Set(typedRows.map((row) => row.match_id))
     );
 
     const sessionIds = Array.from(
-      new Set((mpRows as MatchPlayerWithMatch[]).map((row) => {
-        const m = row.matches;
-        return Array.isArray(m) ? m[0]?.session_id : (m as { session_id: string })?.session_id;
-      }).filter(Boolean) as string[])
+      new Set(typedRows.map((row) => row.matches?.session_id).filter(Boolean) as string[])
     );
 
     const { data: allMatchRows, error: allMatchError } = await supabase
@@ -347,14 +345,13 @@ export default function HomePage() {
     if (matchError || !matchRows || allMatchError || !allMatchRows) return;
 
     const userTeamMap = new Map<string, number>();
-    (mpRows as MatchPlayerWithMatch[]).forEach((row) => {
+    typedRows.forEach((row) => {
       userTeamMap.set(row.match_id, row.team);
     });
 
     const sessionTeamMap = new Map<string, number>();
-    (mpRows as MatchPlayerWithMatch[]).forEach((row) => {
-      const m = row.matches;
-      const sessionId = Array.isArray(m) ? m[0]?.session_id : (m as { session_id: string })?.session_id;
+    typedRows.forEach((row) => {
+      const sessionId = row.matches?.session_id;
       if (sessionId) sessionTeamMap.set(sessionId, row.team);
     });
 

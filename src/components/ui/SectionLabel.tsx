@@ -3,11 +3,12 @@ import type { ReactNode } from "react";
 interface SectionLabelProps {
   children: ReactNode;
   className?: string;
+  id?: string;
 }
 
-export function SectionLabel({ children, className = "" }: SectionLabelProps) {
+export function SectionLabel({ children, className = "", id }: SectionLabelProps) {
   return (
-    <span className={`section-label ${className}`}>
+    <span id={id} className={`section-label ${className}`}>
       {children}
     </span>
   );

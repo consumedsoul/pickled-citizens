@@ -52,6 +52,7 @@ export interface Database {
           display_name?: string | null
           avatar_url?: string | null
         }
+        Relationships: []
       }
       leagues: {
         Row: {
@@ -72,6 +73,15 @@ export interface Database {
           name?: string
           owner_id?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: 'leagues_owner_id_fkey'
+            columns: ['owner_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          }
+        ]
       }
       league_members: {
         Row: {
@@ -95,6 +105,22 @@ export interface Database {
           email?: string | null
           created_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: 'league_members_league_id_fkey'
+            columns: ['league_id']
+            isOneToOne: false
+            referencedRelation: 'leagues'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'league_members_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          }
+        ]
       }
       league_invites: {
         Row: {
@@ -124,6 +150,22 @@ export interface Database {
           created_at?: string
           accepted_at?: string | null
         }
+        Relationships: [
+          {
+            foreignKeyName: 'league_invites_league_id_fkey'
+            columns: ['league_id']
+            isOneToOne: false
+            referencedRelation: 'leagues'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'league_invites_invited_by_fkey'
+            columns: ['invited_by']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          }
+        ]
       }
       game_sessions: {
         Row: {
@@ -153,6 +195,22 @@ export interface Database {
           location?: string | null
           player_count?: 6 | 8 | 10 | 12
         }
+        Relationships: [
+          {
+            foreignKeyName: 'game_sessions_league_id_fkey'
+            columns: ['league_id']
+            isOneToOne: false
+            referencedRelation: 'leagues'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'game_sessions_created_by_fkey'
+            columns: ['created_by']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          }
+        ]
       }
       matches: {
         Row: {
@@ -179,6 +237,15 @@ export interface Database {
           status?: 'scheduled' | 'completed' | 'canceled'
           created_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: 'matches_session_id_fkey'
+            columns: ['session_id']
+            isOneToOne: false
+            referencedRelation: 'game_sessions'
+            referencedColumns: ['id']
+          }
+        ]
       }
       match_players: {
         Row: {
@@ -199,6 +266,22 @@ export interface Database {
           team?: 1 | 2
           position?: number
         }
+        Relationships: [
+          {
+            foreignKeyName: 'match_players_match_id_fkey'
+            columns: ['match_id']
+            isOneToOne: false
+            referencedRelation: 'matches'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'match_players_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          }
+        ]
       }
       match_results: {
         Row: {
@@ -219,6 +302,15 @@ export interface Database {
           team2_score?: number | null
           completed_at?: string | null
         }
+        Relationships: [
+          {
+            foreignKeyName: 'match_results_match_id_fkey'
+            columns: ['match_id']
+            isOneToOne: true
+            referencedRelation: 'matches'
+            referencedColumns: ['id']
+          }
+        ]
       }
       admin_events: {
         Row: {
@@ -248,6 +340,7 @@ export interface Database {
           league_id?: string | null
           payload?: Json | null
         }
+        Relationships: []
       }
     }
     Views: {
@@ -268,6 +361,9 @@ export interface Database {
       }
     }
     Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
       [_ in never]: never
     }
   }

@@ -61,7 +61,7 @@ export default function SessionsPage() {
   const [members, setMembers] = useState<Member[]>([]);
 
   const [scheduledFor, setScheduledFor] = useState("");
-  const [playerCount, setPlayerCount] = useState<number>(6);
+  const [playerCount, setPlayerCount] = useState<6 | 8 | 10 | 12>(6);
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
   const [orderedPlayers, setOrderedPlayers] = useState<Member[]>([]);
 
@@ -474,7 +474,7 @@ export default function SessionsPage() {
   }
 
   function handlePlayerCountChange(value: string) {
-    const n = Number(value) || 6;
+    const n = (Number(value) || 6) as 6 | 8 | 10 | 12;
     setPlayerCount(n);
     setSelectedPlayerIds((prev) => prev.slice(0, n));
   }
@@ -757,7 +757,7 @@ export default function SessionsPage() {
       const matchInserts = gamesPlan.map((_, index) => ({
         session_id: session.id,
         scheduled_order: index + 1,
-        status: "scheduled",
+        status: "scheduled" as const,
       }));
 
       const { data: matchRows, error: matchesError } = await supabase
@@ -777,7 +777,7 @@ export default function SessionsPage() {
         (a, b) => (a.scheduled_order ?? 0) - (b.scheduled_order ?? 0)
       );
 
-      const playerInserts: { match_id: string; user_id: string; team: number; position: number }[] = [];
+      const playerInserts: { match_id: string; user_id: string; team: 1 | 2; position: number }[] = [];
 
       sortedMatches.forEach((match, index) => {
         const plan = gamesPlan[index];

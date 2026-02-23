@@ -8,7 +8,6 @@ import { supabase } from '@/lib/supabaseClient';
 interface AuthState {
   loading: boolean;
   email: string | null;
-  userId: string | null;
 }
 
 export function AuthStatus() {
@@ -16,7 +15,6 @@ export function AuthStatus() {
   const [state, setState] = useState<AuthState>({
     loading: true,
     email: null,
-    userId: null
   });
 
   useEffect(() => {
@@ -25,36 +23,14 @@ export function AuthStatus() {
     async function loadUser() {
       const { data } = await supabase.auth.getUser();
       if (!isMounted) return;
-
-      const user = data.user;
-      if (!user) {
-        setState({ loading: false, email: null, userId: null });
-        return;
-      }
-
-      setState({
-        loading: false,
-        email: user.email ?? null,
-        userId: user.id
-      });
+      setState({ loading: false, email: data.user?.email ?? null });
     }
 
     loadUser();
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!isMounted) return;
-
-      const user = session?.user;
-      if (!user) {
-        setState({ loading: false, email: null, userId: null });
-        return;
-      }
-
-      setState({
-        loading: false,
-        email: user.email ?? null,
-        userId: user.id
-      });
+      setState({ loading: false, email: session?.user?.email ?? null });
     });
 
     return () => {
@@ -65,7 +41,7 @@ export function AuthStatus() {
 
   async function handleSignOut() {
     await supabase.auth.signOut();
-    setState({ loading: false, email: null, userId: null });
+    setState({ loading: false, email: null });
     router.push('/');
   }
 

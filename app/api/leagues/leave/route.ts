@@ -37,12 +37,19 @@ export async function POST(request: NextRequest) {
     const userId = userData.user.id;
 
     // Check if user is an admin of this league
-    const { data: membership } = await supabaseServiceRole
+    const { data: membership, error: membershipError } = await supabaseServiceRole
       .from('league_members')
       .select('role')
       .eq('league_id', leagueId)
       .eq('user_id', userId)
       .single();
+
+    if (membershipError) {
+      return NextResponse.json(
+        { error: 'Could not verify league membership.' },
+        { status: 400 }
+      );
+    }
 
     if (membership?.role === 'admin') {
       // Count other admins in the league

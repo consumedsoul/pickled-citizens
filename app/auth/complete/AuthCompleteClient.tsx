@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import type { Database } from '@/types/database';
 
+type ProfileInsert = Database['public']['Tables']['profiles']['Insert'];
 type Status = 'loading' | 'success' | 'error';
 
 export default function AuthCompleteClient() {
@@ -43,14 +45,14 @@ export default function AuthCompleteClient() {
       const gender = searchParams.get('gender') ?? '';
       const selfDuprParam = searchParams.get('selfDupr') ?? '';
 
-      const payload: Record<string, unknown> = {
+      const payload: ProfileInsert = {
         id: user.id,
-        email: user.email,
+        email: user.email ?? null,
         updated_at: new Date().toISOString(),
+        ...(firstName ? { first_name: firstName } : {}),
+        ...(lastName ? { last_name: lastName } : {}),
+        ...(gender ? { gender } : {}),
       };
-      if (firstName) payload.first_name = firstName;
-      if (lastName) payload.last_name = lastName;
-      if (gender) payload.gender = gender;
       if (selfDuprParam) {
         const n = Number(selfDuprParam);
         if (!Number.isNaN(n)) {

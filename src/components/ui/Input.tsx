@@ -1,6 +1,6 @@
 "use client";
 
-import type { InputHTMLAttributes, SelectHTMLAttributes } from "react";
+import { useId, type InputHTMLAttributes, type SelectHTMLAttributes, type ReactNode } from "react";
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -8,14 +8,15 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 
 interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 const inputClasses =
   "w-full px-3 py-2.5 border border-app-border bg-transparent text-app-text text-sm font-sans placeholder:text-app-light-gray focus:outline-none focus:border-app-text transition-colors";
 
 export function Input({ label, className = "", id, ...props }: InputProps) {
-  const inputId = id || label?.toLowerCase().replace(/\s+/g, "-");
+  const generatedId = useId();
+  const inputId = id || generatedId;
   return (
     <div>
       {label && (
@@ -29,7 +30,8 @@ export function Input({ label, className = "", id, ...props }: InputProps) {
 }
 
 export function Select({ label, className = "", id, children, ...props }: SelectProps) {
-  const selectId = id || label?.toLowerCase().replace(/\s+/g, "-");
+  const generatedId = useId();
+  const selectId = id || generatedId;
   return (
     <div>
       {label && (
