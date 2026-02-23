@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Modal } from '@/components/ui/Modal';
+import { formatLeagueName } from '@/lib/formatters';
 
 type Profile = {
   first_name: string | null;
@@ -21,11 +22,6 @@ type League = {
   owner_id: string;
   created_at: string;
 };
-
-function formatLeagueName(name: string, createdAt: string) {
-  const year = new Date(createdAt).getFullYear();
-  return `${name} (est. ${year})`;
-}
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -107,13 +103,10 @@ export default function ProfilePage() {
 
       if (!leaguesError && memberRows) {
         type LeagueJoinRow = {
-          league: League[] | League | null;
+          league: League | null;
         };
         const mapped: League[] = (memberRows as unknown as LeagueJoinRow[])
-          .map((row) => {
-            const rel = row.league;
-            return Array.isArray(rel) ? rel[0] ?? null : rel;
-          })
+          .map((row) => row.league)
           .filter((l): l is League => l !== null);
         setLeagues(mapped);
       }
@@ -280,17 +273,33 @@ export default function ProfilePage() {
     const leaguesToCheck = memberships.map(m => m.league.id);
     const soleAdminLeagues: { id: string; name: string }[] = [];
 
-    for (const leagueId of leaguesToCheck) {
-      const { data: adminCount, error: countError } = await supabase
+    if (leaguesToCheck.length > 0) {
+      // Single query to get all admins for all leagues the user administers
+      const { data: allAdmins, error: adminsError } = await supabase
         .from('league_members')
-        .select('user_id')
-        .eq('league_id', leagueId)
+        .select('league_id, user_id')
+        .in('league_id', leaguesToCheck)
         .eq('role', 'admin');
 
-      if (!countError && adminCount && adminCount.length === 1) {
-        const league = memberships.find(m => m.league.id === leagueId)?.league;
-        if (league) {
-          soleAdminLeagues.push(league);
+      if (adminsError) {
+        setDeleteError('Failed to check league admin status. Please try again.');
+        return;
+      }
+
+      // Count admins per league
+      const adminCountByLeague = new Map<string, number>();
+      const adminRows = (allAdmins ?? []) as unknown as { league_id: string; user_id: string }[];
+      for (const row of adminRows) {
+        adminCountByLeague.set(row.league_id, (adminCountByLeague.get(row.league_id) ?? 0) + 1);
+      }
+
+      // Find leagues where this user is the sole admin
+      for (const leagueId of leaguesToCheck) {
+        if ((adminCountByLeague.get(leagueId) ?? 0) === 1) {
+          const league = memberships.find(m => m.league.id === leagueId)?.league;
+          if (league) {
+            soleAdminLeagues.push(league);
+          }
         }
       }
     }

@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Modal } from '@/components/ui/Modal';
+import { formatDateTime, displayPlayerName, displayPlayerNameShort } from '@/lib/formatters';
 
 type SessionPlayer = {
   id: string;
@@ -54,52 +55,6 @@ type PlayerStats = {
   losses: number;
   games: number;
 };
-
-function formatDateTime(value: string | null) {
-  if (!value) return 'Not scheduled';
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return 'Not scheduled';
-  return d.toLocaleString(undefined, {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
-
-function formatDateTimeForMeta(value: string | null) {
-  if (!value) return 'Not scheduled';
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return 'Not scheduled';
-  return d.toLocaleString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    timeZoneName: 'short',
-  });
-}
-
-function displayPlayerName(player: SessionPlayer) {
-  const full = `${player.first_name ?? ''} ${player.last_name ?? ''}`.trim();
-  if (full) return full;
-  return 'Deleted player';
-}
-
-function displayPlayerNameShort(player: SessionPlayer) {
-  const firstName = player.first_name?.trim() || '';
-  const lastName = player.last_name?.trim() || '';
-  if (firstName && lastName) {
-    return `${firstName} ${lastName.charAt(0)}`;
-  }
-  if (firstName) return firstName;
-  if (lastName) return lastName;
-  return 'Deleted player';
-}
 
 export default function SessionDetailPage() {
   const params = useParams();

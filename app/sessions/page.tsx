@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/Button";
 import { Input, Select } from "@/components/ui/Input";
 import { SectionLabel } from "@/components/ui/SectionLabel";
+import { formatDateTime, displayPlayerName } from "@/lib/formatters";
 
 type League = {
   id: string;
@@ -527,11 +528,10 @@ export default function SessionsPage() {
     });
   }
 
-  function displayPlayer(member: Member) {
-    const fullName = [member.first_name, member.last_name]
-      .filter(Boolean)
-      .join(" ");
-    const base = fullName || member.user_id;
+  function displayPlayerWithDupr(member: Member) {
+    const base = displayPlayerName(member) === "Deleted player"
+      ? member.user_id
+      : displayPlayerName(member);
 
     if (member.self_reported_dupr != null) {
       const dupr = Number(member.self_reported_dupr);
@@ -541,29 +541,6 @@ export default function SessionsPage() {
     }
 
     return base;
-  }
-
-  function displayPlayerForDropdown(member: Member) {
-    const fullName = [member.first_name, member.last_name]
-      .filter(Boolean)
-      .join(" ");
-    const base = fullName || member.user_id;
-
-    if (member.self_reported_dupr != null) {
-      const dupr = Number(member.self_reported_dupr);
-      if (!Number.isNaN(dupr)) {
-        return `${base} (${dupr.toFixed(2)})`;
-      }
-    }
-
-    return base;
-  }
-
-  function displayShortName(member: Member) {
-    const fullName = [member.first_name, member.last_name]
-      .filter(Boolean)
-      .join(" ");
-    return fullName || member.user_id;
   }
 
   function buildTeams(players: Member[]): { teamA: Member[]; teamB: Member[] } {
@@ -595,20 +572,6 @@ export default function SessionsPage() {
     }
     return pairs;
   }
-  function formatDateTime(value: string | null) {
-    if (!value) return "Not scheduled";
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return "Not scheduled";
-    return d.toLocaleString(undefined, {
-      weekday: "long",
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  }
-
   async function handleGenerate(event: FormEvent) {
     event.preventDefault();
     setError(null);
@@ -992,7 +955,7 @@ export default function SessionsPage() {
                         <option value="">Select Player {i + 1}</option>
                         {getAvailablePlayersForSlot(i).map((member) => (
                           <option key={member.user_id} value={member.user_id}>
-                            {displayPlayerForDropdown(member)}
+                            {displayPlayerWithDupr(member)}
                           </option>
                         ))}
                       </Select>
@@ -1025,7 +988,7 @@ export default function SessionsPage() {
                     className="flex items-center justify-between gap-2 py-2.5"
                   >
                     <span className="text-sm text-app-text">
-                      {index + 1}. {displayPlayer(member)}
+                      {index + 1}. {displayPlayerWithDupr(member)}
                     </span>
                     <div className="flex gap-1">
                       <Button

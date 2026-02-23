@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/Button";
 import { SectionLabel } from "@/components/ui/SectionLabel";
+import { formatDateTime, formatLeagueName } from "@/lib/formatters";
 import type { Database } from "@/types/database";
 
 interface HomeAuthState {
@@ -52,11 +53,6 @@ type SessionWithLeague = {
   league: { name: string }[] | { name: string } | null;
 };
 
-function formatLeagueName(name: string, createdAt: string) {
-  const year = new Date(createdAt).getFullYear();
-  return `${name} (est. ${year})`;
-}
-
 export default function HomePage() {
   const router = useRouter();
   const loadedUserIdRef = useRef<string | null>(null);
@@ -97,21 +93,15 @@ export default function HomePage() {
       if (!isMounted) return;
       const user = session?.user;
       const newUserId = user?.id ?? null;
+      const previousUserId = loadedUserIdRef.current;
 
       setAuth({ loading: false, email: user?.email ?? null, userId: newUserId });
 
-      if (auth.userId !== newUserId && !(auth.userId === null && newUserId !== null && loadedUserIdRef.current === newUserId)) {
-        if (user) {
-          loadUserLeagues(user.id);
-          loadUserSessions(user.id);
-          loadLifetimeStats(user.id);
-        } else {
-          setLeagues([]);
-          setSessions([]);
-          setLifetimeStats({ individualWins: 0, individualLosses: 0, teamWins: 0, teamLosses: 0, teamTies: 0 });
-          loadedUserIdRef.current = null;
-        }
-      } else if (!user && auth.userId !== null) {
+      if (newUserId && newUserId !== previousUserId) {
+        loadUserLeagues(newUserId);
+        loadUserSessions(newUserId);
+        loadLifetimeStats(newUserId);
+      } else if (!newUserId && previousUserId) {
         setLeagues([]);
         setSessions([]);
         setLifetimeStats({ individualWins: 0, individualLosses: 0, teamWins: 0, teamLosses: 0, teamTies: 0 });
@@ -452,20 +442,6 @@ export default function HomePage() {
     });
 
     setLifetimeStats({ individualWins, individualLosses, teamWins, teamLosses, teamTies });
-  }
-
-  function formatDateTime(value: string | null) {
-    if (!value) return "Not scheduled";
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return "Not scheduled";
-    return d.toLocaleString(undefined, {
-      weekday: "long",
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
   }
 
   const upcomingSessions = useMemo(() => {
