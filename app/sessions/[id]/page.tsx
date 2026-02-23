@@ -56,6 +56,196 @@ type PlayerStats = {
   games: number;
 };
 
+/* ------------------------------------------------------------------ */
+/* Shared inline sub-components (used by both normal & fullscreen)     */
+/* ------------------------------------------------------------------ */
+
+function TeamsPanel({ teamStats, hasMatches }: {
+  teamStats: { team1: TeamStats; team2: TeamStats };
+  hasMatches: boolean;
+}) {
+  if (!hasMatches) {
+    return (
+      <p className="text-app-muted text-sm mt-3">
+        No matches found for this session.
+      </p>
+    );
+  }
+  return (
+    <div className="mt-3 border border-app-border overflow-hidden">
+      <div className="grid grid-cols-2 gap-px bg-app-border">
+        <div className="bg-team-green text-white font-mono text-xs uppercase tracking-label font-bold text-center py-2 px-3">
+          <span className="block">TEAM</span>
+          <span className="block">GREEN</span>
+        </div>
+        <div className="bg-team-blue text-white font-mono text-xs uppercase tracking-label font-bold text-center py-2 px-3">
+          <span className="block">TEAM</span>
+          <span className="block">BLUE</span>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-px bg-app-border">
+        <div className="flex flex-col bg-white">
+          <div className="font-display text-3xl text-center py-2 text-team-green font-bold">
+            {teamStats.team1.wins}
+          </div>
+          {teamStats.team1.roster.map((p) => (
+            <div key={p.id} className="flex justify-center">
+              <span className="text-sm text-team-green font-medium text-center py-1 px-3 truncate max-w-[120px] inline-block">
+                {displayPlayerName(p)}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-col bg-white">
+          <div className="font-display text-3xl text-center py-2 text-team-blue font-bold">
+            {teamStats.team2.wins}
+          </div>
+          {teamStats.team2.roster.map((p) => (
+            <div key={p.id} className="flex justify-center">
+              <span className="text-sm text-team-blue font-medium text-center py-1 px-3 truncate max-w-[120px] inline-block">
+                {displayPlayerName(p)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PlayersPanel({ playerStats, matches, showEmptyState }: {
+  playerStats: PlayerStats[];
+  matches: MatchWithPlayers[];
+  showEmptyState: boolean;
+}) {
+  if (playerStats.length === 0) {
+    if (!showEmptyState) return null;
+    return (
+      <p className="text-app-muted text-sm mt-3">
+        Players will appear here once matches and participants are loaded.
+      </p>
+    );
+  }
+  return (
+    <ul className="mt-3 list-none p-0 m-0 border border-app-border divide-y divide-app-border">
+      {playerStats.map((ps) => {
+        const team1Count = matches.filter((m) =>
+          m.team1.some((p) => p.id === ps.player.id)
+        ).length;
+        const team2Count = matches.filter((m) =>
+          m.team2.some((p) => p.id === ps.player.id)
+        ).length;
+        const isTeam1 = team1Count >= team2Count;
+
+        return (
+          <li
+            key={ps.player.id}
+            className="flex items-center justify-between gap-2 px-3 py-2 bg-white"
+          >
+            <div className={`text-sm font-medium ${isTeam1 ? 'text-team-green' : 'text-team-blue'}`}>
+              {displayPlayerName(ps.player)}
+              {ps.player.self_reported_dupr != null &&
+                !Number.isNaN(ps.player.self_reported_dupr) && (
+                  <> ({ps.player.self_reported_dupr.toFixed(2)})</>
+                )}
+            </div>
+            <div className={`text-xs text-right ${isTeam1 ? 'text-team-green' : 'text-team-blue'}`}>
+              {ps.wins}-{ps.losses}
+            </div>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function MatchupsPanel({ rounds, canEdit, updatingMatchId, onToggleWinner, variant }: {
+  rounds: MatchWithPlayers[][];
+  canEdit: boolean;
+  updatingMatchId: string | null;
+  onToggleWinner: (matchId: string, team: 1 | 2) => void;
+  variant: 'compact' | 'fullscreen';
+}) {
+  const isFullscreen = variant === 'fullscreen';
+
+  return (
+    <div className={isFullscreen ? 'mt-3' : 'border border-app-border bg-white px-3 py-2'}>
+      {rounds.map((roundMatches, roundIndex) => (
+        <div
+          key={roundIndex}
+          className={roundIndex === 0 ? '' : isFullscreen ? 'mt-3' : 'mt-2'}
+        >
+          <div className={`font-mono text-xs uppercase tracking-label font-medium text-app-muted text-center bg-app-bg-subtle py-1.5 ${isFullscreen ? '' : '-mx-3 px-3'}`}>
+            ROUND {roundIndex + 1}
+          </div>
+          {roundMatches.map((match, index) => (
+            <div
+              key={match.id}
+              className={`grid grid-cols-[auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto] items-center justify-items-center ${isFullscreen ? 'gap-2 py-2' : 'gap-1 py-1.5'} ${index !== 0 ? 'border-t border-app-border' : ''}`}
+            >
+              <button
+                type="button"
+                className={`font-mono text-[0.65rem] uppercase tracking-button px-2 py-1 cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed border ${
+                  match.winner === 1
+                    ? 'bg-team-green border-team-green text-white'
+                    : 'bg-transparent border-app-border text-app-muted'
+                }`}
+                onClick={canEdit ? () => onToggleWinner(match.id, 1) : undefined}
+                disabled={!canEdit || updatingMatchId === match.id}
+              >
+                Win
+              </button>
+              {isFullscreen ? (
+                <div className="text-team-green text-base font-medium text-center">
+                  {match.team1.map(displayPlayerNameShort).join(' + ')}
+                </div>
+              ) : (
+                <div className="text-center flex flex-col md:flex-row md:justify-center md:gap-1 text-sm font-medium text-team-green">
+                  {match.team1.map((p, i) => (
+                    <span key={p.id}>
+                      {displayPlayerNameShort(p)}
+                      {i < match.team1.length - 1 && <span className="hidden md:inline"> +</span>}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <span className={`text-app-muted text-center ${isFullscreen ? 'text-sm' : 'text-xs'}`}>
+                vs
+              </span>
+              {isFullscreen ? (
+                <div className="text-team-blue text-base font-medium text-center">
+                  {match.team2.map(displayPlayerNameShort).join(' + ')}
+                </div>
+              ) : (
+                <div className="text-center flex flex-col md:flex-row md:justify-center md:gap-1 text-sm font-medium text-team-blue">
+                  {match.team2.map((p, i) => (
+                    <span key={p.id}>
+                      {displayPlayerNameShort(p)}
+                      {i < match.team2.length - 1 && <span className="hidden md:inline"> +</span>}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <button
+                type="button"
+                className={`font-mono text-[0.65rem] uppercase tracking-button px-2 py-1 cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed border ${
+                  match.winner === 2
+                    ? 'bg-team-blue border-team-blue text-white'
+                    : 'bg-transparent border-app-border text-app-muted'
+                }`}
+                onClick={canEdit ? () => onToggleWinner(match.id, 2) : undefined}
+                disabled={!canEdit || updatingMatchId === match.id}
+              >
+                Win
+              </button>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function SessionDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -392,14 +582,6 @@ export default function SessionDetailPage() {
     return list;
   }, [matches]);
 
-  const playerStatsMap = useMemo(() => {
-    const m = new Map<string, PlayerStats>();
-    playerStats.forEach((ps) => {
-      m.set(ps.player.id, ps);
-    });
-    return m;
-  }, [playerStats]);
-
   const courtsPerRound = useMemo(() => {
     if (!session) return 1;
     if (session.player_count >= 12) return 3;
@@ -589,98 +771,13 @@ export default function SessionDetailPage() {
         {/* Teams section - shows first on mobile */}
         <div className="order-1 md:col-start-1 md:row-start-1">
           <SectionLabel>TEAMS</SectionLabel>
-          {matches.length === 0 ? (
-            <p className="text-app-muted text-sm mt-3">
-              No matches found for this session.
-            </p>
-          ) : (
-            <div className="mt-3 border border-app-border overflow-hidden">
-              <div className="grid grid-cols-2 gap-px bg-app-border">
-                <div className="bg-team-green text-white font-mono text-xs uppercase tracking-label font-bold text-center py-2 px-3">
-                  <span className="block">TEAM</span>
-                  <span className="block">GREEN</span>
-                </div>
-                <div className="bg-team-blue text-white font-mono text-xs uppercase tracking-label font-bold text-center py-2 px-3">
-                  <span className="block">TEAM</span>
-                  <span className="block">BLUE</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-px bg-app-border">
-                <div className="flex flex-col bg-white">
-                  <div className="font-display text-3xl text-center py-2 text-team-green font-bold">
-                    {teamStats.team1.wins}
-                  </div>
-                  {teamStats.team1.roster.map((p) => (
-                    <div
-                      key={p.id}
-                      className="flex justify-center"
-                    >
-                      <span className="text-sm text-team-green font-medium text-center py-1 px-3 truncate max-w-[120px] inline-block">
-                        {displayPlayerName(p)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex flex-col bg-white">
-                  <div className="font-display text-3xl text-center py-2 text-team-blue font-bold">
-                    {teamStats.team2.wins}
-                  </div>
-                  {teamStats.team2.roster.map((p) => (
-                    <div
-                      key={p.id}
-                      className="flex justify-center"
-                    >
-                      <span className="text-sm text-team-blue font-medium text-center py-1 px-3 truncate max-w-[120px] inline-block">
-                        {displayPlayerName(p)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+          <TeamsPanel teamStats={teamStats} hasMatches={matches.length > 0} />
         </div>
 
         {/* Players section - shows second on mobile */}
         <div className="order-3 mt-6 md:mt-0 md:col-start-1 md:row-start-2">
           <SectionLabel>PLAYERS</SectionLabel>
-          {playerStats.length === 0 ? (
-            <p className="text-app-muted text-sm mt-3">
-              Players will appear here once matches and participants are loaded.
-            </p>
-          ) : (
-            <ul className="mt-3 list-none p-0 m-0 border border-app-border divide-y divide-app-border">
-              {playerStats.map((ps) => {
-                const team1Count = matches.filter((m) =>
-                  m.team1.some((p) => p.id === ps.player.id)
-                ).length;
-                const team2Count = matches.filter((m) =>
-                  m.team2.some((p) => p.id === ps.player.id)
-                ).length;
-                const isTeam1 = team1Count >= team2Count;
-
-                return (
-                  <li
-                    key={ps.player.id}
-                    className="flex items-center justify-between gap-2 px-3 py-2 bg-white"
-                  >
-                    <div className={`text-sm font-medium ${isTeam1 ? 'text-team-green' : 'text-team-blue'}`}>
-                      {displayPlayerName(ps.player)}
-                      {ps.player.self_reported_dupr != null &&
-                        !Number.isNaN(ps.player.self_reported_dupr) && (
-                          <> ({ps.player.self_reported_dupr.toFixed(2)})</>
-                        )}
-                    </div>
-                    <div className={`text-xs text-right ${isTeam1 ? 'text-team-green' : 'text-team-blue'}`}>
-                      {ps.wins}-{ps.losses}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+          <PlayersPanel playerStats={playerStats} matches={matches} showEmptyState />
         </div>
 
         {/* Matchups section - shows third on mobile, second column on desktop */}
@@ -698,72 +795,13 @@ export default function SessionDetailPage() {
               No matchups to show yet.
             </p>
           ) : (
-            <div className="border border-app-border bg-white px-3 py-2">
-              {rounds.map((roundMatches, roundIndex) => (
-                <div
-                  key={roundIndex}
-                  className={roundIndex === 0 ? '' : 'mt-2'}
-                >
-                  <div className="font-mono text-xs uppercase tracking-label font-medium text-app-muted text-center bg-app-bg-subtle py-1.5 -mx-3 px-3">
-                    ROUND {roundIndex + 1}
-                  </div>
-                  {roundMatches.map((match, index) => (
-                    <div
-                      key={match.id}
-                      className={`grid grid-cols-[auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto] gap-1 items-center justify-items-center py-1.5 ${index !== 0 ? 'border-t border-app-border' : ''}`}
-                    >
-                      <button
-                        type="button"
-                        className={`font-mono text-[0.65rem] uppercase tracking-button px-2 py-1 cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed border ${
-                          match.winner === 1
-                            ? 'bg-team-green border-team-green text-white'
-                            : 'border-app-border bg-transparent text-app-muted'
-                        }`}
-                        onClick={
-                          canEdit ? () => handleToggleWinner(match.id, 1) : undefined
-                        }
-                        disabled={!canEdit || updatingMatchId === match.id}
-                      >
-                        Win
-                      </button>
-                      <div className="text-center flex flex-col md:flex-row md:justify-center md:gap-1 text-sm font-medium text-team-green">
-                        {match.team1.map((p, i) => (
-                          <span key={p.id}>
-                            {displayPlayerNameShort(p)}
-                            {i < match.team1.length - 1 && <span className="hidden md:inline"> +</span>}
-                          </span>
-                        ))}
-                      </div>
-                      <span className="text-xs text-app-muted text-center">
-                        vs
-                      </span>
-                      <div className="text-center flex flex-col md:flex-row md:justify-center md:gap-1 text-sm font-medium text-team-blue">
-                        {match.team2.map((p, i) => (
-                          <span key={p.id}>
-                            {displayPlayerNameShort(p)}
-                            {i < match.team2.length - 1 && <span className="hidden md:inline"> +</span>}
-                          </span>
-                        ))}
-                      </div>
-                      <button
-                        type="button"
-                        className={`font-mono text-[0.65rem] uppercase tracking-button px-2 py-1 cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed border ${
-                          match.winner === 2
-                            ? 'bg-team-blue border-team-blue text-white'
-                            : 'border-app-border bg-transparent text-app-muted'
-                        }`}
-                        onClick={
-                          canEdit ? () => handleToggleWinner(match.id, 2) : undefined
-                        }
-                        disabled={!canEdit || updatingMatchId === match.id}
-                      >
-                        Win
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
+            <MatchupsPanel
+              rounds={rounds}
+              canEdit={canEdit}
+              updatingMatchId={updatingMatchId}
+              onToggleWinner={handleToggleWinner}
+              variant="compact"
+            />
           )}
         </div>
 
@@ -790,143 +828,25 @@ export default function SessionDetailPage() {
           <div className="grid grid-cols-[1fr_2fr] gap-6 p-6 overflow-auto flex-1">
             {/* Left column: Teams + Players */}
             <div className="overflow-auto">
-              {/* Teams section */}
               <SectionLabel>TEAMS</SectionLabel>
-              <div className="mt-3 border border-app-border overflow-hidden">
-                <div className="grid grid-cols-2 gap-px bg-app-border">
-                  <div className="bg-team-green text-white font-mono text-xs uppercase tracking-label font-bold text-center py-2 px-3">
-                    <span className="block">TEAM</span>
-                    <span className="block">GREEN</span>
-                  </div>
-                  <div className="bg-team-blue text-white font-mono text-xs uppercase tracking-label font-bold text-center py-2 px-3">
-                    <span className="block">TEAM</span>
-                    <span className="block">BLUE</span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-px bg-app-border">
-                  <div className="flex flex-col bg-white">
-                    <div className="font-display text-3xl text-center py-2 text-team-green font-bold">
-                      {teamStats.team1.wins}
-                    </div>
-                    {teamStats.team1.roster.map((p) => (
-                      <div
-                        key={p.id}
-                        className="flex justify-center"
-                      >
-                        <span className="text-sm text-team-green font-medium text-center py-1 px-3 truncate max-w-[120px] inline-block">
-                          {displayPlayerName(p)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex flex-col bg-white">
-                    <div className="font-display text-3xl text-center py-2 text-team-blue font-bold">
-                      {teamStats.team2.wins}
-                    </div>
-                    {teamStats.team2.roster.map((p) => (
-                      <div
-                        key={p.id}
-                        className="flex justify-center"
-                      >
-                        <span className="text-sm text-team-blue font-medium text-center py-1 px-3 truncate max-w-[120px] inline-block">
-                          {displayPlayerName(p)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <TeamsPanel teamStats={teamStats} hasMatches={matches.length > 0} />
 
-              {/* Players section */}
               <div className="mt-6">
                 <SectionLabel>PLAYERS</SectionLabel>
-                {playerStats.length > 0 && (
-                  <ul className="mt-3 list-none p-0 m-0 border border-app-border divide-y divide-app-border">
-                    {playerStats.map((ps) => {
-                      const team1Count = matches.filter((m) =>
-                        m.team1.some((p) => p.id === ps.player.id)
-                      ).length;
-                      const team2Count = matches.filter((m) =>
-                        m.team2.some((p) => p.id === ps.player.id)
-                      ).length;
-                      const isTeam1 = team1Count >= team2Count;
-
-                      return (
-                        <li
-                          key={ps.player.id}
-                          className="flex items-center justify-between gap-2 px-3 py-2 bg-white"
-                        >
-                          <div className={`text-sm font-medium ${isTeam1 ? 'text-team-green' : 'text-team-blue'}`}>
-                            {displayPlayerName(ps.player)}
-                            {ps.player.self_reported_dupr != null &&
-                              !Number.isNaN(ps.player.self_reported_dupr) && (
-                                <> ({ps.player.self_reported_dupr.toFixed(2)})</>
-                              )}
-                          </div>
-                          <div className={`text-xs text-right ${isTeam1 ? 'text-team-green' : 'text-team-blue'}`}>
-                            {ps.wins}-{ps.losses}
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
+                <PlayersPanel playerStats={playerStats} matches={matches} showEmptyState={false} />
               </div>
             </div>
 
             {/* Right column: Matchups */}
             <div className="overflow-auto">
               <SectionLabel>MATCHUPS</SectionLabel>
-              <div className="mt-3">
-                {rounds.map((roundMatches, roundIndex) => (
-                  <div
-                    key={roundIndex}
-                    className={roundIndex === 0 ? '' : 'mt-3'}
-                  >
-                    <div className="font-mono text-xs uppercase tracking-label text-app-muted font-medium text-center bg-app-bg-subtle py-1.5">
-                      ROUND {roundIndex + 1}
-                    </div>
-                    {roundMatches.map((match, index) => (
-                      <div
-                        key={match.id}
-                        className={`grid grid-cols-[auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto] gap-2 items-center justify-items-center py-2 ${index !== 0 ? 'border-t border-app-border' : ''}`}
-                      >
-                        <button
-                          type="button"
-                          className={`font-mono text-[0.65rem] uppercase tracking-button px-2 py-1 cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed border ${
-                            match.winner === 1
-                              ? 'bg-team-green border-team-green text-white'
-                              : 'bg-transparent border-app-border text-app-muted'
-                          }`}
-                          onClick={canEdit ? () => handleToggleWinner(match.id, 1) : undefined}
-                          disabled={!canEdit || updatingMatchId === match.id}
-                        >
-                          Win
-                        </button>
-                        <div className="text-team-green text-base font-medium text-center">
-                          {match.team1.map(displayPlayerNameShort).join(' + ')}
-                        </div>
-                        <span className="text-sm text-app-muted">vs</span>
-                        <div className="text-team-blue text-base font-medium text-center">
-                          {match.team2.map(displayPlayerNameShort).join(' + ')}
-                        </div>
-                        <button
-                          type="button"
-                          className={`font-mono text-[0.65rem] uppercase tracking-button px-2 py-1 cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed border ${
-                            match.winner === 2
-                              ? 'bg-team-blue border-team-blue text-white'
-                              : 'bg-transparent border-app-border text-app-muted'
-                          }`}
-                          onClick={canEdit ? () => handleToggleWinner(match.id, 2) : undefined}
-                          disabled={!canEdit || updatingMatchId === match.id}
-                        >
-                          Win
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
+              <MatchupsPanel
+                rounds={rounds}
+                canEdit={canEdit}
+                updatingMatchId={updatingMatchId}
+                onToggleWinner={handleToggleWinner}
+                variant="fullscreen"
+              />
             </div>
           </div>
         </div>
