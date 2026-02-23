@@ -8,6 +8,8 @@ import { AuthStatus } from "@/components/AuthStatus";
 import { Navigation } from "@/components/Navigation";
 import { AdminFooterLinks } from "@/components/AdminFooterLinks";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pickledcitizens.com';
+
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
@@ -37,13 +39,13 @@ export const metadata = {
   openGraph: {
     title: "Pickled Citizens - Pickleball Team Battle Management Tool",
     description: "Lightweight pickleball league tool for scheduling sessions, tracking match history, and managing player rankings. Create leagues, organize games, and track your DUPR ratings.",
-    url: "https://pickledcitizens.com",
+    url: siteUrl,
     siteName: "Pickled Citizens",
     locale: "en_US",
     type: "website",
     images: [
       {
-        url: 'https://pickledcitizens.com/images/Pickled-Citizens-Logo-Social.png',
+        url: `${siteUrl}/images/Pickled-Citizens-Logo-Social.png`,
         width: 1200,
         height: 630,
         alt: 'Pickled Citizens Logo',
@@ -54,7 +56,7 @@ export const metadata = {
     card: "summary_large_image",
     title: "Pickled Citizens - Pickleball Team Battle Management Tool",
     description: "Lightweight pickleball league tool for scheduling sessions, tracking match history, and managing player rankings. Create leagues, organize games, and track your DUPR ratings.",
-    images: ['https://pickledcitizens.com/images/Pickled-Citizens-Logo-Social.png'],
+    images: [`${siteUrl}/images/Pickled-Citizens-Logo-Social.png`],
   },
 };
 

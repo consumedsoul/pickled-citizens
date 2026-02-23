@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import { supabaseServiceRole } from '@/lib/supabaseClient';
 
 const DISPLAY_TIMEZONE = process.env.DISPLAY_TIMEZONE || 'America/Los_Angeles';
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pickledcitizens.com';
 
 // Helper function to format date for OG image
 const formatDateTimeForTitle = (value: string | null) => {
@@ -57,13 +58,13 @@ export async function generateMetadata({ params }: SessionLayoutProps): Promise<
         openGraph: {
           title,
           description,
-          url: `https://pickledcitizens.com/sessions/${sessionId}`,
+          url: `${siteUrl}/sessions/${sessionId}`,
           siteName: 'Pickled Citizens',
           locale: 'en_US',
           type: 'website',
           images: [
             {
-              url: 'https://pickledcitizens.com/images/Pickled-Citizens-Logo-Social.png',
+              url: `${siteUrl}/images/Pickled-Citizens-Logo-Social.png`,
               width: 1200,
               height: 630,
               alt: 'Pickled Citizens Logo',
@@ -74,7 +75,7 @@ export async function generateMetadata({ params }: SessionLayoutProps): Promise<
           card: 'summary_large_image',
           title,
           description,
-          images: ['https://pickledcitizens.com/images/Pickled-Citizens-Logo-Social.png'],
+          images: [`${siteUrl}/images/Pickled-Citizens-Logo-Social.png`],
         },
       };
     }
@@ -89,13 +90,13 @@ export async function generateMetadata({ params }: SessionLayoutProps): Promise<
     openGraph: {
       title: 'Pickleball Session - Pickled Citizens',
       description: 'Pickleball Session | 0 Players | Not scheduled',
-      url: `https://pickledcitizens.com/sessions/${sessionId}`,
+      url: `${siteUrl}/sessions/${sessionId}`,
       siteName: 'Pickled Citizens',
       locale: 'en_US',
       type: 'website',
       images: [
         {
-          url: 'https://pickledcitizens.com/images/Pickled-Citizens-Logo-Social.png',
+          url: `${siteUrl}/images/Pickled-Citizens-Logo-Social.png`,
           width: 1200,
           height: 630,
           alt: 'Pickled Citizens Logo',
@@ -106,7 +107,7 @@ export async function generateMetadata({ params }: SessionLayoutProps): Promise<
       card: 'summary_large_image',
       title: 'Pickleball Session - Pickled Citizens',
       description: 'Pickleball Session | 0 Players | Not scheduled',
-      images: ['https://pickledcitizens.com/images/Pickled-Citizens-Logo-Social.png'],
+      images: [`${siteUrl}/images/Pickled-Citizens-Logo-Social.png`],
     },
   };
 }
