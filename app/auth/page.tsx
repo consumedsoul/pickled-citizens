@@ -4,6 +4,7 @@ import { FormEvent, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
+import { GENDER_OPTIONS } from '@/lib/constants';
 
 export default function AuthPage() {
   const [email, setEmail] = useState('');
@@ -33,6 +34,13 @@ export default function AuthPage() {
     if (!/^\d{1,2}(\.\d{1,2})?$/.test(selfDupr.trim())) {
       setStatus('error');
       setMessage('Self-reported DUPR must be a number like 3.75.');
+      return;
+    }
+
+    const selfDuprParsed = Number(selfDupr.trim());
+    if (selfDuprParsed < 1.0 || selfDuprParsed > 8.5) {
+      setStatus('error');
+      setMessage('DUPR must be between 1.0 and 8.5.');
       return;
     }
 
@@ -144,8 +152,9 @@ export default function AuthPage() {
           required
         >
           <option value="">Select gender</option>
-          <option value="male">Male</option>
-          <option value="female">Female</option>
+          {GENDER_OPTIONS.map((g) => (
+            <option key={g} value={g}>{g.charAt(0).toUpperCase() + g.slice(1)}</option>
+          ))}
         </Select>
 
         <Input

@@ -19,7 +19,7 @@ create table if not exists public.profiles (
 create table if not exists public.leagues (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz default now(),
-  name text not null,
+  name text not null check (length(name) >= 1 and length(name) <= 255),
   owner_id uuid not null references auth.users(id) on delete cascade
 );
 

@@ -234,10 +234,10 @@ describe("generateMatchups — 8 players", () => {
       round.forEach((game) => {
         allPlayerIdsInGame(game).forEach((id) => playerIdsInRound.add(id));
       });
-      expect(playerIdsInRound.size).toBe(
-        8,
+      expect(
+        playerIdsInRound.size,
         `Round ${roundIndex + 1} should have all 8 players but found ${playerIdsInRound.size}`
-      );
+      ).toBe(8);
     });
   });
 
@@ -250,10 +250,10 @@ describe("generateMatchups — 8 players", () => {
       round.forEach((game) => {
         allIds.push(...allPlayerIdsInGame(game));
       });
-      expect(allIds.length).toBe(
-        new Set(allIds).size,
+      expect(
+        allIds.length,
         `Round ${roundIndex + 1} has a player appearing on multiple courts`
-      );
+      ).toBe(new Set(allIds).size);
     });
   });
 
@@ -262,7 +262,7 @@ describe("generateMatchups — 8 players", () => {
     const teamAIds = new Set(teamA.map((p) => p.user_id));
     const teamBIds = new Set(teamB.map((p) => p.user_id));
 
-    games.forEach((game, i) => {
+    games.forEach((game) => {
       expect(teamAIds.has(game.pairA[0].user_id)).toBe(true);
       expect(teamAIds.has(game.pairA[1].user_id)).toBe(true);
       expect(teamBIds.has(game.pairB[0].user_id)).toBe(true);
@@ -364,7 +364,7 @@ describe("generateMatchups — 10 players", () => {
     const courts = getCourtsPerRound(10);
     const rounds = groupIntoRounds(games, courts);
 
-    rounds.forEach((round, roundIndex) => {
+    rounds.forEach((round) => {
       const allIds: string[] = [];
       round.forEach((game) => {
         allIds.push(...allPlayerIdsInGame(game));
@@ -433,10 +433,10 @@ describe("generateMatchups — 12 players", () => {
       round.forEach((game) => {
         allPlayerIdsInGame(game).forEach((id) => playerIdsInRound.add(id));
       });
-      expect(playerIdsInRound.size).toBe(
-        12,
+      expect(
+        playerIdsInRound.size,
         `Round ${roundIndex + 1} should have all 12 players but found ${playerIdsInRound.size}`
-      );
+      ).toBe(12);
     });
   });
 
@@ -449,10 +449,10 @@ describe("generateMatchups — 12 players", () => {
       round.forEach((game) => {
         allIds.push(...allPlayerIdsInGame(game));
       });
-      expect(allIds.length).toBe(
-        new Set(allIds).size,
+      expect(
+        allIds.length,
         `Round ${roundIndex + 1} has a player appearing on multiple courts`
-      );
+      ).toBe(new Set(allIds).size);
     });
   });
 
@@ -576,5 +576,12 @@ describe("edge cases", () => {
     expect(teamA).toHaveLength(4);
     expect(teamB).toHaveLength(4);
     expect(games).toHaveLength(12);
+  });
+
+  it("returns empty array for unsupported player counts", () => {
+    [5, 7, 11, 13].forEach((count) => {
+      const players = makePlayers(count);
+      expect(generateMatchups(players)).toHaveLength(0);
+    });
   });
 });

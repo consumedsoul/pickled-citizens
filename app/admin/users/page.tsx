@@ -181,6 +181,10 @@ export default function AdminUsersPage() {
         setError('Self-reported DUPR must be a number.');
         return;
       }
+      if (n < 1.0 || n > 8.5) {
+        setError('DUPR must be between 1.0 and 8.5.');
+        return;
+      }
       dupr = n;
     }
 

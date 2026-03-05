@@ -8,6 +8,7 @@ import { Input, Select } from '@/components/ui/Input';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Modal } from '@/components/ui/Modal';
 import { formatLeagueName } from '@/lib/formatters';
+import { GENDER_OPTIONS } from '@/lib/constants';
 
 type Profile = {
   first_name: string | null;
@@ -141,6 +142,12 @@ export default function ProfilePage() {
       return;
     }
 
+    const selfDuprParsed = Number(selfDupr.trim());
+    if (selfDuprParsed < 1.0 || selfDuprParsed > 8.5) {
+      setError('DUPR must be between 1.0 and 8.5.');
+      return;
+    }
+
     setSaving(true);
 
     const {
@@ -154,15 +161,13 @@ export default function ProfilePage() {
       return;
     }
 
-    const selfDuprNumber = Number(selfDupr.trim());
-
     const { error: upsertError } = await supabase.from('profiles').upsert({
       id: userData.user.id,
       email: userData.user.email?.toLowerCase() ?? null,
       first_name: firstName.trim(),
       last_name: lastName.trim(),
       gender,
-      self_reported_dupr: selfDuprNumber,
+      self_reported_dupr: selfDuprParsed,
       updated_at: new Date().toISOString(),
     });
 
@@ -452,8 +457,9 @@ export default function ProfilePage() {
           required
         >
           <option value="">Select gender</option>
-          <option value="male">Male</option>
-          <option value="female">Female</option>
+          {GENDER_OPTIONS.map((g) => (
+            <option key={g} value={g}>{g.charAt(0).toUpperCase() + g.slice(1)}</option>
+          ))}
         </Select>
 
         <div>

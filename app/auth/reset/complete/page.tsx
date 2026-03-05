@@ -85,12 +85,14 @@ export default function ResetPasswordCompletePage() {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          required
         />
         <Input
           label="Confirm new password"
           type="password"
           value={passwordConfirm}
           onChange={(e) => setPasswordConfirm(e.target.value)}
+          required
         />
         <div>
           <Button type="submit" disabled={status === 'loading'}>

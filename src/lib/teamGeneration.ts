@@ -110,6 +110,9 @@ export function buildPairs(team: Player[]): Pair[] {
  */
 export function generateMatchups(orderedPlayers: Player[]): GamePlan[] {
   const playerCount = orderedPlayers.length;
+  if (!(PLAYER_COUNTS as readonly number[]).includes(playerCount)) {
+    return [];
+  }
   const { teamA, teamB } = buildTeams(orderedPlayers);
 
   let gamesPlan: GamePlan[] = [];

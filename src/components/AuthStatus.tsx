@@ -1,47 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
-
-interface AuthState {
-  loading: boolean;
-  email: string | null;
-}
+import { useAuthUser } from '@/lib/hooks/useAuthUser';
 
 export function AuthStatus() {
   const router = useRouter();
-  const [state, setState] = useState<AuthState>({
-    loading: true,
-    email: null,
-  });
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadUser() {
-      const { data } = await supabase.auth.getUser();
-      if (!isMounted) return;
-      setState({ loading: false, email: data.user?.email ?? null });
-    }
-
-    loadUser();
-
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (!isMounted) return;
-      setState({ loading: false, email: session?.user?.email ?? null });
-    });
-
-    return () => {
-      isMounted = false;
-      sub.subscription.unsubscribe();
-    };
-  }, []);
+  const state = useAuthUser();
 
   async function handleSignOut() {
     await supabase.auth.signOut();
-    setState({ loading: false, email: null });
     router.push('/');
   }
 

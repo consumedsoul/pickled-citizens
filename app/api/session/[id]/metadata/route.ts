@@ -17,7 +17,7 @@ type SessionRow = {
 };
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
@@ -36,12 +36,11 @@ export async function GET(
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
-    // Format date for metadata - fix timezone and format
-    const formatDateTimeForMeta = (value: string | null) => {
+    const formatSessionDate = (value: string | null, compact = false) => {
       if (!value) return 'Not scheduled';
       const d = new Date(value);
       if (Number.isNaN(d.getTime())) return 'Not scheduled';
-      return d.toLocaleString('en-US', {
+      const str = d.toLocaleString('en-US', {
         weekday: 'short',
         month: 'short',
         day: 'numeric',
@@ -50,31 +49,16 @@ export async function GET(
         timeZone: DISPLAY_TIMEZONE,
         hour12: true,
       });
-    };
-
-    // Format for title ( more concise
-    const formatDateTimeForTitle = (value: string | null) => {
-      if (!value) return 'Not scheduled';
-      const d = new Date(value);
-      if (Number.isNaN(d.getTime())) return 'Not scheduled';
-      return d.toLocaleString('en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        timeZone: DISPLAY_TIMEZONE,
-        hour12: true,
-      }).replace(',', '').replace(/:\d{2}\s/, ' ');
+      return compact ? str.replace(',', '').replace(/:\d{2}\s/, ' ') : str;
     };
 
     const sessionData = {
       id: sessionRow.id,
       league_name: sessionRow.league?.name || 'Pickleball Session',
       player_count: sessionRow.player_count || 0,
-      formatted_date: formatDateTimeForMeta(sessionRow.scheduled_for),
-      title: `${sessionRow.league?.name || 'Pickleball Session'} - ${sessionRow.player_count || 0} Players - ${formatDateTimeForTitle(sessionRow.scheduled_for)}`,
-      description: `${sessionRow.league?.name || 'Pickleball Session'} team battle scheduled for ${formatDateTimeForTitle(sessionRow.scheduled_for)}.`,
+      formatted_date: formatSessionDate(sessionRow.scheduled_for),
+      title: `${sessionRow.league?.name || 'Pickleball Session'} - ${sessionRow.player_count || 0} Players - ${formatSessionDate(sessionRow.scheduled_for, true)}`,
+      description: `${sessionRow.league?.name || 'Pickleball Session'} team battle scheduled for ${formatSessionDate(sessionRow.scheduled_for, true)}.`,
       scheduled_for: sessionRow.scheduled_for,
       created_at: sessionRow.created_at,
     };

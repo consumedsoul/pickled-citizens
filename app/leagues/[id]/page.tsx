@@ -49,6 +49,9 @@ export default function LeagueMembersPage() {
   const [roleUpdating, setRoleUpdating] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
+  const [removeMemberTarget, setRemoveMemberTarget] = useState<Member | null>(null);
+  const [promoteMemberTarget, setPromoteMemberTarget] = useState<Member | null>(null);
+
   useEffect(() => {
     let active = true;
 
@@ -382,11 +385,14 @@ export default function LeagueMembersPage() {
     router.replace('/leagues');
   }
 
-  async function handleRemoveMember(member: Member) {
-    if (!leagueId) return;
+  function handleRemoveMember(member: Member) {
+    setRemoveMemberTarget(member);
+  }
 
-    const confirmed = window.confirm(`Are you sure you want to remove ${member.first_name || member.email || member.user_id} from the league?`);
-    if (!confirmed) return;
+  async function confirmRemoveMember() {
+    const member = removeMemberTarget;
+    if (!member || !leagueId) return;
+    setRemoveMemberTarget(null);
 
     setSaving(true);
     setError(null);
@@ -423,11 +429,14 @@ export default function LeagueMembersPage() {
     setSaving(false);
   }
 
-  async function handlePromoteToAdmin(member: Member) {
-    if (!leagueId) return;
+  function handlePromoteToAdmin(member: Member) {
+    setPromoteMemberTarget(member);
+  }
 
-    const confirmed = window.confirm(`Are you sure you want to make ${member.first_name || member.email || member.user_id} an admin?`);
-    if (!confirmed) return;
+  async function confirmPromoteToAdmin() {
+    const member = promoteMemberTarget;
+    if (!member || !leagueId) return;
+    setPromoteMemberTarget(null);
 
     setRoleUpdating(true);
     setError(null);
@@ -732,6 +741,46 @@ export default function LeagueMembersPage() {
             placeholder="Type delete to confirm"
             className="w-full px-3 py-2.5 border border-app-border bg-transparent text-app-text text-sm placeholder:text-app-light-gray focus:outline-none focus:border-app-text transition-colors"
           />
+        </Modal>
+      )}
+
+      {/* Remove Member Modal */}
+      {removeMemberTarget && (
+        <Modal
+          title="Remove Member"
+          onClose={() => setRemoveMemberTarget(null)}
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setRemoveMemberTarget(null)}>Cancel</Button>
+              <Button variant="danger" onClick={confirmRemoveMember} disabled={saving}>
+                Remove
+              </Button>
+            </>
+          }
+        >
+          <p>
+            Remove <span className="font-semibold">{removeMemberTarget.first_name || removeMemberTarget.email || removeMemberTarget.user_id}</span> from the league?
+          </p>
+        </Modal>
+      )}
+
+      {/* Promote to Admin Modal */}
+      {promoteMemberTarget && (
+        <Modal
+          title="Promote to Admin"
+          onClose={() => setPromoteMemberTarget(null)}
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setPromoteMemberTarget(null)}>Cancel</Button>
+              <Button onClick={confirmPromoteToAdmin} disabled={roleUpdating}>
+                Promote
+              </Button>
+            </>
+          }
+        >
+          <p>
+            Make <span className="font-semibold">{promoteMemberTarget.first_name || promoteMemberTarget.email || promoteMemberTarget.user_id}</span> an admin?
+          </p>
         </Modal>
       )}
     </div>

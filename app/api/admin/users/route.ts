@@ -70,6 +70,12 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: updateError.message }, { status: 400 });
     }
 
+    await supabaseServiceRole.from('admin_events').insert({
+      event_type: 'admin.user_profile_updated',
+      user_email: callerEmail,
+      payload: { target_user_id: body.userId, fields_updated: Object.keys(updatePayload).filter(k => k !== 'updated_at') },
+    });
+
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -126,6 +132,12 @@ export async function DELETE(request: NextRequest) {
     if (deleteError) {
       return NextResponse.json({ error: deleteError.message }, { status: 400 });
     }
+
+    await supabaseServiceRole.from('admin_events').insert({
+      event_type: 'admin.user_deleted',
+      user_email: callerEmail,
+      payload: { deleted_user_id: body.userId },
+    });
 
     return NextResponse.json({ ok: true });
   } catch (error) {
