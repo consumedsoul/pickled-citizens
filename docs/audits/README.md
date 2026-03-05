@@ -4,6 +4,7 @@ Chronological list of repository audits for Pickled Citizens.
 
 | Date | Overall | Security | Performance | Code Quality | Docs | Critical | High | Medium | Low | Total | Summary |
 |------|---------|----------|-------------|--------------|------|----------|------|--------|-----|-------|---------|
+| [2026-03-04](./2026-03-04-audit.md) | 89/100 (A) | 80/100 | 93/100 | 88/100 | 88/100 | 1 | 2 | 4 | 9 | 16 | All 15 prev items resolved (100%), 52 tests added, DB types with Relationships, CSP header missing |
 | [2026-02-23](./2026-02-23-audit.md) | 80/100 (B+) | 75/100 | 80/100 | 82/100 | 85/100 | 1 | 3 | 6 | 5 | 15 | Complete UI redesign, 0 any types, component library, 8/13 prev items resolved, dead middleware found |
 | [2026-02-19](./2026-02-19-audit.md) | 74/100 (B) | 85/100 | 82/100 | 65/100 | 80/100 | 0 | 2 | 6 | 5 | 13 | First B grade! Corrupted type file removed, TS build fixed, CI/CD deploying, fullscreen view improved |
 | [2026-02-17](./2026-02-17-audit.md) | 69/100 (C) | 80/100 | 85/100 | 60/100 | 75/100 | 1 | 2 | 7 | 6 | 16 | Corrupted type file found; .env/.eslint/middleware/indexes all added; README needs minor updates |
@@ -11,6 +12,19 @@ Chronological list of repository audits for Pickled Citizens.
 | [2026-02-08](./2026-02-08-audit.md) | N/A | N/A | N/A | N/A | N/A | 2 | 5 | 6 | 5 | 18 | Initial audit. Debug endpoint in prod, duplicate RLS policies, 15+ `any` types, no tests. |
 
 ## Trend Analysis
+
+**2026-03-04 (Week 6):**
+- 📊 **Overall: 89/100 (A - Very Good)** — Highest score yet! (+9 from last audit)
+- ✅ **100% resolution rate** — All 15 previous action items resolved (first perfect sprint)
+- ✅ Admin middleware moved to project root — now functional and protecting `/admin/*`
+- ✅ Supabase `Database` type now includes `Relationships` (required for supabase-js v2.81+)
+- ✅ 52 vitest tests added for team generation — first test coverage after 6 audits
+- ✅ `src/lib/formatters.ts` and `src/lib/teamGeneration.ts` extracted as pure utilities
+- ✅ Security headers: X-Frame-Options, X-Content-Type-Options, Referrer-Policy added
+- ✅ Typed Supabase client — all queries now end-to-end type safe
+- ❌ Critical: Content-Security-Policy header still missing
+- ⚠️ Admin PATCH/DELETE operations have no audit trail
+- ⚠️ middleware.ts hardcodes ADMIN_EMAIL instead of importing from constants
 
 **2026-02-23 (Week 5):**
 - 📊 **Overall: 80/100 (B+ - Very Good)** — Highest score yet! (+6 from last audit)
@@ -55,15 +69,28 @@ Chronological list of repository audits for Pickled Citizens.
 
 | Issue | First Found | Status | Audits Open |
 |-------|------------|--------|-------------|
-| Zero test coverage | 2026-02-08 | Open | 5 |
-| N+1 query patterns | 2026-02-19 | Open | 2 |
-| Admin middleware non-functional | 2026-02-17 | Open (severity upgraded) | 3 |
-| Supabase client not typed | 2026-02-23 | New | 1 |
+| Missing CSP header | 2026-03-04 | Open | 1 |
+| No audit logging for admin ops | 2026-03-04 | Open | 1 |
 
 ## Resolved Issues
 
 | Issue | First Found | Resolved | Audits Open | Resolution |
 |-------|------------|----------|-------------|------------|
+| Admin middleware dead code | 2026-02-17 | 2026-03-04 | 3 | Moved to project root `middleware.ts` |
+| Stale closure in home page auth | 2026-02-23 | 2026-03-04 | 1 | Uses `loadedUserIdRef.current` ref pattern |
+| Modal missing keyboard/ARIA | 2026-02-23 | 2026-03-04 | 1 | Added Escape, focus trap, aria-modal, aria-labelledby |
+| Supabase client not typed | 2026-02-23 | 2026-03-04 | 1 | Added `Database` generic + `Relationships` arrays |
+| N+1 query in leagues page | 2026-02-19 | 2026-03-04 | 2 | Consolidated 3 queries into 1 joined query |
+| Session detail JSX duplication | 2026-02-23 | 2026-03-04 | 1 | Extracted TeamsPanel, PlayersPanel, MatchupsPanel |
+| Duplicated formatter functions | 2026-02-23 | 2026-03-04 | 1 | Created `src/lib/formatters.ts` |
+| .bak file tracked in git | 2026-02-23 | 2026-03-04 | 1 | Deleted, added `*.bak` to .gitignore |
+| Missing error check in leave route | 2026-02-23 | 2026-03-04 | 1 | Added membership query error handling |
+| No security headers | 2026-02-23 | 2026-03-04 | 1 | X-Frame-Options, X-Content-Type-Options, Referrer-Policy added |
+| Zero test coverage | 2026-02-08 | 2026-03-04 | 6 | 52 vitest tests for team generation algorithm |
+| setCreating not reset on returns | 2026-02-23 | 2026-03-04 | 1 | Fixed early return paths |
+| Input ID collision | 2026-02-23 | 2026-03-04 | 1 | React 18 useId() hook |
+| Hardcoded production URLs | 2026-02-23 | 2026-03-04 | 1 | `NEXT_PUBLIC_SITE_URL` env var |
+| Unused userId in AuthStatus | 2026-02-23 | 2026-03-04 | 1 | Removed dead state |
 | `any` type usage (32) | 2026-02-08 | 2026-02-23 | 4 | Complete UI redesign eliminated all instances |
 | `.DS_Store` tracked in git | 2026-02-08 | 2026-02-23 | 4 | Removed from tracking, added to .gitignore |
 | `app/share-test/page.tsx` in prod | 2026-02-14 | 2026-02-23 | 3 | Deleted |

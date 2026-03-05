@@ -185,7 +185,7 @@ Lightweight web app for running casual pickleball leagues: create leagues, invit
 - `postcss.config.js` – PostCSS configuration.
 
 #### Middleware
-- `admin/middleware.ts` – Server-side admin route protection (JWT verification).
+- `middleware.ts` (project root) – Server-side admin route protection (JWT verification, matches `/admin/:path*`).
 
 ### Documentation (`docs/`)
 - `prd.md` – Product Requirements Document.

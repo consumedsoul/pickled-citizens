@@ -61,8 +61,15 @@ src/
   lib/
     supabaseClient.ts   # Exports `supabase` (anon) and `supabaseServiceRole` (bypasses RLS)
     constants.ts        # Shared constants (ADMIN_EMAIL)
+    formatters.ts       # Shared formatting utilities (dates, scores, names)
+    teamGeneration.ts   # Snaking team-balance algorithm (extracted for testability)
   types/
-    database.ts         # TypeScript types for all Supabase tables (Row/Insert/Update)
+    database.ts         # TypeScript types for all Supabase tables (Row/Insert/Update/Relationships)
+
+middleware.ts           # Next.js middleware — protects /admin/* routes server-side
+
+__tests__/
+  team-generation.test.ts  # Vitest tests for team generation algorithm
 
 supabase/
   schema.sql            # Full DB schema (source of truth)
@@ -107,7 +114,7 @@ Email `hun@ghkim.com` is the super-admin. Referenced in:
 - `src/lib/constants.ts` — `ADMIN_EMAIL` constant (imported by all admin pages)
 - `src/components/AdminFooterLinks.tsx` — conditional admin nav links
 - `app/admin/events/AdminEventsClient.tsx`, `app/admin/leagues/page.tsx`, `app/admin/users/page.tsx`, `app/leagues/[id]/page.tsx`
-- `app/admin/middleware.ts` — intended server-side route protection (**non-functional**, see Known Gotchas)
+- `middleware.ts` (project root) — server-side route protection for `/admin/*`
 - `app/api/admin/users/route.ts` — admin user management API
 
 ## Authentication
@@ -170,7 +177,7 @@ Editorial-inspired B&W design: sharp edges (no border-radius), monospace upperca
 
 ## Known Gotchas
 
-- **No test suite**: Zero test files exist. Critical paths (team generation, auth flows) are untested.
-- **Admin middleware non-functional**: `app/admin/middleware.ts` is NOT at the project root — Next.js never executes it. Admin routes rely on client-side email checks + RLS only.
-- **Admin email**: Hardcoded in `supabase/schema.sql` (RLS + functions). Client-side code imports from `src/lib/constants.ts`.
-- **Supabase client not typed**: `createClient` in `supabaseClient.ts` does not pass the `Database` generic — queries return implicitly typed data.
+- **Admin email hardcoded in two places**: `supabase/schema.sql` (RLS + functions) hardcodes `hun@ghkim.com` directly — this can't easily be changed. `middleware.ts` (line 5) also hardcodes it instead of importing `ADMIN_EMAIL` from `src/lib/constants.ts`. Client-side code correctly imports from `constants.ts`.
+- **No CSP header**: `next.config.mjs` sets security headers but is missing `Content-Security-Policy`. Inject nonces or use a hash-based policy if adding it.
+- **No audit logging for admin PATCH**: `app/api/admin/users/route.ts` DELETE handler logs to `admin_events` but the PATCH handler does not.
+- **`window.confirm()` used for destructive ops**: `app/leagues/[id]/page.tsx` uses browser dialogs. Replace with the `Modal` component for better UX.
