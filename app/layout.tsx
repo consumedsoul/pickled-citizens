@@ -60,10 +60,37 @@ export const metadata = {
   },
 };
 
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'Pickled Citizens',
+  applicationCategory: 'SportsApplication',
+  description:
+    'Lightweight pickleball league management tool for scheduling sessions, generating balanced teams, and tracking match history.',
+  url: 'https://pickledcitizens.com',
+  featureList: [
+    'Balanced team generation with DUPR ratings',
+    'League creation and member management',
+    'Session scheduling with 6, 8, 10, or 12-player support',
+    'Match result tracking with win/loss statistics',
+  ],
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'USD',
+  },
+};
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   const year = new Date().getFullYear();
   return (
     <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable} ${ibmPlexMono.variable}`}>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body className="font-sans">
         <div className="min-h-screen flex flex-col">
           <header className="border-b border-app-border bg-white">

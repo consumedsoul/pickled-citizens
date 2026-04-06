@@ -1,0 +1,30 @@
+# Pickled Citizens
+
+> Lightweight pickleball league management tool for scheduling sessions, generating balanced teams, and tracking match history.
+
+## Key Pages
+
+- /: Home — league list, session history, lifetime win/loss stats
+- /leagues/[id]: League detail — member management, role assignment, email invites
+- /sessions/[id]: Session detail — team matchups, match scores, player stats
+- /profile: User profile — name and self-reported DUPR rating
+- /auth/signup: Create a new account
+- /auth/signin: Sign in with email and password
+
+## Features
+
+- League creation and member management with invite-by-email
+- Balanced team generation using DUPR ratings and a snaking algorithm
+- Session scheduling with 6, 8, 10, or 12-player support
+- Match result tracking with individual and team win/loss records
+- Session history sorted upcoming-first, then past sessions most-recent-first
+- Admin roles per league — sole-admin protection prevents orphaned leagues
+- Open Graph social sharing for sessions
+
+## Tech Stack
+
+Next.js 14 (App Router), TypeScript, Supabase (PostgreSQL + Auth), Cloudflare Workers
+
+## About
+
+Pickled Citizens is a free tool for recreational pickleball players to organize and track their league play. Live at https://pickledcitizens.com.

@@ -59,7 +59,16 @@ export async function PATCH(request: NextRequest) {
 
     if (body.first_name !== undefined) updatePayload.first_name = body.first_name;
     if (body.last_name !== undefined) updatePayload.last_name = body.last_name;
-    if (body.self_reported_dupr !== undefined) updatePayload.self_reported_dupr = body.self_reported_dupr;
+    if (body.self_reported_dupr !== undefined) {
+      const dupr = body.self_reported_dupr;
+      if (dupr !== null && (dupr < 1.0 || dupr > 8.5)) {
+        return NextResponse.json(
+          { error: 'DUPR must be between 1.0 and 8.5.' },
+          { status: 400 }
+        );
+      }
+      updatePayload.self_reported_dupr = dupr;
+    }
 
     const { error: updateError } = await supabaseServiceRole
       .from('profiles')

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { ADMIN_EMAIL } from '@/lib/constants';
 import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
 
 type League = {
   id: string;
@@ -38,6 +39,7 @@ export default function AdminUsersPage() {
   const [editing, setEditing] = useState<EditState | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingDeleteUser, setPendingDeleteUser] = useState<AdminUser | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -242,11 +244,13 @@ export default function AdminUsersPage() {
 
   async function handleDelete(user: AdminUser) {
     if (!user.id) return;
-    const confirmed = window.confirm(
-      `Delete profile for ${user.email ?? 'this user'}? This removes their leagues, invites, and membership data.`
-    );
-    if (!confirmed) return;
+    setPendingDeleteUser(user);
+  }
 
+  async function confirmDelete() {
+    const user = pendingDeleteUser;
+    if (!user) return;
+    setPendingDeleteUser(null);
     setDeletingId(user.id);
     setError(null);
 
@@ -421,6 +425,30 @@ export default function AdminUsersPage() {
             );
           })}
         </div>
+      )}
+
+      {pendingDeleteUser && (
+        <Modal
+          title="Delete User"
+          onClose={() => setPendingDeleteUser(null)}
+          footer={
+            <>
+              <Button variant="sm" onClick={() => setPendingDeleteUser(null)}>
+                Cancel
+              </Button>
+              <Button variant="danger" className="text-[0.65rem] px-3 py-1.5" onClick={confirmDelete}>
+                Delete
+              </Button>
+            </>
+          }
+        >
+          <p>
+            Delete profile for <strong>{pendingDeleteUser.email ?? 'this user'}</strong>?
+          </p>
+          <p className="mt-2 text-app-muted">
+            This removes their leagues, invites, and membership data. This cannot be undone.
+          </p>
+        </Modal>
       )}
     </div>
   );
