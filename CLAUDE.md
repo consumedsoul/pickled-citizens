@@ -177,7 +177,7 @@ Editorial-inspired B&W design: sharp edges (no border-radius), monospace upperca
 
 ## Known Gotchas
 
-- **Admin email hardcoded in two places**: `supabase/schema.sql` (RLS + functions) hardcodes `hun@ghkim.com` directly — this can't easily be changed. `middleware.ts` (line 5) also hardcodes it instead of importing `ADMIN_EMAIL` from `src/lib/constants.ts`. Client-side code correctly imports from `constants.ts`.
-- **No CSP header**: `next.config.mjs` sets security headers but is missing `Content-Security-Policy`. Inject nonces or use a hash-based policy if adding it.
-- **No audit logging for admin PATCH**: `app/api/admin/users/route.ts` DELETE handler logs to `admin_events` but the PATCH handler does not.
-- **`window.confirm()` used for destructive ops**: `app/leagues/[id]/page.tsx` uses browser dialogs. Replace with the `Modal` component for better UX.
+- **Admin email hardcoded in schema**: `supabase/schema.sql` (RLS + functions) hardcodes `hun@ghkim.com` directly — changing it requires a migration. `middleware.ts` and all client-side code correctly import `ADMIN_EMAIL` from `src/lib/constants.ts`.
+- **CSP uses `unsafe-inline` for scripts**: `next.config.mjs` has a CSP header but `script-src 'self' 'unsafe-inline'` is needed for Next.js hydration. Proper fix is nonce-based CSP — see audit 2026-04-06.
+- **`window.confirm()` still in admin**: `app/admin/users/page.tsx:245` still uses browser dialogs for delete confirmation. The leagues page was already migrated to the `Modal` component.
+- **No LLM discoverability**: No `public/robots.txt`, `public/llms.txt`, or JSON-LD structured data. See audit 2026-04-06 for templates.
