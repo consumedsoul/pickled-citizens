@@ -7,6 +7,7 @@ import favicon from "./images/Pickled-Citizens-Logo-Favicon.png";
 import { AuthStatus } from "@/components/AuthStatus";
 import { Navigation } from "@/components/Navigation";
 import { AdminFooterLinks } from "@/components/AdminFooterLinks";
+import { BuildVersion } from "@/components/BuildVersion";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pickledcitizens.com';
 
@@ -119,10 +120,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <footer className="border-t border-app-border mt-8">
             <div className="max-w-app mx-auto px-6 py-6 flex items-center justify-between flex-wrap gap-4">
               <span className="font-mono text-[0.65rem] uppercase tracking-label text-app-muted">
-                {year} Pickled Citizens
-                {process.env.NEXT_PUBLIC_BUILD_VERSION && (
-                  <> · {process.env.NEXT_PUBLIC_BUILD_VERSION}</>
-                )}
+                {year} Pickled Citizens<BuildVersion />
               </span>
               <AdminFooterLinks />
             </div>
