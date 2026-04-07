@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createServerClient } from '@supabase/ssr';
 import { ADMIN_EMAIL } from './src/lib/constants';
 
 export async function middleware(request: NextRequest) {
@@ -11,47 +11,33 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
-  // Supabase stores auth tokens in cookies with a project-specific prefix:
-  // sb-<project-ref>-auth-token (the value is a JSON array: [access_token, refresh_token])
-  const projectRef = supabaseUrl.match(/https:\/\/([^.]+)\./)?.[1] ?? '';
-  const authCookieName = `sb-${projectRef}-auth-token`;
-  const authCookie = request.cookies.get(authCookieName)?.value;
+  const response = NextResponse.next();
 
-  if (!authCookie) {
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          response.cookies.set(name, value, options);
+        });
+      },
+    },
+  });
+
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
-  // Parse the auth token — Supabase stores it as a JSON-encoded array or base64-encoded value
-  let accessToken: string | null = null;
-  try {
-    const parsed = JSON.parse(authCookie);
-    accessToken = Array.isArray(parsed) ? parsed[0] : parsed?.access_token ?? null;
-  } catch {
-    // Not JSON — try using the raw value as the access token
-    accessToken = authCookie;
-  }
-
-  if (!accessToken) {
+  const userEmail = user.email?.toLowerCase();
+  if (userEmail !== ADMIN_EMAIL) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
-  try {
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
-    const { data: { user }, error } = await supabase.auth.getUser(accessToken);
-
-    if (error || !user) {
-      return NextResponse.redirect(new URL('/', request.url));
-    }
-
-    const userEmail = user.email?.toLowerCase();
-    if (userEmail !== ADMIN_EMAIL) {
-      return NextResponse.redirect(new URL('/', request.url));
-    }
-
-    return NextResponse.next();
-  } catch {
-    return NextResponse.redirect(new URL('/', request.url));
-  }
+  return response;
 }
 
 export const config = {

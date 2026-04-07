@@ -1,3 +1,4 @@
+import { createBrowserClient } from '@supabase/ssr';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database';
 
@@ -14,13 +15,13 @@ const missingClient = new Proxy({} as SupabaseClient<Database>, {
   },
 });
 
+// Browser client — uses @supabase/ssr cookie storage so middleware can read the session
 export const supabase: SupabaseClient<Database> =
   supabaseUrl && supabaseAnonKey
-    ? createClient<Database>(supabaseUrl, supabaseAnonKey)
+    ? (createBrowserClient<Database>(supabaseUrl, supabaseAnonKey) as SupabaseClient<Database>)
     : missingClient;
 
 // Service role client for API routes (bypasses RLS)
-// Throws on first use if service role key is missing so misconfiguration is caught immediately
 function missingServiceRoleKey(): never {
   throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for API routes that bypass RLS.');
 }
