@@ -1,9 +1,8 @@
 'use client';
 
-// process.env.NEXT_PUBLIC_BUILD_VERSION is statically replaced at build
-// time in client components. Must NOT be a Server Component.
+import { BUILD_VERSION } from '@/lib/buildVersion';
+
 export function BuildVersion() {
-  const version = process.env.NEXT_PUBLIC_BUILD_VERSION;
-  if (!version) return null;
-  return <span> · {version}</span>;
+  if (!BUILD_VERSION) return null;
+  return <span> · {BUILD_VERSION}</span>;
 }
