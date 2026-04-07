@@ -28,8 +28,11 @@ jobs:
           node-version: 20
           cache: npm
 
+      - name: Set build version
+        run: echo "NEXT_PUBLIC_BUILD_VERSION=$(date -u +v%Y%m%d.%H%M)" >> $GITHUB_ENV
+
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: Deploy
         env:

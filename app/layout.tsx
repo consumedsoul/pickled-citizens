@@ -120,6 +120,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <div className="max-w-app mx-auto px-6 py-6 flex items-center justify-between flex-wrap gap-4">
               <span className="font-mono text-[0.65rem] uppercase tracking-label text-app-muted">
                 {year} Pickled Citizens
+                {process.env.NEXT_PUBLIC_BUILD_VERSION && (
+                  <> · {process.env.NEXT_PUBLIC_BUILD_VERSION}</>
+                )}
               </span>
               <AdminFooterLinks />
             </div>
