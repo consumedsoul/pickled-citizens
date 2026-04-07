@@ -6,7 +6,7 @@ import { writeFileSync } from 'fs';
 // (process.env.NEXT_PUBLIC_* isn't reliably replaced in all runtimes)
 function getBuildVersion() {
   try {
-    return execSync('date -u +v%Y%m%d.%H%M', { encoding: 'utf8' }).trim();
+    return execSync('TZ=America/Los_Angeles date +v%Y%m%d.%H%M', { encoding: 'utf8' }).trim();
   } catch {
     return '';
   }
