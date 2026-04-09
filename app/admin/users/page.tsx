@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState, FormEvent } from 'react';
+import { useEffect, useState, useCallback, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { ADMIN_EMAIL } from '@/lib/constants';
 import { Button } from '@/components/ui/Button';
+import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Modal } from '@/components/ui/Modal';
 
 type League = {
@@ -41,118 +42,115 @@ export default function AdminUsersPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [pendingDeleteUser, setPendingDeleteUser] = useState<AdminUser | null>(null);
 
-  useEffect(() => {
-    let active = true;
+  // Create user form state
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [createEmail, setCreateEmail] = useState('');
+  const [createFirstName, setCreateFirstName] = useState('');
+  const [createLastName, setCreateLastName] = useState('');
+  const [createDupr, setCreateDupr] = useState('');
+  const [creating, setCreating] = useState(false);
 
-    async function load() {
-      setLoading(true);
-      setError(null);
+  const loadUsers = useCallback(async () => {
+    setLoading(true);
+    setError(null);
 
-      const { data: authData, error: authError } = await supabase.auth.getUser();
-      if (!active) return;
+    const { data: authData, error: authError } = await supabase.auth.getUser();
 
-      if (authError || !authData.user) {
-        router.replace('/');
-        return;
-      }
-
-      const email = authData.user.email?.toLowerCase() ?? null;
-      setUserEmail(email);
-
-      if (email !== ADMIN_EMAIL) {
-        setError('You are not authorized to view this page.');
-        setLoading(false);
-        return;
-      }
-
-      const { data: profileRows, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, email, first_name, last_name, self_reported_dupr, updated_at');
-
-      if (!active) return;
-
-      if (profilesError) {
-        setError(profilesError.message);
-        setLoading(false);
-        return;
-      }
-
-      const { data: membershipRows, error: membershipsError } = await supabase
-        .from('league_members')
-        .select('user_id, league:leagues(id, name)');
-
-      if (!active) return;
-
-      if (membershipsError) {
-        setError(membershipsError.message);
-        setLoading(false);
-        return;
-      }
-
-      const leagueMap = new Map<string, League[]>();
-      type MembershipRow = {
-        user_id: string;
-        league: { id: string; name: string }[] | { id: string; name: string } | null;
-      };
-      (membershipRows as MembershipRow[] ?? []).forEach((row) => {
-        const userId: string = row.user_id;
-        const leagueRel = row.league;
-        const league: League | null = Array.isArray(leagueRel)
-          ? leagueRel[0] ?? null
-          : leagueRel ?? null;
-        if (!league) return;
-        const list = leagueMap.get(userId) ?? [];
-        list.push({ id: league.id, name: league.name });
-        leagueMap.set(userId, list);
-      });
-
-      type ProfileRow = {
-        id: string;
-        email: string | null;
-        first_name: string | null;
-        last_name: string | null;
-        self_reported_dupr: number | null;
-        updated_at: string | null;
-      };
-      const mapped: AdminUser[] = (profileRows ?? []).map((p: ProfileRow) => {
-        let dupr: number | null = null;
-        if (p.self_reported_dupr != null) {
-          const n = Number(p.self_reported_dupr);
-          dupr = Number.isNaN(n) ? null : n;
-        }
-
-        return {
-          id: p.id,
-          email: p.email,
-          first_name: p.first_name,
-          last_name: p.last_name,
-          self_reported_dupr: dupr,
-          updated_at: p.updated_at ?? null,
-          leagues: leagueMap.get(p.id) ?? [],
-        };
-      });
-
-      mapped.sort((a, b) => {
-        const an = `${a.first_name ?? ''} ${a.last_name ?? ''}`.trim().toLowerCase();
-        const bn = `${b.first_name ?? ''} ${b.last_name ?? ''}`.trim().toLowerCase();
-        if (an && bn) return an.localeCompare(bn);
-        if (an) return -1;
-        if (bn) return 1;
-        const ae = (a.email ?? '').toLowerCase();
-        const be = (b.email ?? '').toLowerCase();
-        return ae.localeCompare(be);
-      });
-
-      setUsers(mapped);
-      setLoading(false);
+    if (authError || !authData.user) {
+      router.replace('/');
+      return;
     }
 
-    load();
+    const email = authData.user.email?.toLowerCase() ?? null;
+    setUserEmail(email);
 
-    return () => {
-      active = false;
+    if (email !== ADMIN_EMAIL) {
+      setError('You are not authorized to view this page.');
+      setLoading(false);
+      return;
+    }
+
+    const { data: profileRows, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, email, first_name, last_name, self_reported_dupr, updated_at');
+
+    if (profilesError) {
+      setError(profilesError.message);
+      setLoading(false);
+      return;
+    }
+
+    const { data: membershipRows, error: membershipsError } = await supabase
+      .from('league_members')
+      .select('user_id, league:leagues(id, name)');
+
+    if (membershipsError) {
+      setError(membershipsError.message);
+      setLoading(false);
+      return;
+    }
+
+    const leagueMap = new Map<string, League[]>();
+    type MembershipRow = {
+      user_id: string;
+      league: { id: string; name: string }[] | { id: string; name: string } | null;
     };
+    (membershipRows as MembershipRow[] ?? []).forEach((row) => {
+      const userId: string = row.user_id;
+      const leagueRel = row.league;
+      const league: League | null = Array.isArray(leagueRel)
+        ? leagueRel[0] ?? null
+        : leagueRel ?? null;
+      if (!league) return;
+      const list = leagueMap.get(userId) ?? [];
+      list.push({ id: league.id, name: league.name });
+      leagueMap.set(userId, list);
+    });
+
+    type ProfileRow = {
+      id: string;
+      email: string | null;
+      first_name: string | null;
+      last_name: string | null;
+      self_reported_dupr: number | null;
+      updated_at: string | null;
+    };
+    const mapped: AdminUser[] = (profileRows ?? []).map((p: ProfileRow) => {
+      let dupr: number | null = null;
+      if (p.self_reported_dupr != null) {
+        const n = Number(p.self_reported_dupr);
+        dupr = Number.isNaN(n) ? null : n;
+      }
+
+      return {
+        id: p.id,
+        email: p.email,
+        first_name: p.first_name,
+        last_name: p.last_name,
+        self_reported_dupr: dupr,
+        updated_at: p.updated_at ?? null,
+        leagues: leagueMap.get(p.id) ?? [],
+      };
+    });
+
+    mapped.sort((a, b) => {
+      const an = `${a.first_name ?? ''} ${a.last_name ?? ''}`.trim().toLowerCase();
+      const bn = `${b.first_name ?? ''} ${b.last_name ?? ''}`.trim().toLowerCase();
+      if (an && bn) return an.localeCompare(bn);
+      if (an) return -1;
+      if (bn) return 1;
+      const ae = (a.email ?? '').toLowerCase();
+      const be = (b.email ?? '').toLowerCase();
+      return ae.localeCompare(be);
+    });
+
+    setUsers(mapped);
+    setLoading(false);
   }, [router]);
+
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
 
   function startEdit(user: AdminUser) {
     setEditing({
@@ -284,6 +282,68 @@ export default function AdminUsersPage() {
     setDeletingId(null);
   }
 
+  async function handleCreateUser(event: FormEvent) {
+    event.preventDefault();
+    const email = createEmail.trim().toLowerCase();
+    if (!email) {
+      setError('Email is required.');
+      return;
+    }
+
+    let dupr: number | null = null;
+    if (createDupr.trim()) {
+      const n = Number(createDupr.trim());
+      if (Number.isNaN(n) || n < 1.0 || n > 8.5) {
+        setError('DUPR must be between 1.0 and 8.5.');
+        return;
+      }
+      dupr = n;
+    }
+
+    setCreating(true);
+    setError(null);
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+
+    if (!accessToken) {
+      setError('You must be signed in.');
+      setCreating(false);
+      return;
+    }
+
+    const response = await fetch('/api/admin/users', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        email,
+        first_name: createFirstName.trim() || undefined,
+        last_name: createLastName.trim() || undefined,
+        self_reported_dupr: dupr,
+      }),
+    });
+
+    const json = (await response.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+
+    if (!response.ok) {
+      setError(json?.error ?? 'Failed to create user.');
+      setCreating(false);
+      return;
+    }
+
+    // Reset form and reload user list
+    setCreateEmail('');
+    setCreateFirstName('');
+    setCreateLastName('');
+    setCreateDupr('');
+    setCreating(false);
+    setShowCreateForm(false);
+    loadUsers();
+  }
+
   function formatDate(value: string | null) {
     if (!value) return '\u2014';
     const d = new Date(value);
@@ -323,6 +383,58 @@ export default function AdminUsersPage() {
       <p className="text-app-muted text-sm mb-6">
         View and manage all user profiles. Only your admin account can access this page.
       </p>
+
+      {/* Create User Section */}
+      <div className="border-t border-app-border pt-6 mb-6">
+        {!showCreateForm ? (
+          <Button variant="primary" onClick={() => setShowCreateForm(true)}>
+            Create User
+          </Button>
+        ) : (
+          <div>
+            <SectionLabel>Create User</SectionLabel>
+            <form onSubmit={handleCreateUser} className="mt-3 grid gap-3 max-w-sm">
+              <input
+                type="email"
+                placeholder="Email (required)"
+                value={createEmail}
+                onChange={(e) => setCreateEmail(e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-app-border bg-transparent text-app-text text-sm focus:outline-none focus:border-app-text transition-colors"
+              />
+              <input
+                type="text"
+                placeholder="First name"
+                value={createFirstName}
+                onChange={(e) => setCreateFirstName(e.target.value)}
+                className="w-full px-3 py-2 border border-app-border bg-transparent text-app-text text-sm focus:outline-none focus:border-app-text transition-colors"
+              />
+              <input
+                type="text"
+                placeholder="Last name"
+                value={createLastName}
+                onChange={(e) => setCreateLastName(e.target.value)}
+                className="w-full px-3 py-2 border border-app-border bg-transparent text-app-text text-sm focus:outline-none focus:border-app-text transition-colors"
+              />
+              <input
+                type="text"
+                placeholder="DUPR (1.0 - 8.5)"
+                value={createDupr}
+                onChange={(e) => setCreateDupr(e.target.value)}
+                className="w-full px-3 py-2 border border-app-border bg-transparent text-app-text text-sm focus:outline-none focus:border-app-text transition-colors"
+              />
+              <div className="flex gap-2">
+                <Button variant="primary" type="submit" disabled={creating}>
+                  {creating ? 'Creating...' : 'Create'}
+                </Button>
+                <Button variant="secondary" onClick={() => { setShowCreateForm(false); setError(null); }} disabled={creating}>
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </div>
+        )}
+      </div>
 
       {error && (
         <p className="text-app-danger text-sm mb-4">{error}</p>
