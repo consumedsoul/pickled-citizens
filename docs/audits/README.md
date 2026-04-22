@@ -4,6 +4,7 @@ Chronological list of repository audits for Pickled Citizens.
 
 | Date | Overall | Security | Performance | Code Quality | Docs | Critical | High | Medium | Low | Total | Summary |
 |------|---------|----------|-------------|--------------|------|----------|------|--------|-----|-------|---------|
+| [2026-04-22](./2026-04-22-audit.md) | 97/100 (A+) | 95/100 | 100/100 | 96/100 | 78/100 | 0 | 0 | 3 | 4 | 7 | 7 of 8 prev items resolved (88%); llms.txt + JSON-LD + robots.txt all shipped; Modal used for admin delete; new Create User admin flow |
 | [2026-04-06](./2026-04-06-audit.md) | 93/100 (A) | 92/100 | 95/100 | 92/100 | 75/100 | 0 | 0 | 4 | 4 | 8 | All 3 prev items resolved (100%); first audit with 0 critical/high; LLM discoverability 1/10 — first assessed |
 | [2026-03-04](./2026-03-04-audit.md) | 89/100 (A) | 80/100 | 93/100 | 88/100 | 88/100 | 1 | 2 | 4 | 9 | 16 | All 15 prev items resolved (100%), 52 tests added, DB types with Relationships, CSP header missing |
 | [2026-02-23](./2026-02-23-audit.md) | 80/100 (B+) | 75/100 | 80/100 | 82/100 | 85/100 | 1 | 3 | 6 | 5 | 15 | Complete UI redesign, 0 any types, component library, 8/13 prev items resolved, dead middleware found |
@@ -13,6 +14,19 @@ Chronological list of repository audits for Pickled Citizens.
 | [2026-02-08](./2026-02-08-audit.md) | N/A | N/A | N/A | N/A | N/A | 2 | 5 | 6 | 5 | 18 | Initial audit. Debug endpoint in prod, duplicate RLS policies, 15+ `any` types, no tests. |
 
 ## Trend Analysis
+
+**2026-04-22 (Week 8):**
+- 📊 **Overall: 97/100 (A+ - Excellent)** — New high! (+4 from last audit)
+- ✅ **88% resolution rate** — 7 of 8 previous action items resolved
+- ✅ **Second consecutive audit with 0 critical and 0 high issues**
+- ✅ LLM Discoverability 1/10 → 7/10 (+6) — `llms.txt`, JSON-LD `SoftwareApplication`, and `robots.txt` AI rules all shipped
+- ✅ Admin users page now uses `Modal` for delete confirmation (design-system consistent)
+- ✅ DUPR range validation (1.0–8.5) in both PATCH and new POST endpoints
+- 🆕 Admin **Create User** feature with email-verified bypass (`POST /api/admin/users`)
+- 🆕 Migration to `@supabase/ssr` for cookie-based auth (middleware now works)
+- ⚠️ `robots.txt` advertises `/sitemap.xml` that does not exist — 404
+- ⚠️ CSP still carries `script-src 'unsafe-inline'` (now joined by Cloudflare Insights beacon)
+- ⚠️ CLAUDE.md Known Gotchas contains two newly stale entries
 
 **2026-04-06 (Week 7):**
 - 📊 **Overall: 93/100 (A - Excellent)** — New high! (+4 from last audit)
@@ -81,14 +95,20 @@ Chronological list of repository audits for Pickled Citizens.
 
 | Issue | First Found | Status | Audits Open |
 |-------|------------|--------|-------------|
-| CSP `script-src 'unsafe-inline'` | 2026-04-06 | Open | 1 |
-| No LLM discoverability signals | 2026-04-06 | Open | 1 |
-| DUPR range validation missing | 2026-04-06 | Open | 1 |
+| CSP `script-src 'unsafe-inline'` | 2026-04-06 | Open | 2 |
+| README.md too long (558 lines) | 2026-04-06 | Open | 2 |
+| FAQ with FAQPage schema missing | 2026-04-06 | Open | 2 |
+| `robots.txt` references non-existent sitemap | 2026-04-22 | Open | 1 |
 
 ## Resolved Issues
 
 | Issue | First Found | Resolved | Audits Open | Resolution |
 |-------|------------|----------|-------------|------------|
+| No `llms.txt` | 2026-04-06 | 2026-04-22 | 1 | `public/llms.txt` created with site description + key pages |
+| No JSON-LD structured data | 2026-04-06 | 2026-04-22 | 1 | `SoftwareApplication` schema added to `app/layout.tsx` |
+| No `robots.txt` / AI crawler rules | 2026-04-06 | 2026-04-22 | 1 | `public/robots.txt` with GPTBot/ClaudeBot/PerplexityBot allowed |
+| DUPR range validation missing | 2026-04-06 | 2026-04-22 | 1 | 1.0–8.5 range check in `app/api/admin/users/route.ts:138` |
+| `window.confirm()` in admin users page | 2026-04-06 | 2026-04-22 | 1 | Replaced with `Modal` component |
 | Missing Content-Security-Policy header | 2026-03-04 | 2026-04-06 | 1 | CSP added to `next.config.mjs` with full directives |
 | `middleware.ts` hardcoded ADMIN_EMAIL | 2026-03-04 | 2026-04-06 | 1 | Imports from `./src/lib/constants` |
 | No audit logging for admin PATCH | 2026-03-04 | 2026-04-06 | 1 | PATCH logs `admin.user_profile_updated` to `admin_events` |

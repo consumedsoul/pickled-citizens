@@ -172,12 +172,14 @@ Editorial-inspired B&W design: sharp edges (no border-radius), monospace upperca
 | POST | `/api/leagues/leave` | Bearer token auth. Body: `{ leagueId }` |
 | GET | `/api/session/[id]/metadata` | Uses service role. Returns session info for OG tags |
 | GET | `/api/og` | Generates Open Graph images |
-| PATCH | `/api/admin/users` | Admin-only. Bearer token + email check. Updates user profiles via service role |
-| DELETE | `/api/admin/users` | Admin-only. Bearer token + email check. Deletes user and cascading data |
+| POST | `/api/admin/users` | Admin-only. Creates auth user with `email_confirm: true` (skips verification) + upserts profile. Audit logged as `admin.user_created` |
+| PATCH | `/api/admin/users` | Admin-only. Bearer token + email check. Updates user profiles via service role. Validates DUPR 1.0–8.5 |
+| DELETE | `/api/admin/users` | Admin-only. Bearer token + email check. Deletes user and cascading data via `admin_delete_user` RPC |
 
 ## Known Gotchas
 
 - **Admin email hardcoded in schema**: `supabase/schema.sql` (RLS + functions) hardcodes `hun@ghkim.com` directly — changing it requires a migration. `middleware.ts` and all client-side code correctly import `ADMIN_EMAIL` from `src/lib/constants.ts`.
-- **CSP uses `unsafe-inline` for scripts**: `next.config.mjs` has a CSP header but `script-src 'self' 'unsafe-inline'` is needed for Next.js hydration. Proper fix is nonce-based CSP — see audit 2026-04-06.
-- **`window.confirm()` still in admin**: `app/admin/users/page.tsx:245` still uses browser dialogs for delete confirmation. The leagues page was already migrated to the `Modal` component.
-- **No LLM discoverability**: No `public/robots.txt`, `public/llms.txt`, or JSON-LD structured data. See audit 2026-04-06 for templates.
+- **CSP uses `unsafe-inline` for scripts**: `next.config.mjs` has a CSP header but `script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com` is needed for Next.js hydration and the Cloudflare Web Analytics beacon. Proper fix is nonce-based CSP via middleware — see audit 2026-04-22.
+- **`robots.txt` references a non-existent sitemap**: `public/robots.txt` advertises `https://pickledcitizens.com/sitemap.xml` but no sitemap route is implemented. Add `app/sitemap.ts` using the Next.js 14 Metadata API — see audit 2026-04-22.
+- **Build version is generated at build time**: `next.config.mjs` writes `src/lib/buildVersion.ts` during `next build` (Pacific time). The file is checked in but mutated by every build; the `M src/lib/buildVersion.ts` status after a local build is expected. Do not remove the file — the footer imports from it.
+- **`@supabase/ssr` required for middleware auth**: The browser client uses `createBrowserClient` from `@supabase/ssr` (cookie-based) so the Next.js middleware at `middleware.ts` can read the session. Reverting to `createClient` from `@supabase/supabase-js` will break `/admin/*` route protection.
