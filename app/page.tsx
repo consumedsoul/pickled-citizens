@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/Button";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { formatDateTime, formatLeagueName } from "@/lib/formatters";
+import { FAQ_ITEMS } from "@/lib/faq";
 import type { Database } from "@/types/database";
 
 interface HomeAuthState {
@@ -619,6 +621,22 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* FAQ */}
+      <div className="border-t border-app-border pt-8 pb-8">
+        <SectionLabel>Frequently Asked Questions</SectionLabel>
+        <div className="mt-4 divide-y divide-app-border">
+          {FAQ_ITEMS.map((item) => (
+            <details key={item.q} className="py-3 group">
+              <summary className="text-sm font-medium text-app-text cursor-pointer list-none flex justify-between items-center">
+                <span>{item.q}</span>
+                <span className="font-mono text-xs text-app-muted ml-4 group-open:rotate-45 transition-transform">+</span>
+              </summary>
+              <p className="text-sm text-app-muted leading-relaxed mt-2">{item.a}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+
       {/* Support */}
       <div className="border-t border-app-border pt-8 pb-4 text-center">
         <a
@@ -626,10 +644,13 @@ export default function HomePage() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          <img
-            src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
+          <Image
+            src="/images/buymeacoffee.png"
             alt="Buy Me A Coffee"
-            className="h-[38px] w-[135px] inline-block"
+            width={135}
+            height={38}
+            unoptimized
+            className="inline-block"
           />
         </a>
       </div>

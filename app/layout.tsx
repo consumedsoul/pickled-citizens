@@ -2,12 +2,14 @@ import "./globals.css";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { headers } from "next/headers";
 import { Inter, Space_Grotesk, IBM_Plex_Mono } from "next/font/google";
 import favicon from "./images/Pickled-Citizens-Logo-Favicon.png";
 import { AuthStatus } from "@/components/AuthStatus";
 import { Navigation } from "@/components/Navigation";
 import { AdminFooterLinks } from "@/components/AdminFooterLinks";
 import { BuildVersion } from "@/components/BuildVersion";
+import { FAQ_ITEMS } from "@/lib/faq";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pickledcitizens.com';
 
@@ -61,7 +63,7 @@ export const metadata = {
   },
 };
 
-const jsonLd = {
+const softwareAppJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
   name: 'Pickled Citizens',
@@ -82,14 +84,31 @@ const jsonLd = {
   },
 };
 
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: FAQ_ITEMS.map((item) => ({
+    '@type': 'Question',
+    name: item.q,
+    acceptedAnswer: { '@type': 'Answer', text: item.a },
+  })),
+};
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   const year = new Date().getFullYear();
+  const nonce = headers().get('x-nonce') ?? undefined;
   return (
     <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable} ${ibmPlexMono.variable}`}>
       <head>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          nonce={nonce}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareAppJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          nonce={nonce}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
         />
       </head>
       <body className="font-sans">
