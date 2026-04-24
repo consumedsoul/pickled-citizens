@@ -867,26 +867,16 @@ export default function SessionsPage() {
         const { data: guestRows, error: guestsError } = await supabase
           .from("session_guests")
           .insert(guestInserts)
-          .select("id, display_name, dupr");
+          .select("id");
 
-        if (guestsError || !guestRows) {
+        if (guestsError || !guestRows || guestRows.length !== guestsInPlay.length) {
           setError(guestsError?.message ?? "Unable to create session guests.");
           setGenerating(false);
           return;
         }
 
-        const remaining = [...guestRows];
-        guestsInPlay.forEach((g) => {
-          const displayName = `${g.first_name ?? ""}${g.last_name ? ` ${g.last_name}` : ""}`.trim();
-          const matchIdx = remaining.findIndex(
-            (r) =>
-              r.display_name === displayName &&
-              Number(r.dupr) === Number(g.self_reported_dupr)
-          );
-          if (matchIdx >= 0) {
-            syntheticToGuestId.set(g.user_id, remaining[matchIdx].id);
-            remaining.splice(matchIdx, 1);
-          }
+        guestsInPlay.forEach((g, i) => {
+          syntheticToGuestId.set(g.user_id, guestRows[i].id);
         });
       }
 
@@ -901,10 +891,12 @@ export default function SessionsPage() {
         guest_id: string | null;
         team: 1 | 2;
         position: number;
-      } | null {
+      } {
         if (p.is_guest) {
           const guestId = syntheticToGuestId.get(p.user_id);
-          if (!guestId) return null;
+          if (!guestId) {
+            throw new Error(`Missing guest mapping for ${p.first_name ?? "guest"}`);
+          }
           return { match_id, user_id: null, guest_id: guestId, team, position };
         }
         return { match_id, user_id: p.user_id, guest_id: null, team, position };
@@ -923,21 +915,12 @@ export default function SessionsPage() {
         if (!plan) return;
         const [a1, a2] = plan.pairA;
         const [b1, b2] = plan.pairB;
-        const rows = [
+        playerInserts.push(
           playerInsertFor(match.id, a1, 1, 0),
           playerInsertFor(match.id, a2, 1, 1),
           playerInsertFor(match.id, b1, 2, 0),
           playerInsertFor(match.id, b2, 2, 1),
-        ].filter(
-          (r): r is {
-            match_id: string;
-            user_id: string | null;
-            guest_id: string | null;
-            team: 1 | 2;
-            position: number;
-          } => r !== null
         );
-        playerInserts.push(...rows);
       });
 
       if (playerInserts.length) {
