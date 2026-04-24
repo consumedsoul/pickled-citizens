@@ -342,7 +342,7 @@ export default function SessionDetailPage() {
       const { data: matchRows, error: matchesError } = await supabase
         .from('matches')
         .select(
-          'id, session_id, court_number, scheduled_order, status, match_players(user_id, team, position), result:match_results(team1_score, team2_score, completed_at)'
+          'id, session_id, court_number, scheduled_order, status, match_players(user_id, guest_id, team, position), result:match_results(team1_score, team2_score, completed_at)'
         )
         .eq('session_id', sessionId)
         .order('scheduled_order', { ascending: true });
@@ -357,13 +357,19 @@ export default function SessionDetailPage() {
       }
 
       const playerIds = new Set<string>();
+      const guestIds = new Set<string>();
       type MatchQueryRow = {
         id: string;
         session_id: string;
         court_number: number | null;
         scheduled_order: number | null;
         status: string;
-        match_players: { user_id: string; team: number; position: number }[];
+        match_players: {
+          user_id: string | null;
+          guest_id: string | null;
+          team: number;
+          position: number;
+        }[];
         result:
           | { team1_score: number | null; team2_score: number | null; completed_at: string | null }
           | { team1_score: number | null; team2_score: number | null; completed_at: string | null }[]
@@ -373,6 +379,7 @@ export default function SessionDetailPage() {
         const mps = row.match_players ?? [];
         mps.forEach((mp) => {
           if (mp.user_id) playerIds.add(mp.user_id);
+          if (mp.guest_id) guestIds.add(mp.guest_id);
         });
       });
 
@@ -415,11 +422,72 @@ export default function SessionDetailPage() {
         });
       }
 
-      function toPlayer(userId: string): SessionPlayer {
-        const profile = profilesMap.get(userId);
-        if (profile) return profile;
+      const guestsMap = new Map<string, SessionPlayer>();
+      if (guestIds.size > 0) {
+        const { data: guestRows, error: guestsError } = await supabase
+          .from('session_guests')
+          .select('id, display_name, dupr')
+          .in('id', Array.from(guestIds));
+
+        if (!active) return;
+
+        if (guestsError) {
+          setError(guestsError.message);
+          setMatches([]);
+          setLoading(false);
+          return;
+        }
+
+        type GuestQueryRow = {
+          id: string;
+          display_name: string;
+          dupr: number | string | null;
+        };
+        ((guestRows ?? []) as GuestQueryRow[]).forEach((g) => {
+          const name = (g.display_name ?? '').trim();
+          const firstSpace = name.indexOf(' ');
+          const first_name = firstSpace === -1 ? name : name.slice(0, firstSpace);
+          const last_name = firstSpace === -1 ? null : name.slice(firstSpace + 1).trim() || null;
+          let dupr: number | null = null;
+          if (g.dupr != null) {
+            const n = Number(g.dupr);
+            dupr = Number.isNaN(n) ? null : n;
+          }
+          guestsMap.set(g.id, {
+            id: g.id,
+            first_name,
+            last_name,
+            email: null,
+            self_reported_dupr: dupr,
+          });
+        });
+      }
+
+      function toPlayer(mp: { user_id: string | null; guest_id: string | null }): SessionPlayer {
+        if (mp.guest_id) {
+          const guest = guestsMap.get(mp.guest_id);
+          if (guest) return guest;
+          return {
+            id: mp.guest_id,
+            first_name: null,
+            last_name: null,
+            email: null,
+            self_reported_dupr: null,
+          };
+        }
+        if (mp.user_id) {
+          const profile = profilesMap.get(mp.user_id);
+          if (profile) return profile;
+          return {
+            id: mp.user_id,
+            first_name: null,
+            last_name: null,
+            email: null,
+            self_reported_dupr: null,
+          };
+        }
         return {
-          id: userId,
+          id: 'unknown',
           first_name: null,
           last_name: null,
           email: null,
@@ -432,11 +500,11 @@ export default function SessionDetailPage() {
         const team1 = mps
           .filter((mp) => mp.team === 1)
           .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
-          .map((mp) => toPlayer(mp.user_id));
+          .map((mp) => toPlayer(mp));
         const team2 = mps
           .filter((mp) => mp.team === 2)
           .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
-          .map((mp) => toPlayer(mp.user_id));
+          .map((mp) => toPlayer(mp));
 
         const rawResult = row.result;
 

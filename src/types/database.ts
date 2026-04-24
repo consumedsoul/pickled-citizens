@@ -249,20 +249,26 @@ export interface Database {
       }
       match_players: {
         Row: {
+          id: string
           match_id: string
-          user_id: string
+          user_id: string | null
+          guest_id: string | null
           team: 1 | 2
           position: number
         }
         Insert: {
+          id?: string
           match_id: string
-          user_id: string
+          user_id?: string | null
+          guest_id?: string | null
           team: 1 | 2
           position?: number
         }
         Update: {
+          id?: string
           match_id?: string
-          user_id?: string
+          user_id?: string | null
+          guest_id?: string | null
           team?: 1 | 2
           position?: number
         }
@@ -279,6 +285,45 @@ export interface Database {
             columns: ['user_id']
             isOneToOne: false
             referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'match_players_guest_id_fkey'
+            columns: ['guest_id']
+            isOneToOne: false
+            referencedRelation: 'session_guests'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+      session_guests: {
+        Row: {
+          id: string
+          session_id: string
+          display_name: string
+          dupr: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          display_name: string
+          dupr: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          session_id?: string
+          display_name?: string
+          dupr?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'session_guests_session_id_fkey'
+            columns: ['session_id']
+            isOneToOne: false
+            referencedRelation: 'game_sessions'
             referencedColumns: ['id']
           }
         ]

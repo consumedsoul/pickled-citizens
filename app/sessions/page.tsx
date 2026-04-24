@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/Button";
 import { Input, Select } from "@/components/ui/Input";
+import { Modal } from "@/components/ui/Modal";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { formatDateTime, displayPlayerName } from "@/lib/formatters";
 
@@ -20,6 +21,7 @@ type Member = {
   last_name: string | null;
   email: string | null;
   self_reported_dupr: number | null;
+  is_guest?: boolean;
 };
 
 type Pair = [Member, Member];
@@ -59,14 +61,25 @@ export default function SessionsPage() {
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>("");
   const [membersLoading, setMembersLoading] = useState(false);
   const [members, setMembers] = useState<Member[]>([]);
+  const [guests, setGuests] = useState<Member[]>([]);
 
   const [scheduledFor, setScheduledFor] = useState("");
   const [playerCount, setPlayerCount] = useState<6 | 8 | 10 | 12>(6);
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
   const [orderedPlayers, setOrderedPlayers] = useState<Member[]>([]);
 
+  const [guestModalOpen, setGuestModalOpen] = useState(false);
+  const [guestFirstName, setGuestFirstName] = useState("");
+  const [guestLastName, setGuestLastName] = useState("");
+  const [guestDupr, setGuestDupr] = useState("");
+  const [guestError, setGuestError] = useState<string | null>(null);
+
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const selectablePlayers = useMemo(() => {
+    return [...members, ...guests];
+  }, [members, guests]);
 
   const sortedLeaguesForSelect = useMemo(() => {
     if (!leagues.length) return [] as League[];
@@ -76,15 +89,15 @@ export default function SessionsPage() {
   }, [leagues]);
 
   const sortedMembersForSelect = useMemo(() => {
-    if (!members.length) return [] as Member[];
-    const copy = [...members];
+    if (!selectablePlayers.length) return [] as Member[];
+    const copy = [...selectablePlayers];
     copy.sort((a, b) => {
       const an = `${a.first_name ?? ""} ${a.last_name ?? ""}`.trim() || a.email || a.user_id;
       const bn = `${b.first_name ?? ""} ${b.last_name ?? ""}`.trim() || b.email || b.user_id;
       return an.localeCompare(bn);
     });
     return copy;
-  }, [members]);
+  }, [selectablePlayers]);
 
   const getAvailablePlayersForSlot = useMemo(() => {
     return (slotIndex: number) => {
@@ -345,6 +358,7 @@ export default function SessionsPage() {
   useEffect(() => {
     if (!selectedLeagueId) {
       setMembers([]);
+      setGuests([]);
       setSelectedPlayerIds([]);
       setOrderedPlayers([]);
       return;
@@ -424,6 +438,7 @@ export default function SessionsPage() {
       });
 
       setMembers(membersWithProfiles);
+      setGuests([]);
       setSelectedPlayerIds([]);
       setOrderedPlayers([]);
       setMembersLoading(false);
@@ -437,7 +452,7 @@ export default function SessionsPage() {
   }, [selectedLeagueId]);
 
   useEffect(() => {
-    if (!members.length) {
+    if (!selectablePlayers.length) {
       setOrderedPlayers([]);
       return;
     }
@@ -447,7 +462,7 @@ export default function SessionsPage() {
 
     selectedPlayerIds.forEach((id) => {
       if (!id || seen.has(id)) return;
-      const member = members.find((m) => m.user_id === id);
+      const member = selectablePlayers.find((m) => m.user_id === id);
       if (member) {
         seen.add(id);
         chosen.push(member);
@@ -467,7 +482,7 @@ export default function SessionsPage() {
     });
 
     setOrderedPlayers(chosen);
-  }, [selectedPlayerIds, members]);
+  }, [selectedPlayerIds, selectablePlayers]);
 
   function handleLeagueChange(id: string) {
     setSelectedLeagueId(id);
@@ -533,14 +548,79 @@ export default function SessionsPage() {
       ? member.user_id
       : displayPlayerName(member);
 
+    const suffix = member.is_guest ? " (guest)" : "";
+
     if (member.self_reported_dupr != null) {
       const dupr = Number(member.self_reported_dupr);
       if (!Number.isNaN(dupr)) {
-        return `${base} (${dupr.toFixed(2)})`;
+        return `${base} (${dupr.toFixed(2)})${suffix}`;
       }
     }
 
-    return base;
+    return `${base}${suffix}`;
+  }
+
+  function openGuestModal() {
+    setGuestFirstName("");
+    setGuestLastName("");
+    setGuestDupr("");
+    setGuestError(null);
+    setGuestModalOpen(true);
+  }
+
+  function closeGuestModal() {
+    setGuestModalOpen(false);
+    setGuestError(null);
+  }
+
+  function handleAddGuest() {
+    const first = guestFirstName.trim();
+    const last = guestLastName.trim();
+    const duprRaw = guestDupr.trim();
+
+    if (!first) {
+      setGuestError("First name is required.");
+      return;
+    }
+
+    const duprNum = Number(duprRaw);
+    if (!duprRaw || Number.isNaN(duprNum)) {
+      setGuestError("DUPR is required.");
+      return;
+    }
+    if (duprNum < 1.0 || duprNum > 8.5) {
+      setGuestError("DUPR must be between 1.0 and 8.5.");
+      return;
+    }
+
+    const newGuest: Member = {
+      user_id: `guest:${crypto.randomUUID()}`,
+      first_name: first,
+      last_name: last || null,
+      email: null,
+      self_reported_dupr: duprNum,
+      is_guest: true,
+    };
+
+    setGuests((prev) => [...prev, newGuest]);
+
+    setSelectedPlayerIds((prev) => {
+      const next = [...prev];
+      for (let i = 0; i < playerCount; i += 1) {
+        if (!next[i]) {
+          next[i] = newGuest.user_id;
+          return next;
+        }
+      }
+      return next;
+    });
+
+    closeGuestModal();
+  }
+
+  function handleRemoveGuest(guestId: string) {
+    setGuests((prev) => prev.filter((g) => g.user_id !== guestId));
+    setSelectedPlayerIds((prev) => prev.map((id) => (id === guestId ? "" : id)));
   }
 
   function buildTeams(players: Member[]): { teamA: Member[]; teamB: Member[] } {
@@ -582,8 +662,8 @@ export default function SessionsPage() {
     }
 
 
-    if (!members.length) {
-      setError("This league has no members yet.");
+    if (!members.length && !guests.length) {
+      setError("This league has no members yet. Add a guest to create a session.");
       return;
     }
 
@@ -777,19 +857,93 @@ export default function SessionsPage() {
         (a, b) => (a.scheduled_order ?? 0) - (b.scheduled_order ?? 0)
       );
 
-      const playerInserts: { match_id: string; user_id: string; team: 1 | 2; position: number }[] = [];
+      const guestsInPlay = guests.filter((g) =>
+        orderedPlayers.some((p) => p.user_id === g.user_id)
+      );
+
+      const syntheticToGuestId = new Map<string, string>();
+
+      if (guestsInPlay.length) {
+        const guestInserts = guestsInPlay.map((g) => ({
+          session_id: session.id,
+          display_name: `${g.first_name ?? ""}${g.last_name ? ` ${g.last_name}` : ""}`.trim(),
+          dupr: g.self_reported_dupr as number,
+        }));
+
+        const { data: guestRows, error: guestsError } = await supabase
+          .from("session_guests")
+          .insert(guestInserts)
+          .select("id, display_name, dupr");
+
+        if (guestsError || !guestRows) {
+          setError(guestsError?.message ?? "Unable to create session guests.");
+          setGenerating(false);
+          return;
+        }
+
+        const remaining = [...guestRows];
+        guestsInPlay.forEach((g) => {
+          const displayName = `${g.first_name ?? ""}${g.last_name ? ` ${g.last_name}` : ""}`.trim();
+          const matchIdx = remaining.findIndex(
+            (r) =>
+              r.display_name === displayName &&
+              Number(r.dupr) === Number(g.self_reported_dupr)
+          );
+          if (matchIdx >= 0) {
+            syntheticToGuestId.set(g.user_id, remaining[matchIdx].id);
+            remaining.splice(matchIdx, 1);
+          }
+        });
+      }
+
+      function playerInsertFor(
+        match_id: string,
+        p: Member,
+        team: 1 | 2,
+        position: number
+      ): {
+        match_id: string;
+        user_id: string | null;
+        guest_id: string | null;
+        team: 1 | 2;
+        position: number;
+      } | null {
+        if (p.is_guest) {
+          const guestId = syntheticToGuestId.get(p.user_id);
+          if (!guestId) return null;
+          return { match_id, user_id: null, guest_id: guestId, team, position };
+        }
+        return { match_id, user_id: p.user_id, guest_id: null, team, position };
+      }
+
+      const playerInserts: {
+        match_id: string;
+        user_id: string | null;
+        guest_id: string | null;
+        team: 1 | 2;
+        position: number;
+      }[] = [];
 
       sortedMatches.forEach((match, index) => {
         const plan = gamesPlan[index];
         if (!plan) return;
         const [a1, a2] = plan.pairA;
         const [b1, b2] = plan.pairB;
-        playerInserts.push(
-          { match_id: match.id, user_id: a1.user_id, team: 1, position: 0 },
-          { match_id: match.id, user_id: a2.user_id, team: 1, position: 1 },
-          { match_id: match.id, user_id: b1.user_id, team: 2, position: 0 },
-          { match_id: match.id, user_id: b2.user_id, team: 2, position: 1 }
+        const rows = [
+          playerInsertFor(match.id, a1, 1, 0),
+          playerInsertFor(match.id, a2, 1, 1),
+          playerInsertFor(match.id, b1, 2, 0),
+          playerInsertFor(match.id, b2, 2, 1),
+        ].filter(
+          (r): r is {
+            match_id: string;
+            user_id: string | null;
+            guest_id: string | null;
+            team: 1 | 2;
+            position: number;
+          } => r !== null
         );
+        playerInserts.push(...rows);
       });
 
       if (playerInserts.length) {
@@ -872,6 +1026,52 @@ export default function SessionsPage() {
 
   return (
     <div className="mt-8">
+      {guestModalOpen && (
+        <Modal
+          title="Add guest player"
+          onClose={closeGuestModal}
+          footer={
+            <>
+              <Button type="button" variant="secondary" onClick={closeGuestModal}>
+                Cancel
+              </Button>
+              <Button type="button" variant="primary" onClick={handleAddGuest}>
+                Add guest
+              </Button>
+            </>
+          }
+        >
+          <p className="text-app-muted mb-4">
+            Guests join this session only. They are not added to the league and do not appear in lifetime stats.
+          </p>
+          <div className="grid gap-4">
+            <Input
+              label="First name"
+              value={guestFirstName}
+              onChange={(e) => setGuestFirstName(e.target.value)}
+              autoFocus
+            />
+            <Input
+              label="Last name (optional)"
+              value={guestLastName}
+              onChange={(e) => setGuestLastName(e.target.value)}
+            />
+            <Input
+              label="DUPR (1.0–8.5)"
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min="1.0"
+              max="8.5"
+              value={guestDupr}
+              onChange={(e) => setGuestDupr(e.target.value)}
+            />
+            {guestError && (
+              <p className="text-app-danger text-sm">{guestError}</p>
+            )}
+          </div>
+        </Modal>
+      )}
       <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Sessions</h1>
       {userEmail && (
         <p className="text-app-muted text-sm mb-4">
@@ -939,12 +1139,12 @@ export default function SessionsPage() {
                     Loading league members...
                   </p>
                 )}
-                {!membersLoading && !members.length && (
+                {!membersLoading && !members.length && !guests.length && (
                   <p className="text-app-muted text-sm">
-                    {selectedLeagueId ? "This league has no members yet." : "Please select a league in the drop-down above."}
+                    {selectedLeagueId ? "This league has no members yet. Add a guest to get started." : "Please select a league in the drop-down above."}
                   </p>
                 )}
-                {!membersLoading && members.length > 0 && (
+                {!membersLoading && selectablePlayers.length > 0 && (
                   <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-2">
                     {Array.from({ length: playerCount }).map((_, i) => (
                       <Select
@@ -960,6 +1160,39 @@ export default function SessionsPage() {
                         ))}
                       </Select>
                     ))}
+                  </div>
+                )}
+                {selectedLeagueId && !membersLoading && (
+                  <div className="mt-3">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={openGuestModal}
+                      disabled={generating}
+                    >
+                      + Add guest
+                    </Button>
+                    {guests.length > 0 && (
+                      <div className="mt-3 divide-y divide-app-border border-t border-b border-app-border">
+                        {guests.map((g) => (
+                          <div
+                            key={g.user_id}
+                            className="flex items-center justify-between gap-2 py-2"
+                          >
+                            <span className="text-sm text-app-text">
+                              {displayPlayerWithDupr(g)}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={() => handleRemoveGuest(g.user_id)}
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
