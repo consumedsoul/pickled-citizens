@@ -13,7 +13,12 @@ interface ModalProps {
 export function Modal({ title, children, footer, onClose }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
   const titleId = useId();
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   // Lock body scroll, manage focus, handle Escape key
   useEffect(() => {
@@ -27,7 +32,7 @@ export function Modal({ title, children, footer, onClose }: ModalProps) {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
         e.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -63,7 +68,7 @@ export function Modal({ title, children, footer, onClose }: ModalProps) {
       // Restore focus to previously focused element
       previousFocusRef.current?.focus();
     };
-  }, [onClose]);
+  }, []);
 
   return (
     <>
