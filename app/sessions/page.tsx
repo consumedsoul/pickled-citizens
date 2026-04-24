@@ -77,9 +77,7 @@ export default function SessionsPage() {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const selectablePlayers = useMemo(() => {
-    return [...members, ...guests];
-  }, [members, guests]);
+  const memberSlotCount = Math.max(0, playerCount - guests.length);
 
   const sortedLeaguesForSelect = useMemo(() => {
     if (!leagues.length) return [] as League[];
@@ -89,15 +87,15 @@ export default function SessionsPage() {
   }, [leagues]);
 
   const sortedMembersForSelect = useMemo(() => {
-    if (!selectablePlayers.length) return [] as Member[];
-    const copy = [...selectablePlayers];
+    if (!members.length) return [] as Member[];
+    const copy = [...members];
     copy.sort((a, b) => {
       const an = `${a.first_name ?? ""} ${a.last_name ?? ""}`.trim() || a.email || a.user_id;
       const bn = `${b.first_name ?? ""} ${b.last_name ?? ""}`.trim() || b.email || b.user_id;
       return an.localeCompare(bn);
     });
     return copy;
-  }, [selectablePlayers]);
+  }, [members]);
 
   const getAvailablePlayersForSlot = useMemo(() => {
     return (slotIndex: number) => {
@@ -452,7 +450,7 @@ export default function SessionsPage() {
   }, [selectedLeagueId]);
 
   useEffect(() => {
-    if (!selectablePlayers.length) {
+    if (!members.length && !guests.length) {
       setOrderedPlayers([]);
       return;
     }
@@ -462,11 +460,17 @@ export default function SessionsPage() {
 
     selectedPlayerIds.forEach((id) => {
       if (!id || seen.has(id)) return;
-      const member = selectablePlayers.find((m) => m.user_id === id);
+      const member = members.find((m) => m.user_id === id);
       if (member) {
         seen.add(id);
         chosen.push(member);
       }
+    });
+
+    guests.forEach((g) => {
+      if (seen.has(g.user_id)) return;
+      seen.add(g.user_id);
+      chosen.push(g);
     });
 
     chosen.sort((a, b) => {
@@ -482,7 +486,7 @@ export default function SessionsPage() {
     });
 
     setOrderedPlayers(chosen);
-  }, [selectedPlayerIds, selectablePlayers]);
+  }, [selectedPlayerIds, members, guests]);
 
   function handleLeagueChange(id: string) {
     setSelectedLeagueId(id);
@@ -491,7 +495,7 @@ export default function SessionsPage() {
   function handlePlayerCountChange(value: string) {
     const n = (Number(value) || 6) as 6 | 8 | 10 | 12;
     setPlayerCount(n);
-    setSelectedPlayerIds((prev) => prev.slice(0, n));
+    setSelectedPlayerIds((prev) => prev.slice(0, Math.max(0, n - guests.length)));
   }
 
   function handleScheduledForChange(value: string) {
@@ -593,6 +597,11 @@ export default function SessionsPage() {
       return;
     }
 
+    if (guests.length >= playerCount) {
+      setGuestError("Guest count exceeds the player count for this session.");
+      return;
+    }
+
     const newGuest: Member = {
       user_id: `guest:${crypto.randomUUID()}`,
       first_name: first,
@@ -603,24 +612,12 @@ export default function SessionsPage() {
     };
 
     setGuests((prev) => [...prev, newGuest]);
-
-    setSelectedPlayerIds((prev) => {
-      const next = [...prev];
-      for (let i = 0; i < playerCount; i += 1) {
-        if (!next[i]) {
-          next[i] = newGuest.user_id;
-          return next;
-        }
-      }
-      return next;
-    });
-
+    setSelectedPlayerIds((prev) => prev.slice(0, Math.max(0, playerCount - (guests.length + 1))));
     closeGuestModal();
   }
 
   function handleRemoveGuest(guestId: string) {
     setGuests((prev) => prev.filter((g) => g.user_id !== guestId));
-    setSelectedPlayerIds((prev) => prev.map((id) => (id === guestId ? "" : id)));
   }
 
   function buildTeams(players: Member[]): { teamA: Member[]; teamB: Member[] } {
@@ -683,19 +680,16 @@ export default function SessionsPage() {
       return;
     }
 
-    if (selectedPlayerIds.length < playerCount) {
-      setError("Select all player slots.");
-      return;
-    }
-
+    const requiredMemberSlots = Math.max(0, playerCount - guests.length);
     const nonEmpty = selectedPlayerIds.filter(Boolean);
-    if (nonEmpty.length !== playerCount) {
+
+    if (nonEmpty.length !== requiredMemberSlots) {
       setError("Select all player slots.");
       return;
     }
 
     const unique = new Set(nonEmpty);
-    if (unique.size !== playerCount) {
+    if (unique.size !== nonEmpty.length) {
       setError("Each player can only be selected once.");
       return;
     }
@@ -1144,9 +1138,9 @@ export default function SessionsPage() {
                     {selectedLeagueId ? "This league has no members yet. Add a guest to get started." : "Please select a league in the drop-down above."}
                   </p>
                 )}
-                {!membersLoading && selectablePlayers.length > 0 && (
+                {!membersLoading && members.length > 0 && memberSlotCount > 0 && (
                   <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-2">
-                    {Array.from({ length: playerCount }).map((_, i) => (
+                    {Array.from({ length: memberSlotCount }).map((_, i) => (
                       <Select
                         key={i}
                         value={selectedPlayerIds[i] ?? ""}
@@ -1161,6 +1155,11 @@ export default function SessionsPage() {
                       </Select>
                     ))}
                   </div>
+                )}
+                {!membersLoading && members.length > 0 && memberSlotCount === 0 && (
+                  <p className="text-app-muted text-sm">
+                    All {playerCount} slots filled by guests.
+                  </p>
                 )}
                 {selectedLeagueId && !membersLoading && (
                   <div className="mt-3">
