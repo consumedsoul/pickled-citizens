@@ -4,6 +4,9 @@ import type { WebhookEvent } from '@clerk/nextjs/server';
 import { upsertProfile, deleteProfile } from '@/lib/db/queries/profiles';
 import { deleteUserAppData, logAdminEvent } from '@/lib/db/queries/admin';
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 /**
  * Clerk webhook receiver.
  *
@@ -59,7 +62,6 @@ export async function POST(request: Request) {
         firstName: u.first_name ?? null,
         lastName: u.last_name ?? null,
         avatarUrl: u.image_url ?? null,
-        // gender, duprId, selfReportedDupr, displayName remain user-managed via the profile UI.
       });
 
       if (event.type === 'user.created') {
@@ -75,8 +77,6 @@ export async function POST(request: Request) {
     case 'user.deleted': {
       const userId = event.data.id;
       if (userId) {
-        // Look up email before deleting profile, for cascade lookup of invites
-        // (We don't have a join here; deleteUserAppData is best-effort.)
         await deleteUserAppData(userId, null);
         await deleteProfile(userId);
         await logAdminEvent({
@@ -88,7 +88,6 @@ export async function POST(request: Request) {
       break;
     }
     default:
-      // Ignore other event types
       break;
   }
 

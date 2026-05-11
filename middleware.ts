@@ -54,7 +54,7 @@ export const config = {
   matcher: [
     // Skip Next internals, static assets, and the Clerk webhook (which uses
     // svix headers and its own signature verification).
-    '/((?!_next/static|_next/image|favicon.ico|images/|llms.txt|robots.txt|sitemap.xml|api/webhooks/).*)',
+    '/((?!_next/static|_next/image|favicon.ico|images/|llms.txt|robots.txt|sitemap.xml|api/clerk-webhook).*)',
     // Always run on API routes for auth context (Clerk needs this).
     '/(api|trpc)(.*)',
   ],
