@@ -1,37 +1,23 @@
-name: Deploy to Cloudflare Workers
+# Pages auto-deploys via Cloudflare's GitHub integration on push to main.
+# This workflow runs typecheck + lint as a sanity gate; it does not deploy.
+name: CI
 
 "on":
   push:
     branches:
       - main
-
-concurrency:
-  group: cloudflare-workers-deploy
-  cancel-in-progress: true
+  pull_request:
 
 jobs:
-  deploy:
+  check:
     runs-on: ubuntu-latest
-    env:
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || vars.NEXT_PUBLIC_SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-      NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL || vars.NEXT_PUBLIC_SITE_URL }}
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps
-
-      - name: Deploy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: npm run deploy:ci
+      - run: npm ci --legacy-peer-deps
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm test
