@@ -1,19 +1,20 @@
-"use client";
+'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
-import { Button } from "@/components/ui/Button";
-import { Input, Select } from "@/components/ui/Input";
-import { Modal } from "@/components/ui/Modal";
-import { SectionLabel } from "@/components/ui/SectionLabel";
-import { formatDateTime, displayPlayerName } from "@/lib/formatters";
-
-type League = {
-  id: string;
-  name: string;
-};
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useUser } from '@clerk/nextjs';
+import { Button } from '@/components/ui/Button';
+import { Input, Select } from '@/components/ui/Input';
+import { Modal } from '@/components/ui/Modal';
+import { SectionLabel } from '@/components/ui/SectionLabel';
+import { formatDateTime, displayPlayerName } from '@/lib/formatters';
+import {
+  getSessionsListData,
+  listLeagueRosterAction,
+  createSessionWithTeamsAction,
+  type SessionListItem,
+} from '@/lib/actions/sessions';
 
 type Member = {
   user_id: string;
@@ -26,15 +27,7 @@ type Member = {
 
 type Pair = [Member, Member];
 
-type SessionSummary = {
-  id: string;
-  league_id: string | null;
-  league_name: string | null;
-  created_by: string;
-  created_at: string;
-  scheduled_for: string | null;
-  player_count: number;
-};
+type LeagueOption = { id: string; name: string };
 
 const PLAYER_COUNTS = [6, 8, 10, 12] as const;
 const MAX_GAMES_BY_TOTAL_PLAYERS: Record<number, number> = {
@@ -46,52 +39,52 @@ const MAX_GAMES_BY_TOTAL_PLAYERS: Record<number, number> = {
 
 export default function SessionsPage() {
   const router = useRouter();
+  const { isLoaded, user } = useUser();
 
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [leagues, setLeagues] = useState<League[]>([]);
-
-  const [sessions, setSessions] = useState<SessionSummary[]>([]);
+  const [leagues, setLeagues] = useState<LeagueOption[]>([]);
+  const [sessions, setSessions] = useState<SessionListItem[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [sessionResults, setSessionResults] = useState<
     Record<string, { teamGreenWins: number; teamBlueWins: number }>
   >({});
 
-  const [selectedLeagueId, setSelectedLeagueId] = useState<string>("");
+  const [selectedLeagueId, setSelectedLeagueId] = useState<string>('');
   const [membersLoading, setMembersLoading] = useState(false);
   const [members, setMembers] = useState<Member[]>([]);
   const [guests, setGuests] = useState<Member[]>([]);
 
-  const [scheduledFor, setScheduledFor] = useState("");
+  const [scheduledFor, setScheduledFor] = useState('');
   const [playerCount, setPlayerCount] = useState<6 | 8 | 10 | 12>(6);
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
   const [orderedPlayers, setOrderedPlayers] = useState<Member[]>([]);
 
   const [guestModalOpen, setGuestModalOpen] = useState(false);
-  const [guestFirstName, setGuestFirstName] = useState("");
-  const [guestLastName, setGuestLastName] = useState("");
-  const [guestDupr, setGuestDupr] = useState("");
+  const [guestFirstName, setGuestFirstName] = useState('');
+  const [guestLastName, setGuestLastName] = useState('');
+  const [guestDupr, setGuestDupr] = useState('');
   const [guestError, setGuestError] = useState<string | null>(null);
 
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const userId = user?.id ?? null;
+  const userEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? null;
   const memberSlotCount = Math.max(0, playerCount - guests.length);
 
   const sortedLeaguesForSelect = useMemo(() => {
-    if (!leagues.length) return [] as League[];
+    if (!leagues.length) return [];
     const copy = [...leagues];
     copy.sort((a, b) => a.name.localeCompare(b.name));
     return copy;
   }, [leagues]);
 
   const sortedMembersForSelect = useMemo(() => {
-    if (!members.length) return [] as Member[];
+    if (!members.length) return [];
     const copy = [...members];
     copy.sort((a, b) => {
-      const an = `${a.first_name ?? ""} ${a.last_name ?? ""}`.trim() || a.email || a.user_id;
-      const bn = `${b.first_name ?? ""} ${b.last_name ?? ""}`.trim() || b.email || b.user_id;
+      const an = `${a.first_name ?? ''} ${a.last_name ?? ''}`.trim() || a.email || a.user_id;
+      const bn = `${b.first_name ?? ''} ${b.last_name ?? ''}`.trim() || b.email || b.user_id;
       return an.localeCompare(bn);
     });
     return copy;
@@ -99,259 +92,49 @@ export default function SessionsPage() {
 
   const getAvailablePlayersForSlot = useMemo(() => {
     return (slotIndex: number) => {
-      const selectedIds = selectedPlayerIds.filter((id, index) =>
-        id && index !== slotIndex
-      );
-      return sortedMembersForSelect.filter(member =>
-        !selectedIds.includes(member.user_id)
-      );
+      const selectedIds = selectedPlayerIds.filter((id, index) => id && index !== slotIndex);
+      return sortedMembersForSelect.filter((m) => !selectedIds.includes(m.user_id));
     };
   }, [sortedMembersForSelect, selectedPlayerIds]);
 
   useEffect(() => {
-    let active = true;
-
-    async function load() {
-      setLoading(true);
-      setError(null);
-
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (!active) return;
-
-      if (userError || !userData.user) {
-        router.replace("/");
-        return;
-      }
-
-      const user = userData.user;
-      setUserId(user.id);
-      setUserEmail(user.email ?? null);
-
-      const { data: leaguesData, error: leaguesError } = await supabase
-        .from("leagues")
-        .select("id, name")
-        .eq("owner_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (!active) return;
-
-      if (leaguesError) {
-        setError(leaguesError.message);
-        setLeagues([]);
-        setSessions([]);
-        setLoading(false);
-        return;
-      }
-
-      const list = (leaguesData ?? []) as League[];
-      setLeagues(list);
-
-      setSessionsLoading(true);
-
-      const { data: ownedSessionRows, error: ownedSessionsError } = await supabase
-        .from("game_sessions")
-        .select(
-          "id, league_id, created_by, created_at, scheduled_for, player_count, league:leagues(name)"
-        )
-        .eq("created_by", user.id);
-
-      if (!active) return;
-
-      if (ownedSessionsError) {
-        setError(ownedSessionsError.message);
-        setSessions([]);
-        setSessionsLoading(false);
-        setLoading(false);
-        return;
-      }
-
-      const { data: mpRows, error: mpError } = await supabase
-        .from("match_players")
-        .select("match_id")
-        .eq("user_id", user.id);
-
-      if (!active) return;
-
-      if (mpError) {
-        setError(mpError.message);
-        setSessions([]);
-        setSessionsLoading(false);
-        setLoading(false);
-        return;
-      }
-
-      type SessionQueryRow = {
-        id: string;
-        league_id: string | null;
-        created_by: string;
-        created_at: string;
-        scheduled_for: string | null;
-        player_count: number;
-        league: { name: string }[] | { name: string } | null;
-      };
-      let participantSessionRows: SessionQueryRow[] = [];
-
-      if (mpRows && mpRows.length) {
-        const matchIds = Array.from(
-          new Set(mpRows.map((row) => row.match_id))
-        );
-
-        if (matchIds.length) {
-          const { data: matchRows, error: matchesError } = await supabase
-            .from("matches")
-            .select("id, session_id")
-            .in("id", matchIds);
-
-          if (!active) return;
-
-          if (matchesError) {
-            setError(matchesError.message);
-            setSessions([]);
-            setSessionsLoading(false);
-            setLoading(false);
-            return;
-          }
-
-          const sessionIds = Array.from(
-            new Set(
-              (matchRows ?? [])
-                .map((m) => m.session_id)
-                .filter((id): id is string => !!id)
-            )
-          );
-
-          if (sessionIds.length) {
-            const { data: participantRows, error: participantError } =
-              await supabase
-                .from("game_sessions")
-                .select(
-                  "id, league_id, created_by, created_at, scheduled_for, player_count, league:leagues(name)"
-                )
-                .in("id", sessionIds);
-
-            if (!active) return;
-
-            if (participantError) {
-              setError(participantError.message);
-              setSessions([]);
-              setSessionsLoading(false);
-              setLoading(false);
-              return;
-            }
-
-            participantSessionRows = participantRows ?? [];
-          }
-        }
-      }
-
-      const allRows = [...(ownedSessionRows ?? []), ...participantSessionRows];
-      const byId = new Map<string, SessionQueryRow>();
-      allRows.forEach((row) => {
-        if (!row || !row.id) return;
-        byId.set(row.id, row as SessionQueryRow);
-      });
-
-      const mapped: SessionSummary[] = Array.from(byId.values()).map((row) => {
-        const leagueRel = row.league;
-        const leagueName =
-          Array.isArray(leagueRel) && leagueRel.length > 0
-            ? leagueRel[0]?.name ?? null
-            : !Array.isArray(leagueRel) && leagueRel
-              ? leagueRel.name ?? null
-              : null;
-
-        return {
-          id: row.id,
-          league_id: row.league_id ?? null,
-          league_name: leagueName,
-          created_by: row.created_by,
-          created_at: row.created_at,
-          scheduled_for: row.scheduled_for ?? null,
-          player_count: row.player_count,
-        };
-      });
-
-      mapped.sort((a, b) => {
-        const aTime = a.scheduled_for ?? a.created_at;
-        const bTime = b.scheduled_for ?? b.created_at;
-        if (!aTime && !bTime) return 0;
-        if (!aTime) return 1;
-        if (!bTime) return -1;
-        return new Date(bTime).getTime() - new Date(aTime).getTime();
-      });
-
-      let resultsBySession: Record<string, { teamGreenWins: number; teamBlueWins: number }> = {};
-
-      const sessionIds = mapped.map((s) => s.id);
-      if (sessionIds.length) {
-        const { data: matchRows, error: matchResultsError } = await supabase
-          .from("matches")
-          .select(
-            "id, session_id, result:match_results(team1_score, team2_score)"
-          )
-          .in("session_id", sessionIds);
-
-        if (!active) return;
-
-        if (!matchResultsError && matchRows) {
-          const bySession: Record<string, { teamGreenWins: number; teamBlueWins: number }> = {};
-
-          type MatchWithResult = {
-            id: string;
-            session_id: string | null;
-            result:
-              | { team1_score: number | null; team2_score: number | null }[]
-              | { team1_score: number | null; team2_score: number | null }
-              | null;
-          };
-          (matchRows as MatchWithResult[]).forEach((row) => {
-            const sessionId = row.session_id;
-            if (!sessionId) return;
-
-            const rawResult = row.result;
-
-            let result: { team1_score: number | null; team2_score: number | null } | null = null;
-            if (rawResult) {
-              if (Array.isArray(rawResult)) {
-                result = rawResult[0] ?? null;
-              } else {
-                result = rawResult;
-              }
-            }
-
-            if (!result) return;
-            if (result.team1_score == null || result.team2_score == null) return;
-
-            let entry = bySession[sessionId];
-            if (!entry) {
-              entry = { teamGreenWins: 0, teamBlueWins: 0 };
-              bySession[sessionId] = entry;
-            }
-
-            if (result.team1_score > result.team2_score) {
-              entry.teamGreenWins += 1;
-            } else if (result.team2_score > result.team1_score) {
-              entry.teamBlueWins += 1;
-            }
-          });
-
-          resultsBySession = bySession;
-        }
-      }
-
-      setSessions(mapped);
-      setSessionResults(resultsBySession);
-
-      setSessionsLoading(false);
-      setLoading(false);
+    if (!isLoaded) return;
+    if (!user) {
+      router.replace('/auth/signin');
+      return;
     }
-
-    load();
-
+    let active = true;
+    (async () => {
+      setLoading(true);
+      setSessionsLoading(true);
+      setError(null);
+      try {
+        const data = await getSessionsListData();
+        if (!active) return;
+        setLeagues(data.ownedLeagues.map((l) => ({ id: l.id, name: l.name })));
+        const sorted = [...data.sessions].sort((a, b) => {
+          const aTime = a.scheduledFor ?? a.createdAt;
+          const bTime = b.scheduledFor ?? b.createdAt;
+          if (!aTime && !bTime) return 0;
+          if (!aTime) return 1;
+          if (!bTime) return -1;
+          return new Date(bTime).getTime() - new Date(aTime).getTime();
+        });
+        setSessions(sorted);
+        setSessionResults(data.results);
+      } catch (err) {
+        if (active) setError(err instanceof Error ? err.message : 'Failed to load sessions.');
+      } finally {
+        if (active) {
+          setLoading(false);
+          setSessionsLoading(false);
+        }
+      }
+    })();
     return () => {
       active = false;
     };
-  }, [router]);
+  }, [isLoaded, user, router]);
 
   useEffect(() => {
     if (!selectedLeagueId) {
@@ -361,89 +144,31 @@ export default function SessionsPage() {
       setOrderedPlayers([]);
       return;
     }
-
     let active = true;
-
-    async function loadMembers() {
+    (async () => {
       setMembersLoading(true);
       setError(null);
-
-      const { data: memberRows, error: membersError } = await supabase
-        .from("league_members")
-        .select("user_id, email")
-        .eq("league_id", selectedLeagueId)
-        .order("created_at", { ascending: true });
-
-      if (!active) return;
-
-      if (membersError) {
-        setError(membersError.message);
-        setMembers([]);
-        setMembersLoading(false);
-        return;
-      }
-
-      const rows = (memberRows ?? []) as { user_id: string; email: string | null }[];
-
-      if (!rows.length) {
-        setMembers([]);
+      try {
+        const roster = await listLeagueRosterAction(selectedLeagueId);
+        if (!active) return;
+        const mapped: Member[] = roster.map((m) => ({
+          user_id: m.userId,
+          first_name: m.firstName,
+          last_name: m.lastName,
+          email: m.email,
+          self_reported_dupr: m.selfReportedDupr,
+        }));
+        setMembers(mapped);
+        setGuests([]);
         setSelectedPlayerIds([]);
         setOrderedPlayers([]);
-        setMembersLoading(false);
-        return;
-      }
-
-      const userIds = rows.map((m) => m.user_id);
-
-      const { data: profileRows, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name, email, self_reported_dupr")
-        .in("id", userIds);
-
-      if (!active) return;
-
-      if (profilesError) {
-        setError(profilesError.message);
+      } catch (err) {
+        if (active) setError(err instanceof Error ? err.message : 'Failed to load members.');
         setMembers([]);
-        setMembersLoading(false);
-        return;
+      } finally {
+        if (active) setMembersLoading(false);
       }
-
-      const membersWithProfiles: Member[] = rows.map((m) => {
-        const profile = (profileRows ?? []).find((p) => p.id === m.user_id) as
-          | {
-              id: string;
-              first_name: string | null;
-              last_name: string | null;
-              email: string | null;
-              self_reported_dupr: number | null;
-            }
-          | undefined;
-
-        let dupr: number | null = null;
-        if (profile && profile.self_reported_dupr != null) {
-          const n = Number(profile.self_reported_dupr);
-          dupr = Number.isNaN(n) ? null : n;
-        }
-
-        return {
-          user_id: m.user_id,
-          first_name: profile?.first_name ?? null,
-          last_name: profile?.last_name ?? null,
-          email: m.email ?? profile?.email ?? null,
-          self_reported_dupr: dupr,
-        };
-      });
-
-      setMembers(membersWithProfiles);
-      setGuests([]);
-      setSelectedPlayerIds([]);
-      setOrderedPlayers([]);
-      setMembersLoading(false);
-    }
-
-    loadMembers();
-
+    })();
     return () => {
       active = false;
     };
@@ -454,25 +179,21 @@ export default function SessionsPage() {
       setOrderedPlayers([]);
       return;
     }
-
     const chosen: Member[] = [];
     const seen = new Set<string>();
-
     selectedPlayerIds.forEach((id) => {
       if (!id || seen.has(id)) return;
-      const member = members.find((m) => m.user_id === id);
-      if (member) {
+      const m = members.find((mm) => mm.user_id === id);
+      if (m) {
         seen.add(id);
-        chosen.push(member);
+        chosen.push(m);
       }
     });
-
     guests.forEach((g) => {
       if (seen.has(g.user_id)) return;
       seen.add(g.user_id);
       chosen.push(g);
     });
-
     chosen.sort((a, b) => {
       const da = a.self_reported_dupr;
       const db = b.self_reported_dupr;
@@ -480,11 +201,10 @@ export default function SessionsPage() {
       if (da == null) return 1;
       if (db == null) return -1;
       if (db !== da) return db - da;
-      const an = `${a.first_name ?? ""} ${a.last_name ?? ""}`.trim();
-      const bn = `${b.first_name ?? ""} ${b.last_name ?? ""}`.trim();
+      const an = `${a.first_name ?? ''} ${a.last_name ?? ''}`.trim();
+      const bn = `${b.first_name ?? ''} ${b.last_name ?? ''}`.trim();
       return an.localeCompare(bn);
     });
-
     setOrderedPlayers(chosen);
   }, [selectedPlayerIds, members, guests]);
 
@@ -503,35 +223,30 @@ export default function SessionsPage() {
       setScheduledFor(value);
       return;
     }
-
     const date = new Date(value);
     const minutes = date.getMinutes();
-
     if (minutes !== 0 && minutes !== 30) {
       const roundedMinutes = minutes < 15 ? 0 : minutes < 45 ? 30 : 0;
       const hourAdjustment = minutes >= 45 ? 1 : 0;
-
       date.setMinutes(roundedMinutes);
       date.setHours(date.getHours() + hourAdjustment);
       date.setSeconds(0);
       date.setMilliseconds(0);
-
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
       const hours = String(date.getHours()).padStart(2, '0');
       const mins = String(date.getMinutes()).padStart(2, '0');
-
       setScheduledFor(`${year}-${month}-${day}T${hours}:${mins}`);
     } else {
       setScheduledFor(value);
     }
   }
 
-  function handlePlayerSelect(index: number, userId: string) {
+  function handlePlayerSelect(index: number, userIdValue: string) {
     setSelectedPlayerIds((prev) => {
       const next = [...prev];
-      next[index] = userId;
+      next[index] = userIdValue;
       return next;
     });
   }
@@ -548,26 +263,19 @@ export default function SessionsPage() {
   }
 
   function displayPlayerWithDupr(member: Member) {
-    const base = displayPlayerName(member) === "Deleted player"
-      ? member.user_id
-      : displayPlayerName(member);
-
-    const suffix = member.is_guest ? " (guest)" : "";
-
+    const base = displayPlayerName(member) === 'Deleted player' ? member.user_id : displayPlayerName(member);
+    const suffix = member.is_guest ? ' (guest)' : '';
     if (member.self_reported_dupr != null) {
       const dupr = Number(member.self_reported_dupr);
-      if (!Number.isNaN(dupr)) {
-        return `${base} (${dupr.toFixed(2)})${suffix}`;
-      }
+      if (!Number.isNaN(dupr)) return `${base} (${dupr.toFixed(2)})${suffix}`;
     }
-
     return `${base}${suffix}`;
   }
 
   function openGuestModal() {
-    setGuestFirstName("");
-    setGuestLastName("");
-    setGuestDupr("");
+    setGuestFirstName('');
+    setGuestLastName('');
+    setGuestDupr('');
     setGuestError(null);
     setGuestModalOpen(true);
   }
@@ -581,27 +289,23 @@ export default function SessionsPage() {
     const first = guestFirstName.trim();
     const last = guestLastName.trim();
     const duprRaw = guestDupr.trim();
-
     if (!first) {
-      setGuestError("First name is required.");
+      setGuestError('First name is required.');
       return;
     }
-
     const duprNum = Number(duprRaw);
     if (!duprRaw || Number.isNaN(duprNum)) {
-      setGuestError("DUPR is required.");
+      setGuestError('DUPR is required.');
       return;
     }
     if (duprNum < 1.0 || duprNum > 8.5) {
-      setGuestError("DUPR must be between 1.0 and 8.5.");
+      setGuestError('DUPR must be between 1.0 and 8.5.');
       return;
     }
-
     if (guests.length >= playerCount) {
-      setGuestError("Guest count exceeds the player count for this session.");
+      setGuestError('Guest count exceeds the player count for this session.');
       return;
     }
-
     const newGuest: Member = {
       user_id: `guest:${crypto.randomUUID()}`,
       first_name: first,
@@ -610,9 +314,10 @@ export default function SessionsPage() {
       self_reported_dupr: duprNum,
       is_guest: true,
     };
-
     setGuests((prev) => [...prev, newGuest]);
-    setSelectedPlayerIds((prev) => prev.slice(0, Math.max(0, playerCount - (guests.length + 1))));
+    setSelectedPlayerIds((prev) =>
+      prev.slice(0, Math.max(0, playerCount - (guests.length + 1))),
+    );
     closeGuestModal();
   }
 
@@ -623,7 +328,6 @@ export default function SessionsPage() {
   function buildTeams(players: Member[]): { teamA: Member[]; teamB: Member[] } {
     const teamA: Member[] = [];
     const teamB: Member[] = [];
-
     for (let i = 0; i + 1 < players.length; i += 2) {
       const p1 = players[i];
       const p2 = players[i + 1];
@@ -636,7 +340,6 @@ export default function SessionsPage() {
         teamA.push(p2);
       }
     }
-
     return { teamA, teamB };
   }
 
@@ -649,132 +352,100 @@ export default function SessionsPage() {
     }
     return pairs;
   }
+
   async function handleGenerate(event: FormEvent) {
     event.preventDefault();
     setError(null);
 
     if (!selectedLeagueId) {
-      setError("Select a league.");
+      setError('Select a league.');
       return;
     }
-
-
     if (!members.length && !guests.length) {
-      setError("This league has no members yet. Add a guest to create a session.");
+      setError('This league has no members yet. Add a guest to create a session.');
       return;
     }
-
     if (!userId) {
-      setError("You must be signed in to create a session.");
+      setError('You must be signed in to create a session.');
       return;
     }
-
     if (!scheduledFor) {
-      setError("Select a date/time for the session.");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      setError('Select a date/time for the session.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-
     if (!PLAYER_COUNTS.includes(playerCount as (typeof PLAYER_COUNTS)[number])) {
-      setError("Player count must be 6, 8, 10, or 12.");
+      setError('Player count must be 6, 8, 10, or 12.');
       return;
     }
-
     const requiredMemberSlots = Math.max(0, playerCount - guests.length);
     const nonEmpty = selectedPlayerIds.filter(Boolean);
-
     if (nonEmpty.length !== requiredMemberSlots) {
-      setError("Select all player slots.");
+      setError('Select all player slots.');
       return;
     }
-
     const unique = new Set(nonEmpty);
     if (unique.size !== nonEmpty.length) {
-      setError("Each player can only be selected once.");
+      setError('Each player can only be selected once.');
       return;
     }
-
     if (orderedPlayers.length !== playerCount) {
-      setError("Unable to resolve selected players. Try again.");
+      setError('Unable to resolve selected players. Try again.');
       return;
     }
 
     const { teamA, teamB } = buildTeams(orderedPlayers);
     const totalPlayers = teamA.length + teamB.length;
-
     let gamesPlan: { pairA: Pair; pairB: Pair }[] = [];
 
-    // Special-case 8 players (4 per team) so each round has two disjoint doubles
-    // matches and no player appears on two courts in the same round.
     if (playerCount === 8 && teamA.length === 4 && teamB.length === 4) {
       const [a1, a2, a3, a4] = teamA;
       const [b1, b2, b3, b4] = teamB;
-
       gamesPlan = [
-        // Round 1
         { pairA: [a1, a2], pairB: [b1, b2] },
         { pairA: [a3, a4], pairB: [b3, b4] },
-        // Round 2
         { pairA: [a1, a3], pairB: [b1, b3] },
         { pairA: [a2, a4], pairB: [b2, b4] },
-        // Round 3
         { pairA: [a1, a4], pairB: [b1, b4] },
         { pairA: [a2, a3], pairB: [b2, b3] },
-        // Round 4 (repeat Round 1 matchups)
         { pairA: [a1, a2], pairB: [b1, b2] },
         { pairA: [a3, a4], pairB: [b3, b4] },
-        // Round 5 (repeat Round 2 matchups)
         { pairA: [a1, a3], pairB: [b1, b3] },
         { pairA: [a2, a4], pairB: [b2, b4] },
-        // Round 6 (repeat Round 3 matchups)
         { pairA: [a1, a4], pairB: [b1, b4] },
         { pairA: [a2, a3], pairB: [b2, b3] },
       ];
     } else if (playerCount === 10 && teamA.length === 5 && teamB.length === 5) {
-      // Special-case 10 players (5 per team): 5 rounds, 2 courts per round.
       const [a1, a2, a3, a4, a5] = teamA;
       const [b1, b2, b3, b4, b5] = teamB;
-
       gamesPlan = [
-        // Round 1
         { pairA: [a1, a2], pairB: [b1, b2] },
         { pairA: [a3, a4], pairB: [b3, b4] },
-        // Round 2
         { pairA: [a2, a3], pairB: [b2, b3] },
         { pairA: [a4, a5], pairB: [b4, b5] },
-        // Round 3
         { pairA: [a1, a4], pairB: [b1, b4] },
         { pairA: [a3, a5], pairB: [b3, b5] },
-        // Round 4
         { pairA: [a1, a3], pairB: [b1, b3] },
         { pairA: [a2, a5], pairB: [b2, b5] },
-        // Round 5
         { pairA: [a1, a5], pairB: [b1, b5] },
         { pairA: [a2, a4], pairB: [b2, b4] },
       ];
     } else if (playerCount === 12 && teamA.length === 6 && teamB.length === 6) {
-      // Special-case 12 players (6 per team): 5 rounds, 3 courts per round.
       const [a1, a2, a3, a4, a5, a6] = teamA;
       const [b1, b2, b3, b4, b5, b6] = teamB;
-
       gamesPlan = [
-        // Round 1
         { pairA: [a1, a2], pairB: [b1, b2] },
         { pairA: [a3, a4], pairB: [b3, b4] },
         { pairA: [a5, a6], pairB: [b5, b6] },
-        // Round 2
         { pairA: [a1, a3], pairB: [b1, b3] },
         { pairA: [a2, a5], pairB: [b2, b5] },
         { pairA: [a4, a6], pairB: [b4, b6] },
-        // Round 3
         { pairA: [a1, a4], pairB: [b1, b4] },
         { pairA: [a2, a6], pairB: [b2, b6] },
         { pairA: [a3, a5], pairB: [b3, b5] },
-        // Round 4
         { pairA: [a1, a5], pairB: [b1, b5] },
         { pairA: [a2, a4], pairB: [b2, b4] },
         { pairA: [a3, a6], pairB: [b3, b6] },
-        // Round 5
         { pairA: [a1, a6], pairB: [b1, b6] },
         { pairA: [a2, a3], pairB: [b2, b3] },
         { pairA: [a4, a5], pairB: [b4, b5] },
@@ -784,19 +455,14 @@ export default function SessionsPage() {
       const pairsB = buildPairs(teamB);
       const baseGames: { pairA: Pair; pairB: Pair }[] = [];
       const limit = Math.min(pairsA.length, pairsB.length);
-
       for (let i = 0; i < limit; i += 1) {
         baseGames.push({ pairA: pairsA[i], pairB: pairsB[i] });
       }
-
       if (baseGames.length === 0) {
-        setError("Unable to generate matchups for this player selection.");
+        setError('Unable to generate matchups for this player selection.');
         return;
       }
-
-      const maxGames =
-        MAX_GAMES_BY_TOTAL_PLAYERS[totalPlayers] ?? baseGames.length;
-
+      const maxGames = MAX_GAMES_BY_TOTAL_PLAYERS[totalPlayers] ?? baseGames.length;
       for (let i = 0; i < maxGames; i += 1) {
         const base = baseGames[i % baseGames.length];
         gamesPlan.push({ pairA: base.pairA, pairB: base.pairB });
@@ -804,161 +470,56 @@ export default function SessionsPage() {
     }
 
     setGenerating(true);
-
     try {
       const scheduledDate = new Date(scheduledFor);
-      const scheduledIso = Number.isNaN(scheduledDate.getTime())
-        ? null
-        : scheduledDate.toISOString();
-
-      const { data: session, error: sessionError } = await supabase
-        .from("game_sessions")
-        .insert({
-          league_id: selectedLeagueId,
-          created_by: userId,
-          scheduled_for: scheduledIso,
-          player_count: playerCount,
-        })
-        .select("id, league_id, created_at, scheduled_for, player_count")
-        .single();
-
-      if (sessionError || !session) {
-        setError(sessionError?.message ?? "Unable to create session.");
-        setGenerating(false);
-        return;
-      }
-
-      const matchInserts = gamesPlan.map((_, index) => ({
-        session_id: session.id,
-        scheduled_order: index + 1,
-        status: "scheduled" as const,
-      }));
-
-      const { data: matchRows, error: matchesError } = await supabase
-        .from("matches")
-        .insert(matchInserts)
-        .select("id, scheduled_order");
-
-      if (matchesError || !matchRows) {
-        setError(
-          matchesError?.message ?? "Unable to create matches for session."
-        );
-        setGenerating(false);
-        return;
-      }
-
-      const sortedMatches = [...matchRows].sort(
-        (a, b) => (a.scheduled_order ?? 0) - (b.scheduled_order ?? 0)
-      );
+      const scheduledIso = Number.isNaN(scheduledDate.getTime()) ? null : scheduledDate.toISOString();
 
       const guestsInPlay = guests.filter((g) =>
-        orderedPlayers.some((p) => p.user_id === g.user_id)
+        orderedPlayers.some((p) => p.user_id === g.user_id),
       );
 
-      const syntheticToGuestId = new Map<string, string>();
+      const guestPayload = guestsInPlay.map((g) => ({
+        syntheticId: g.user_id,
+        displayName: `${g.first_name ?? ''}${g.last_name ? ` ${g.last_name}` : ''}`.trim(),
+        dupr: g.self_reported_dupr as number,
+      }));
 
-      if (guestsInPlay.length) {
-        const guestInserts = guestsInPlay.map((g) => ({
-          session_id: session.id,
-          display_name: `${g.first_name ?? ""}${g.last_name ? ` ${g.last_name}` : ""}`.trim(),
-          dupr: g.self_reported_dupr as number,
-        }));
-
-        const { data: guestRows, error: guestsError } = await supabase
-          .from("session_guests")
-          .insert(guestInserts)
-          .select("id");
-
-        if (guestsError || !guestRows || guestRows.length !== guestsInPlay.length) {
-          setError(guestsError?.message ?? "Unable to create session guests.");
-          setGenerating(false);
-          return;
-        }
-
-        guestsInPlay.forEach((g, i) => {
-          syntheticToGuestId.set(g.user_id, guestRows[i].id);
-        });
-      }
-
-      function playerInsertFor(
-        match_id: string,
-        p: Member,
-        team: 1 | 2,
-        position: number
-      ): {
-        match_id: string;
-        user_id: string | null;
-        guest_id: string | null;
-        team: 1 | 2;
-        position: number;
-      } {
-        if (p.is_guest) {
-          const guestId = syntheticToGuestId.get(p.user_id);
-          if (!guestId) {
-            throw new Error(`Missing guest mapping for ${p.first_name ?? "guest"}`);
-          }
-          return { match_id, user_id: null, guest_id: guestId, team, position };
-        }
-        return { match_id, user_id: p.user_id, guest_id: null, team, position };
-      }
-
-      const playerInserts: {
-        match_id: string;
-        user_id: string | null;
-        guest_id: string | null;
-        team: 1 | 2;
-        position: number;
-      }[] = [];
-
-      sortedMatches.forEach((match, index) => {
-        const plan = gamesPlan[index];
-        if (!plan) return;
+      const matchesPayload = gamesPlan.map((plan, idx) => {
         const [a1, a2] = plan.pairA;
         const [b1, b2] = plan.pairB;
-        playerInserts.push(
-          playerInsertFor(match.id, a1, 1, 0),
-          playerInsertFor(match.id, a2, 1, 1),
-          playerInsertFor(match.id, b1, 2, 0),
-          playerInsertFor(match.id, b2, 2, 1),
-        );
+        return {
+          scheduledOrder: idx + 1,
+          players: [
+            playerPayload(a1, 1, 0),
+            playerPayload(a2, 1, 1),
+            playerPayload(b1, 2, 0),
+            playerPayload(b2, 2, 1),
+          ],
+        };
       });
 
-      if (playerInserts.length) {
-        const { error: playersError } = await supabase
-          .from("match_players")
-          .insert(playerInserts);
-
-        if (playersError) {
-          setError(playersError.message);
-          setGenerating(false);
-          return;
-        }
-      }
-
-      if (userEmail) {
-        await supabase.from("admin_events").insert({
-          event_type: "session.created",
-          user_id: userId,
-          user_email: userEmail.toLowerCase(),
-          league_id: selectedLeagueId,
-          payload: {
-            session_id: session.id,
-            player_count: playerCount,
-            scheduled_for: scheduledIso,
-          },
-        });
-      }
-
-      setGenerating(false);
-
-      router.push(`/sessions/${session.id}`);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Unexpected error creating session.");
+      const { sessionId } = await createSessionWithTeamsAction({
+        leagueId: selectedLeagueId,
+        scheduledFor: scheduledIso,
+        playerCount,
+        guests: guestPayload,
+        matches: matchesPayload,
+      });
+      router.push(`/sessions/${sessionId}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unexpected error creating session.');
       setGenerating(false);
     }
   }
 
-  if (loading) {
+  function playerPayload(p: Member, team: 1 | 2, position: 0 | 1) {
+    if (p.is_guest) {
+      return { syntheticId: p.user_id, team, position };
+    }
+    return { userId: p.user_id, team, position };
+  }
+
+  if (loading || !isLoaded) {
     return (
       <div className="mt-8">
         <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Sessions</h1>
@@ -979,7 +540,7 @@ export default function SessionsPage() {
   const nowTime = new Date().getTime();
   const cutoffTime = nowTime - 12 * 60 * 60 * 1000;
   const enriched = sessions.map((session) => {
-    const effective = session.scheduled_for ?? session.created_at;
+    const effective = session.scheduledFor ?? session.createdAt;
     const time = effective ? new Date(effective).getTime() : Number.NaN;
     return { session, time };
   });
@@ -1019,7 +580,8 @@ export default function SessionsPage() {
           }
         >
           <p className="text-app-muted mb-4">
-            Guests join this session only. They are not added to the league and do not appear in lifetime stats.
+            Guests join this session only. They are not added to the league and do not appear in
+            lifetime stats.
           </p>
           <div className="grid gap-4">
             <Input
@@ -1043,37 +605,26 @@ export default function SessionsPage() {
               value={guestDupr}
               onChange={(e) => setGuestDupr(e.target.value)}
             />
-            {guestError && (
-              <p className="text-app-danger text-sm">{guestError}</p>
-            )}
+            {guestError && <p className="text-app-danger text-sm">{guestError}</p>}
           </div>
         </Modal>
       )}
       <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Sessions</h1>
       {userEmail && (
-        <p className="text-app-muted text-sm mb-4">
-          Signed in as {userEmail}
-        </p>
+        <p className="text-app-muted text-sm mb-4">Signed in as {userEmail}</p>
       )}
-      {error && (
-        <p className="text-app-danger text-sm mb-4">
-          {error}
-        </p>
-      )}
+      {error && <p className="text-app-danger text-sm mb-4">{error}</p>}
       {!error && (
         <p className="text-app-muted text-sm mb-6">
           {leagues.length
-            ? "Create a session for one of your leagues, pick 6 / 8 / 10 / 12 players, and generate balanced teams and matchups."
-            : "You do not own any leagues yet. You can still view sessions you play in below."}
+            ? 'Create a session for one of your leagues, pick 6 / 8 / 10 / 12 players, and generate balanced teams and matchups.'
+            : 'You do not own any leagues yet. You can still view sessions you play in below.'}
         </p>
       )}
 
       {leagues.length > 0 && (
         <>
-          <form
-            onSubmit={handleGenerate}
-            className="grid gap-4"
-          >
+          <form onSubmit={handleGenerate} className="grid gap-4">
             <div className="grid gap-4 grid-cols-2">
               <Select
                 label="League"
@@ -1112,13 +663,13 @@ export default function SessionsPage() {
               <div>
                 <span className="form-label">Select players</span>
                 {membersLoading && (
-                  <p className="text-app-muted text-sm">
-                    Loading league members...
-                  </p>
+                  <p className="text-app-muted text-sm">Loading league members...</p>
                 )}
                 {!membersLoading && !members.length && !guests.length && (
                   <p className="text-app-muted text-sm">
-                    {selectedLeagueId ? "This league has no members yet. Add a guest to get started." : "Please select a league in the drop-down above."}
+                    {selectedLeagueId
+                      ? 'This league has no members yet. Add a guest to get started.'
+                      : 'Please select a league in the drop-down above.'}
                   </p>
                 )}
                 {!membersLoading && members.length > 0 && memberSlotCount > 0 && (
@@ -1126,7 +677,7 @@ export default function SessionsPage() {
                     {Array.from({ length: memberSlotCount }).map((_, i) => (
                       <Select
                         key={i}
-                        value={selectedPlayerIds[i] ?? ""}
+                        value={selectedPlayerIds[i] ?? ''}
                         onChange={(e) => handlePlayerSelect(i, e.target.value)}
                       >
                         <option value="">Select Player {i + 1}</option>
@@ -1182,7 +733,7 @@ export default function SessionsPage() {
 
             <div className="mt-2">
               <Button type="submit" variant="primary" disabled={generating || membersLoading}>
-                {generating ? "Creating session..." : "Create session"}
+                {generating ? 'Creating session...' : 'Create session'}
               </Button>
             </div>
           </form>
@@ -1191,9 +742,8 @@ export default function SessionsPage() {
             <SectionLabel>PLAYERS (SNAKING ORDER)</SectionLabel>
             {!orderedPlayers.length ? (
               <p className="text-app-muted text-sm mt-3">
-                After selecting players, they will appear here sorted by DUPR. Use the
-                arrows to adjust the order; teams and matchups will be based on this
-                list.
+                After selecting players, they will appear here sorted by DUPR. Use the arrows
+                to adjust the order; teams and matchups will be based on this list.
               </p>
             ) : (
               <div className="mt-3 divide-y divide-app-border border-t border-b border-app-border">
@@ -1233,19 +783,17 @@ export default function SessionsPage() {
 
       <div className="mt-10 border-t border-app-border pt-8">
         {sessionsLoading ? (
-          <p className="text-app-muted text-sm">
-            Loading sessions...
-          </p>
+          <p className="text-app-muted text-sm">Loading sessions...</p>
         ) : sessions.length === 0 ? (
           <p className="text-app-muted text-sm">
             {leagues.length
-              ? "No sessions yet. Create one above to see it here."
+              ? 'No sessions yet. Create one above to see it here.'
               : "No sessions yet. You'll see sessions you play in here."}
           </p>
         ) : (
           <>
             {upcomingSessions.length > 0 && (
-              <div className={pastSessions.length ? "mb-10" : ""}>
+              <div className={pastSessions.length ? 'mb-10' : ''}>
                 <SectionLabel>CURRENT / UPCOMING</SectionLabel>
                 <div className="mt-3 divide-y divide-app-border border-t border-b border-app-border">
                   {upcomingSessions.map((session) => (
@@ -1255,13 +803,11 @@ export default function SessionsPage() {
                     >
                       <div>
                         <div className="text-sm font-medium text-app-text">
-                          {session.league_name || "Unknown league"} &mdash;{" "}
-                          {session.player_count} players
+                          {session.leagueName || 'Unknown league'} &mdash; {session.playerCount}{' '}
+                          players
                         </div>
                         <div className="text-app-muted text-sm mt-0.5">
-                          {formatDateTime(
-                            session.scheduled_for ?? session.created_at
-                          )}
+                          {formatDateTime(session.scheduledFor ?? session.createdAt ?? '')}
                         </div>
                       </div>
                       <Link
@@ -1270,7 +816,7 @@ export default function SessionsPage() {
                         className="no-underline"
                       >
                         <Button variant="sm" arrow>
-                          {session.created_by === userId ? "Manage" : "View"}
+                          {session.createdBy === userId ? 'Manage' : 'View'}
                         </Button>
                       </Link>
                     </div>
@@ -1289,13 +835,11 @@ export default function SessionsPage() {
                     >
                       <div>
                         <div className="text-sm font-medium text-app-text">
-                          {session.league_name || "Unknown league"} &mdash;{" "}
-                          {session.player_count} players
+                          {session.leagueName || 'Unknown league'} &mdash; {session.playerCount}{' '}
+                          players
                         </div>
                         <div className="text-app-muted text-sm mt-0.5">
-                          {formatDateTime(
-                            session.scheduled_for ?? session.created_at
-                          )}
+                          {formatDateTime(session.scheduledFor ?? session.createdAt ?? '')}
                         </div>
                         {(() => {
                           const summary = sessionResults[session.id];
@@ -1303,22 +847,22 @@ export default function SessionsPage() {
                           const green = summary.teamGreenWins;
                           const blue = summary.teamBlueWins;
                           if (green === 0 && blue === 0) return null;
-
                           let label: string;
                           let colorClass: string;
                           if (green > blue) {
                             label = `Team Green won ${green}-${blue}`;
-                            colorClass = "text-team-green";
+                            colorClass = 'text-team-green';
                           } else if (blue > green) {
                             label = `Team Blue won ${blue}-${green}`;
-                            colorClass = "text-team-blue";
+                            colorClass = 'text-team-blue';
                           } else {
                             label = `Teams tied ${green}-${blue}`;
-                            colorClass = "text-app-muted";
+                            colorClass = 'text-app-muted';
                           }
-
                           return (
-                            <span className={`font-mono text-[0.65rem] uppercase tracking-button mt-1 inline-block ${colorClass}`}>
+                            <span
+                              className={`font-mono text-[0.65rem] uppercase tracking-button mt-1 inline-block ${colorClass}`}
+                            >
                               {label}
                             </span>
                           );
@@ -1330,7 +874,7 @@ export default function SessionsPage() {
                         className="no-underline"
                       >
                         <Button variant="sm" arrow>
-                          {session.created_by === userId ? "Manage" : "View"}
+                          {session.createdBy === userId ? 'Manage' : 'View'}
                         </Button>
                       </Link>
                     </div>
