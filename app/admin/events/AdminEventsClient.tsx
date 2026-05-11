@@ -1,146 +1,50 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
-import { ADMIN_EMAIL } from '@/lib/constants';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
+import type { AdminEventOut } from '@/lib/db/queries/admin';
 
-type AdminEvent = {
-  id: string;
-  created_at: string;
-  event_type: string;
-  user_email: string | null;
-  league_id: string | null;
-  payload: Record<string, unknown> | null;
+type Props = {
+  events: AdminEventOut[];
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+  eventTypes: string[];
+  selectedFilter: string;
 };
 
-const PAGE_SIZE = 100;
-
-const EVENT_TYPES = [
-  'user.signup',
-  'league.created',
-  'league.member_added',
-  'session.created',
-  'session.deleted',
-] as const;
-
-export default function AdminEventsClient() {
+export default function AdminEventsClient({
+  events,
+  page,
+  pageSize,
+  hasMore,
+  eventTypes,
+  selectedFilter,
+}: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [loading, setLoading] = useState(true);
-  const [events, setEvents] = useState<AdminEvent[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(0);
-  const [totalCount, setTotalCount] = useState<number | null>(null);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-
-  const filterParam = searchParams.get('filter') || 'all';
-  const selectedFilter =
-    filterParam === 'all' || !EVENT_TYPES.includes(filterParam as typeof EVENT_TYPES[number]) ? 'all' : filterParam;
-
-  useEffect(() => {
-    let active = true;
-
-    async function load() {
-      setLoading(true);
-      setError(null);
-
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (!active) return;
-
-      if (userError || !userData.user) {
-        router.replace('/');
-        return;
-      }
-
-      const email = userData.user.email?.toLowerCase() ?? null;
-      setUserEmail(email);
-
-      if (email !== ADMIN_EMAIL) {
-        setError('You are not authorized to view this page.');
-        setLoading(false);
-        return;
-      }
-
-      const from = page * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
-
-      let query = supabase
-        .from('admin_events')
-        .select('id, created_at, event_type, user_email, league_id, payload', {
-          count: 'exact',
-        })
-        .order('created_at', { ascending: false });
-
-      if (selectedFilter !== 'all') {
-        query = query.eq('event_type', selectedFilter);
-      }
-
-      const { data, error: eventsError, count } = await query.range(from, to);
-
-      if (!active) return;
-
-      if (eventsError) {
-        setError(eventsError.message);
-      } else {
-        setEvents((data ?? []) as AdminEvent[]);
-        if (typeof count === 'number') {
-          setTotalCount(count);
-        }
-      }
-
-      setLoading(false);
-    }
-
-    load();
-
-    return () => {
-      active = false;
-    };
-  }, [page, selectedFilter, router]);
 
   function setFilter(filter: string) {
     const params = new URLSearchParams(searchParams.toString());
-    if (filter === 'all') {
-      params.delete('filter');
-    } else {
-      params.set('filter', filter);
-    }
+    if (filter === 'all') params.delete('filter');
+    else params.set('filter', filter);
+    params.delete('page');
     router.push(`/admin/events?${params.toString()}`);
-    setPage(0);
   }
 
-  if (loading) {
-    return (
-      <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Admin Events</h1>
-        <p className="text-app-muted text-sm">Loading admin event log...</p>
-      </div>
-    );
+  function setPage(p: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (p === 0) params.delete('page');
+    else params.set('page', String(p));
+    router.push(`/admin/events?${params.toString()}`);
   }
-
-  if (error) {
-    return (
-      <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Admin Events</h1>
-        <p className="text-app-danger text-sm">{error}</p>
-      </div>
-    );
-  }
-
-  const totalPages =
-    totalCount != null && totalCount > 0 ? Math.ceil(totalCount / PAGE_SIZE) : null;
 
   return (
     <div>
       <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Admin Events</h1>
-      {userEmail && (
-        <p className="text-app-muted text-sm mb-1">{userEmail}</p>
-      )}
       <p className="text-app-muted text-sm mb-6">
-        Internal audit log of key system events. Showing newest first, up to {PAGE_SIZE} per page.
+        Internal audit log of key system events. Showing newest first, up to {pageSize} per page.
       </p>
 
       <div className="flex flex-wrap gap-2 items-center mb-6">
@@ -156,7 +60,7 @@ export default function AdminEventsClient() {
         >
           All
         </button>
-        {EVENT_TYPES.map((eventType) => {
+        {eventTypes.map((eventType) => {
           const isSelected = selectedFilter === eventType;
           return (
             <button
@@ -181,12 +85,11 @@ export default function AdminEventsClient() {
         <>
           <div className="divide-y divide-app-border">
             {events.map((event) => {
-              const created = new Date(event.created_at);
-              const timestamp = created.toLocaleString();
-
-              const parts: string[] = [event.event_type];
-              if (event.user_email) parts.push(`by ${event.user_email}`);
-              if (event.league_id) parts.push(`league ${event.league_id}`);
+              const created = event.createdAt ? new Date(event.createdAt) : null;
+              const timestamp = created ? created.toLocaleString() : '';
+              const parts: string[] = [event.eventType];
+              if (event.userEmail) parts.push(`by ${event.userEmail}`);
+              if (event.leagueId) parts.push(`league ${event.leagueId}`);
               const summary = parts.join(' - ');
 
               return (
@@ -206,22 +109,11 @@ export default function AdminEventsClient() {
           </div>
 
           <div className="mt-6 flex justify-between items-center gap-3">
-            <Button
-              variant="sm"
-              disabled={page === 0}
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-            >
+            <Button variant="sm" disabled={page === 0} onClick={() => setPage(Math.max(0, page - 1))}>
               Previous
             </Button>
-            <span className="text-app-muted text-xs font-mono">
-              Page {page + 1}
-              {totalPages != null ? ` of ${totalPages}` : ''}
-            </span>
-            <Button
-              variant="sm"
-              disabled={events.length < PAGE_SIZE}
-              onClick={() => setPage((p) => p + 1)}
-            >
+            <span className="text-app-muted text-xs font-mono">Page {page + 1}</span>
+            <Button variant="sm" disabled={!hasMore} onClick={() => setPage(page + 1)}>
               Next
             </Button>
           </div>

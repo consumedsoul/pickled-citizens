@@ -2,98 +2,65 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
+import Link from 'next/link';
+import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
+import { listMyLeagues, createLeagueAction } from '@/lib/actions/leagues';
 
-type League = {
+type LeagueRow = {
   id: string;
   name: string;
-  memberCount?: number;
-  owner_id?: string;
+  ownerId: string;
+  createdAt: string | null;
+  role: string;
+  memberCount: number;
 };
 
 const MAX_LEAGUES = 3;
 
 export default function LeaguesPage() {
   const router = useRouter();
+  const { isLoaded, user } = useUser();
   const [loading, setLoading] = useState(true);
-  const [leagues, setLeagues] = useState<League[]>([]);
-  const [memberLeagues, setMemberLeagues] = useState<League[]>([]);
+  const [adminLeagues, setAdminLeagues] = useState<LeagueRow[]>([]);
+  const [memberLeagues, setMemberLeagues] = useState<LeagueRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [creating, setCreating] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
 
-  const reachedLimit = leagues.length >= MAX_LEAGUES;
+  const userId = user?.id ?? null;
+  const reachedLimit = adminLeagues.length >= MAX_LEAGUES;
 
   useEffect(() => {
+    if (!isLoaded) return;
+    if (!user) {
+      router.replace('/auth/signin');
+      return;
+    }
     let active = true;
-
-    async function load() {
+    (async () => {
       setLoading(true);
       setError(null);
-
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (!active) return;
-
-      if (userError || !userData.user) {
-        router.replace('/');
-        return;
+      try {
+        const rows = (await listMyLeagues()) as LeagueRow[];
+        if (!active) return;
+        const admins = rows.filter((r) => r.role === 'admin');
+        const members = rows.filter((r) => r.role !== 'admin');
+        admins.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+        members.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+        setAdminLeagues(admins);
+        setMemberLeagues(members);
+      } catch (err) {
+        if (active) setError(err instanceof Error ? err.message : 'Failed to load leagues.');
+      } finally {
+        if (active) setLoading(false);
       }
-
-      const user = userData.user;
-      setUserId(user.id);
-
-      // Single joined query: get user's memberships with league details and member counts
-      const { data: membershipData, error: membershipError } = await supabase
-        .from('league_members')
-        .select('league_id, role, leagues(id, name, owner_id, league_members(count))')
-        .eq('user_id', user.id);
-
-      if (!active) return;
-
-      if (membershipError) {
-        setError(membershipError.message);
-      } else {
-        type MembershipRow = {
-          league_id: string;
-          role: 'player' | 'admin';
-          leagues: {
-            id: string;
-            name: string;
-            owner_id: string;
-            league_members: { count: number }[];
-          };
-        };
-        const memberships = (membershipData as unknown as MembershipRow[]) || [];
-
-        const allLeagues: League[] = memberships.map((m) => ({
-          id: m.leagues.id,
-          name: m.leagues.name,
-          owner_id: m.leagues.owner_id,
-          memberCount: m.leagues.league_members[0]?.count ?? 0,
-        }));
-
-        const adminLeagues = allLeagues.filter((_, i) => memberships[i].role === 'admin');
-        const memberLeaguesList = allLeagues.filter((_, i) => memberships[i].role === 'player');
-
-        adminLeagues.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
-        memberLeaguesList.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
-
-        setLeagues(adminLeagues);
-        setMemberLeagues(memberLeaguesList);
-      }
-
-      setLoading(false);
-    }
-
-    load();
-
+    })();
     return () => {
       active = false;
     };
-  }, [router]);
+  }, [isLoaded, user, router]);
 
   async function handleCreate(event: FormEvent) {
     event.preventDefault();
@@ -111,84 +78,38 @@ export default function LeaguesPage() {
       setError(`You have reached the maximum of ${MAX_LEAGUES} leagues.`);
       return;
     }
+    if (
+      adminLeagues.some(
+        (l) => l.name.trim().toLowerCase() === trimmedName.toLowerCase(),
+      )
+    ) {
+      setError('A league with that name already exists.');
+      return;
+    }
 
     setCreating(true);
-
     try {
-      const { data: existingLeagues, error: existingError } = await supabase
-        .from('leagues')
-        .select('id, name')
-        .eq('owner_id', userId);
-
-      if (existingError) {
-        setError(existingError.message);
-        setCreating(false);
-        return;
-      }
-
-      const duplicate = (existingLeagues ?? []).some(
-        (league) =>
-          league.name.trim().toLowerCase() === trimmedName.toLowerCase()
-      );
-
-      if (duplicate) {
-        setError('A league with that name already exists.');
-        setCreating(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('leagues')
-        .insert({ name: trimmedName, owner_id: userId })
-        .select('id, name, owner_id')
-        .single();
-
-      if (error || !data) {
-        const message = error?.message?.includes('limit_3_leagues_per_owner')
-          ? 'You have reached the maximum of 3 leagues.'
-          : error?.message ?? 'Unable to create league.';
-        setError(message);
-        return;
-      }
-
-      const { error: memberError } = await supabase
-        .from('league_members')
-        .insert({
-          league_id: data.id,
-          user_id: userId,
+      const created = await createLeagueAction({ name: trimmedName });
+      setAdminLeagues((prev) => [
+        {
+          id: created.id,
+          name: created.name,
+          ownerId: created.ownerId,
+          createdAt: created.createdAt ?? null,
           role: 'admin',
-          email: (await supabase.auth.getUser()).data.user?.email || '',
-        });
-
-      if (memberError) {
-        setError(`Failed to add admin: ${memberError.message}`);
-        return;
-      }
-
-      const leagueWithCount: League = { ...data, memberCount: 1 };
-      setLeagues((prev) => [leagueWithCount, ...prev]);
+          memberCount: 1,
+        },
+        ...prev,
+      ]);
       setName('');
-
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-
-      if (!userError && userData.user) {
-        const ownerEmail = userData.user.email?.toLowerCase() ?? null;
-        await supabase.from('admin_events').insert({
-          event_type: 'league.created',
-          user_id: userData.user.id,
-          user_email: ownerEmail,
-          league_id: data.id,
-          payload: { league_name: trimmedName },
-        });
-      }
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Unexpected error creating league.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to create league.');
     } finally {
       setCreating(false);
     }
   }
 
-  if (loading) {
+  if (loading || !isLoaded) {
     return (
       <div>
         <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Leagues</h1>
@@ -225,41 +146,34 @@ export default function LeaguesPage() {
           disabled={reachedLimit}
           className="flex-1 min-w-[200px] px-3 py-2.5 border border-app-border bg-transparent text-app-text text-sm placeholder:text-app-light-gray focus:outline-none focus:border-app-text transition-colors disabled:opacity-60"
         />
-        <Button
-          type="submit"
-          variant="primary"
-          disabled={creating || reachedLimit}
-        >
+        <Button type="submit" variant="primary" disabled={creating || reachedLimit}>
           {creating ? 'Creating...' : 'Create League'}
         </Button>
       </form>
 
-      {/* Leagues you manage */}
       <div className="border-t border-app-border mt-8 pt-8">
         <SectionLabel>Leagues You Manage</SectionLabel>
         <div className="mt-4">
-          {leagues.length === 0 ? (
+          {adminLeagues.length === 0 ? (
             <p className="text-app-muted text-sm">You don&apos;t manage any leagues yet.</p>
           ) : (
             <div className="divide-y divide-app-border">
-              {leagues.map((league) => (
+              {adminLeagues.map((league) => (
                 <div
                   key={league.id}
                   className="flex items-center justify-between gap-3 py-3"
                 >
                   <div>
-                    <div className="text-sm font-medium text-app-text">
-                      {league.name}
+                    <div className="text-sm font-medium text-app-text">{league.name}</div>
+                    <div className="text-xs text-app-muted mt-0.5">
+                      {league.memberCount} {league.memberCount === 1 ? 'member' : 'members'}
                     </div>
-                    {typeof league.memberCount === 'number' && (
-                      <div className="text-xs text-app-muted mt-0.5">
-                        {league.memberCount} {league.memberCount === 1 ? 'member' : 'members'}
-                      </div>
-                    )}
                   </div>
-                  <a href={`/leagues/${league.id}`} className="no-underline">
-                    <Button variant="sm" arrow>Manage</Button>
-                  </a>
+                  <Link href={`/leagues/${league.id}`} className="no-underline">
+                    <Button variant="sm" arrow>
+                      Manage
+                    </Button>
+                  </Link>
                 </div>
               ))}
             </div>
@@ -267,7 +181,6 @@ export default function LeaguesPage() {
         </div>
       </div>
 
-      {/* Leagues you're a member of */}
       <div className="border-t border-app-border mt-8 pt-8">
         <SectionLabel>Leagues You&apos;re a Member Of</SectionLabel>
         <div className="mt-4">
@@ -281,20 +194,16 @@ export default function LeaguesPage() {
                   className="flex items-center justify-between gap-3 py-3"
                 >
                   <div>
-                    <div className="text-sm font-medium text-app-text">
-                      {league.name}
+                    <div className="text-sm font-medium text-app-text">{league.name}</div>
+                    <div className="text-xs text-app-muted mt-0.5">
+                      {league.memberCount} {league.memberCount === 1 ? 'member' : 'members'}
                     </div>
-                    {typeof league.memberCount === 'number' && (
-                      <div className="text-xs text-app-muted mt-0.5">
-                        {league.memberCount} {league.memberCount === 1 ? 'member' : 'members'}
-                      </div>
-                    )}
                   </div>
-                  <a href={`/leagues/${league.id}`} className="no-underline">
+                  <Link href={`/leagues/${league.id}`} className="no-underline">
                     <Button variant="sm" arrow>
-                      {league.owner_id && userId && league.owner_id === userId ? 'Manage' : 'View'}
+                      {league.ownerId && userId && league.ownerId === userId ? 'Manage' : 'View'}
                     </Button>
-                  </a>
+                  </Link>
                 </div>
               ))}
             </div>

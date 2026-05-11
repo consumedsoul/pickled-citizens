@@ -6,5 +6,17 @@ pages_build_output_dir = ".open-next/pages"
 
 [vars]
 NEXT_PUBLIC_SITE_URL = "https://pickledcitizens.com"
-NEXT_PUBLIC_SUPABASE_URL = "https://alyqhhyvpebvmdcssahn.supabase.co"
-NEXT_PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_c6B_tg9PKslCicc4Y1Cz0A_CqnUJ_P8"
+# Clerk publishable key (safe to commit — meant for client-side).
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsucGlja2xlZGNpdGl6ZW5zLmNvbSQ"
+# Server-only Clerk redirect/landing config (also fine in vars).
+NEXT_PUBLIC_CLERK_SIGN_IN_URL = "/auth/signin"
+NEXT_PUBLIC_CLERK_SIGN_UP_URL = "/auth"
+NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL = "/profile"
+NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL = "/auth/complete"
+
+# D1 binding. Run `wrangler d1 create pickled-citizens` and paste the database_id.
+[[d1_databases]]
+binding = "DB"
+database_name = "pickled-citizens"
+database_id = "5a25165d-4e57-4ccc-b097-9a858bac33af"
+migrations_dir = "drizzle"

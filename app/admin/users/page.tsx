@@ -1,27 +1,10 @@
 'use client';
 
 import { useEffect, useState, useCallback, FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
-import { ADMIN_EMAIL } from '@/lib/constants';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Modal } from '@/components/ui/Modal';
-
-type League = {
-  id: string;
-  name: string;
-};
-
-type AdminUser = {
-  id: string;
-  email: string | null;
-  first_name: string | null;
-  last_name: string | null;
-  self_reported_dupr: number | null;
-  updated_at: string | null;
-  leagues: League[];
-};
+import { listAdminUsersAction, type AdminUserView } from '@/lib/actions/admin';
 
 type EditState = {
   id: string;
@@ -31,18 +14,15 @@ type EditState = {
 };
 
 export default function AdminUsersPage() {
-  const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [users, setUsers] = useState<AdminUserView[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   const [editing, setEditing] = useState<EditState | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [pendingDeleteUser, setPendingDeleteUser] = useState<AdminUser | null>(null);
+  const [pendingDeleteUser, setPendingDeleteUser] = useState<AdminUserView | null>(null);
 
-  // Create user form state
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createEmail, setCreateEmail] = useState('');
   const [createFirstName, setCreateFirstName] = useState('');
@@ -53,112 +33,27 @@ export default function AdminUsersPage() {
   const loadUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
-
-    const { data: authData, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !authData.user) {
-      router.replace('/');
-      return;
-    }
-
-    const email = authData.user.email?.toLowerCase() ?? null;
-    setUserEmail(email);
-
-    if (email !== ADMIN_EMAIL) {
-      setError('You are not authorized to view this page.');
+    try {
+      const rows = await listAdminUsersAction();
+      setUsers(rows);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load users.');
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const { data: profileRows, error: profilesError } = await supabase
-      .from('profiles')
-      .select('id, email, first_name, last_name, self_reported_dupr, updated_at');
-
-    if (profilesError) {
-      setError(profilesError.message);
-      setLoading(false);
-      return;
-    }
-
-    const { data: membershipRows, error: membershipsError } = await supabase
-      .from('league_members')
-      .select('user_id, league:leagues(id, name)');
-
-    if (membershipsError) {
-      setError(membershipsError.message);
-      setLoading(false);
-      return;
-    }
-
-    const leagueMap = new Map<string, League[]>();
-    type MembershipRow = {
-      user_id: string;
-      league: { id: string; name: string }[] | { id: string; name: string } | null;
-    };
-    (membershipRows as MembershipRow[] ?? []).forEach((row) => {
-      const userId: string = row.user_id;
-      const leagueRel = row.league;
-      const league: League | null = Array.isArray(leagueRel)
-        ? leagueRel[0] ?? null
-        : leagueRel ?? null;
-      if (!league) return;
-      const list = leagueMap.get(userId) ?? [];
-      list.push({ id: league.id, name: league.name });
-      leagueMap.set(userId, list);
-    });
-
-    type ProfileRow = {
-      id: string;
-      email: string | null;
-      first_name: string | null;
-      last_name: string | null;
-      self_reported_dupr: number | null;
-      updated_at: string | null;
-    };
-    const mapped: AdminUser[] = (profileRows ?? []).map((p: ProfileRow) => {
-      let dupr: number | null = null;
-      if (p.self_reported_dupr != null) {
-        const n = Number(p.self_reported_dupr);
-        dupr = Number.isNaN(n) ? null : n;
-      }
-
-      return {
-        id: p.id,
-        email: p.email,
-        first_name: p.first_name,
-        last_name: p.last_name,
-        self_reported_dupr: dupr,
-        updated_at: p.updated_at ?? null,
-        leagues: leagueMap.get(p.id) ?? [],
-      };
-    });
-
-    mapped.sort((a, b) => {
-      const an = `${a.first_name ?? ''} ${a.last_name ?? ''}`.trim().toLowerCase();
-      const bn = `${b.first_name ?? ''} ${b.last_name ?? ''}`.trim().toLowerCase();
-      if (an && bn) return an.localeCompare(bn);
-      if (an) return -1;
-      if (bn) return 1;
-      const ae = (a.email ?? '').toLowerCase();
-      const be = (b.email ?? '').toLowerCase();
-      return ae.localeCompare(be);
-    });
-
-    setUsers(mapped);
-    setLoading(false);
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     loadUsers();
   }, [loadUsers]);
 
-  function startEdit(user: AdminUser) {
+  function startEdit(user: AdminUserView) {
     setEditing({
       id: user.id,
-      first_name: user.first_name ?? '',
-      last_name: user.last_name ?? '',
+      first_name: user.firstName ?? '',
+      last_name: user.lastName ?? '',
       self_reported_dupr:
-        user.self_reported_dupr != null ? user.self_reported_dupr.toFixed(2) : '',
+        user.selfReportedDupr != null ? user.selfReportedDupr.toFixed(2) : '',
     });
   }
 
@@ -169,7 +64,6 @@ export default function AdminUsersPage() {
   async function handleEditSubmit(event: FormEvent) {
     event.preventDefault();
     if (!editing) return;
-
     const first = editing.first_name.trim();
     const last = editing.last_name.trim();
     const duprStr = editing.self_reported_dupr.trim();
@@ -177,11 +71,7 @@ export default function AdminUsersPage() {
     let dupr: number | null = null;
     if (duprStr) {
       const n = Number(duprStr);
-      if (Number.isNaN(n)) {
-        setError('Self-reported DUPR must be a number.');
-        return;
-      }
-      if (n < 1.0 || n > 8.5) {
+      if (Number.isNaN(n) || n < 1.0 || n > 8.5) {
         setError('DUPR must be between 1.0 and 8.5.');
         return;
       }
@@ -190,59 +80,40 @@ export default function AdminUsersPage() {
 
     setSaving(true);
     setError(null);
-
-    const { data: sessionData } = await supabase.auth.getSession();
-    const accessToken = sessionData.session?.access_token;
-
-    if (!accessToken) {
-      setError('You must be signed in.');
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: editing.id,
+          first_name: first || null,
+          last_name: last || null,
+          self_reported_dupr: dupr,
+        }),
+      });
+      const json = (await response.json().catch(() => null)) as
+        | { ok?: boolean; error?: string }
+        | null;
+      if (!response.ok) throw new Error(json?.error ?? 'Failed to update user profile.');
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === editing.id
+            ? {
+                ...u,
+                firstName: first || null,
+                lastName: last || null,
+                selfReportedDupr: dupr,
+                updatedAt: new Date().toISOString(),
+              }
+            : u,
+        ),
+      );
+      setEditing(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update user.');
+    } finally {
       setSaving(false);
-      return;
     }
-
-    const response = await fetch('/api/admin/users', {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({
-        userId: editing.id,
-        first_name: first || null,
-        last_name: last || null,
-        self_reported_dupr: dupr,
-      }),
-    });
-
-    const json = (await response.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
-
-    if (!response.ok) {
-      setError(json?.error ?? 'Failed to update user profile.');
-      setSaving(false);
-      return;
-    }
-
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.id === editing.id
-          ? {
-              ...u,
-              first_name: first || null,
-              last_name: last || null,
-              self_reported_dupr: dupr,
-              updated_at: new Date().toISOString(),
-            }
-          : u
-      )
-    );
-
-    setSaving(false);
-    setEditing(null);
-  }
-
-  async function handleDelete(user: AdminUser) {
-    if (!user.id) return;
-    setPendingDeleteUser(user);
   }
 
   async function confirmDelete() {
@@ -251,35 +122,22 @@ export default function AdminUsersPage() {
     setPendingDeleteUser(null);
     setDeletingId(user.id);
     setError(null);
-
-    const { data: sessionData } = await supabase.auth.getSession();
-    const accessToken = sessionData.session?.access_token;
-
-    if (!accessToken) {
-      setError('You must be signed in.');
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, userEmail: user.email }),
+      });
+      const json = (await response.json().catch(() => null)) as
+        | { ok?: boolean; error?: string }
+        | null;
+      if (!response.ok) throw new Error(json?.error ?? 'Failed to delete user.');
+      setUsers((prev) => prev.filter((u) => u.id !== user.id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete user.');
+    } finally {
       setDeletingId(null);
-      return;
     }
-
-    const response = await fetch('/api/admin/users', {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({ userId: user.id }),
-    });
-
-    const json = (await response.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
-
-    if (!response.ok) {
-      setError(json?.error ?? 'Failed to delete user.');
-      setDeletingId(null);
-      return;
-    }
-
-    setUsers((prev) => prev.filter((u) => u.id !== user.id));
-    setDeletingId(null);
   }
 
   async function handleCreateUser(event: FormEvent) {
@@ -289,7 +147,6 @@ export default function AdminUsersPage() {
       setError('Email is required.');
       return;
     }
-
     let dupr: number | null = null;
     if (createDupr.trim()) {
       const n = Number(createDupr.trim());
@@ -299,61 +156,46 @@ export default function AdminUsersPage() {
       }
       dupr = n;
     }
-
     setCreating(true);
     setError(null);
-
-    const { data: sessionData } = await supabase.auth.getSession();
-    const accessToken = sessionData.session?.access_token;
-
-    if (!accessToken) {
-      setError('You must be signed in.');
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          first_name: createFirstName.trim() || undefined,
+          last_name: createLastName.trim() || undefined,
+          self_reported_dupr: dupr,
+        }),
+      });
+      const json = (await response.json().catch(() => null)) as
+        | { ok?: boolean; error?: string }
+        | null;
+      if (!response.ok) throw new Error(json?.error ?? 'Failed to create user.');
+      setCreateEmail('');
+      setCreateFirstName('');
+      setCreateLastName('');
+      setCreateDupr('');
+      setShowCreateForm(false);
+      await loadUsers();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create user.');
+    } finally {
       setCreating(false);
-      return;
     }
-
-    const response = await fetch('/api/admin/users', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({
-        email,
-        first_name: createFirstName.trim() || undefined,
-        last_name: createLastName.trim() || undefined,
-        self_reported_dupr: dupr,
-      }),
-    });
-
-    const json = (await response.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
-
-    if (!response.ok) {
-      setError(json?.error ?? 'Failed to create user.');
-      setCreating(false);
-      return;
-    }
-
-    // Reset form and reload user list
-    setCreateEmail('');
-    setCreateFirstName('');
-    setCreateLastName('');
-    setCreateDupr('');
-    setCreating(false);
-    setShowCreateForm(false);
-    loadUsers();
   }
 
   function formatDate(value: string | null) {
-    if (!value) return '\u2014';
+    if (!value) return '—';
     const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return '\u2014';
+    if (Number.isNaN(d.getTime())) return '—';
     return d.toLocaleString();
   }
 
-  function displayName(user: AdminUser) {
-    const full = `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim();
-    return full || '\u2014';
+  function displayName(user: AdminUserView) {
+    const full = `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim();
+    return full || '—';
   }
 
   if (loading) {
@@ -365,26 +207,13 @@ export default function AdminUsersPage() {
     );
   }
 
-  if (error && !users.length) {
-    return (
-      <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Admin Users</h1>
-        <p className="text-app-danger text-sm">{error}</p>
-      </div>
-    );
-  }
-
   return (
     <div>
       <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Admin Users</h1>
-      {userEmail && (
-        <p className="text-app-muted text-sm mb-1">{userEmail}</p>
-      )}
       <p className="text-app-muted text-sm mb-6">
         View and manage all user profiles. Only your admin account can access this page.
       </p>
 
-      {/* Create User Section */}
       <div className="border-t border-app-border pt-6 mb-6">
         {!showCreateForm ? (
           <Button variant="primary" onClick={() => setShowCreateForm(true)}>
@@ -427,7 +256,14 @@ export default function AdminUsersPage() {
                 <Button variant="primary" type="submit" disabled={creating}>
                   {creating ? 'Creating...' : 'Create'}
                 </Button>
-                <Button variant="secondary" onClick={() => { setShowCreateForm(false); setError(null); }} disabled={creating}>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setShowCreateForm(false);
+                    setError(null);
+                  }}
+                  disabled={creating}
+                >
                   Cancel
                 </Button>
               </div>
@@ -436,9 +272,7 @@ export default function AdminUsersPage() {
         )}
       </div>
 
-      {error && (
-        <p className="text-app-danger text-sm mb-4">{error}</p>
-      )}
+      {error && <p className="text-app-danger text-sm mb-4">{error}</p>}
 
       {users.length === 0 ? (
         <p className="text-app-muted text-sm">No profiles found.</p>
@@ -450,7 +284,6 @@ export default function AdminUsersPage() {
               user.leagues.length === 0
                 ? 'None'
                 : user.leagues.map((l) => l.name).join(', ');
-
             return (
               <div
                 key={user.id}
@@ -462,13 +295,16 @@ export default function AdminUsersPage() {
                     {user.email ?? 'No email'}
                   </div>
                   <div className="text-xs text-app-muted mt-0.5">
-                    DUPR: {user.self_reported_dupr != null ? user.self_reported_dupr.toFixed(2) : '\u2014'}
+                    DUPR:{' '}
+                    {user.selfReportedDupr != null
+                      ? user.selfReportedDupr.toFixed(2)
+                      : '—'}
                   </div>
                   <div className="text-xs text-app-muted mt-0.5">
                     Leagues: {leaguesLabel}
                   </div>
                   <div className="text-xs text-app-muted mt-0.5">
-                    Last login: {formatDate(user.updated_at)}
+                    Last login: {formatDate(user.updatedAt)}
                   </div>
                 </div>
 
@@ -481,7 +317,7 @@ export default function AdminUsersPage() {
                         value={editing.first_name}
                         onChange={(e) =>
                           setEditing((prev) =>
-                            prev ? { ...prev, first_name: e.target.value } : prev
+                            prev ? { ...prev, first_name: e.target.value } : prev,
                           )
                         }
                         className="w-full px-2 py-1.5 border border-app-border bg-transparent text-app-text text-xs focus:outline-none focus:border-app-text transition-colors"
@@ -492,7 +328,7 @@ export default function AdminUsersPage() {
                         value={editing.last_name}
                         onChange={(e) =>
                           setEditing((prev) =>
-                            prev ? { ...prev, last_name: e.target.value } : prev
+                            prev ? { ...prev, last_name: e.target.value } : prev,
                           )
                         }
                         className="w-full px-2 py-1.5 border border-app-border bg-transparent text-app-text text-xs focus:outline-none focus:border-app-text transition-colors"
@@ -503,7 +339,9 @@ export default function AdminUsersPage() {
                         value={editing.self_reported_dupr}
                         onChange={(e) =>
                           setEditing((prev) =>
-                            prev ? { ...prev, self_reported_dupr: e.target.value } : prev
+                            prev
+                              ? { ...prev, self_reported_dupr: e.target.value }
+                              : prev,
                           )
                         }
                         className="w-full px-2 py-1.5 border border-app-border bg-transparent text-app-text text-xs focus:outline-none focus:border-app-text transition-colors"
@@ -525,7 +363,7 @@ export default function AdminUsersPage() {
                       <Button
                         variant="danger"
                         className="text-[0.65rem] px-3 py-1.5"
-                        onClick={() => handleDelete(user)}
+                        onClick={() => setPendingDeleteUser(user)}
                         disabled={deletingId === user.id}
                       >
                         {deletingId === user.id ? 'Deleting...' : 'Delete'}
@@ -548,7 +386,11 @@ export default function AdminUsersPage() {
               <Button variant="sm" onClick={() => setPendingDeleteUser(null)}>
                 Cancel
               </Button>
-              <Button variant="danger" className="text-[0.65rem] px-3 py-1.5" onClick={confirmDelete}>
+              <Button
+                variant="danger"
+                className="text-[0.65rem] px-3 py-1.5"
+                onClick={confirmDelete}
+              >
                 Delete
               </Button>
             </>

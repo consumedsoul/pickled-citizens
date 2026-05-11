@@ -2,24 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@clerk/nextjs';
 
 export function Navigation() {
   const pathname = usePathname();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setIsAuthenticated(!!data.user);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAuthenticated(!!session?.user);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  const { isSignedIn } = useAuth();
 
   function isActivePath(href: string) {
     return (href === '/' && pathname === '/') ||
@@ -45,7 +32,7 @@ export function Navigation() {
       <Link href="/sessions" className={getLinkClassName('/sessions')} aria-current={isActivePath('/sessions') ? 'page' : undefined}>
         Sessions
       </Link>
-      {isAuthenticated && (
+      {isSignedIn && (
         <Link href="/profile" className={getLinkClassName('/profile')} aria-current={isActivePath('/profile') ? 'page' : undefined}>
           Profile
         </Link>

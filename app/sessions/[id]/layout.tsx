@@ -1,112 +1,85 @@
 import { Metadata } from 'next';
-import { supabaseServiceRole } from '@/lib/supabaseClient';
+import { getSessionById } from '@/lib/db/queries/sessions';
+import { getLeagueById } from '@/lib/db/queries/leagues';
 
 const DISPLAY_TIMEZONE = process.env.DISPLAY_TIMEZONE || 'America/Los_Angeles';
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pickledcitizens.com';
 
-// Helper function to format date for OG image
 const formatDateTimeForTitle = (value: string | null) => {
   if (!value) return 'Not scheduled';
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return 'Not scheduled';
-  return d.toLocaleString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    timeZone: DISPLAY_TIMEZONE,
-    hour12: true,
-  }).replace(',', '').replace(/:\d{2}\s/, ' ');
+  return d
+    .toLocaleString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZone: DISPLAY_TIMEZONE,
+      hour12: true,
+    })
+    .replace(',', '')
+    .replace(/:\d{2}\s/, ' ');
 };
 
 interface SessionLayoutProps {
   children: React.ReactNode;
-  params: {
-    id: string;
-  };
+  params: { id: string };
 }
 
-export async function generateMetadata({ params }: SessionLayoutProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: SessionLayoutProps): Promise<Metadata> {
   const sessionId = params.id;
-  
+  const fallbackTitle = 'Pickleball Session - Pickled Citizens';
+  const fallbackDescription = 'Pickleball Session | 0 Players | Not scheduled';
+
+  const baseOg = {
+    siteName: 'Pickled Citizens' as const,
+    locale: 'en_US' as const,
+    type: 'website' as const,
+    url: `${siteUrl}/sessions/${sessionId}`,
+    images: [
+      {
+        url: `${siteUrl}/images/Pickled-Citizens-Logo-Social.png`,
+        width: 1200,
+        height: 630,
+        alt: 'Pickled Citizens Logo',
+      },
+    ],
+  };
+
   try {
-    const { data: sessionRow, error: sessionError } = await supabaseServiceRole
-      .from('game_sessions')
-      .select('scheduled_for, player_count, league:leagues(name)')
-      .eq('id', sessionId)
-      .maybeSingle();
-
-    if (!sessionError && sessionRow) {
-      const leagueRel = (sessionRow as Record<string, unknown>).league as
-        | { name: string }[]
-        | { name: string }
-        | null;
-      const leagueName =
-        Array.isArray(leagueRel) && leagueRel.length > 0
-          ? leagueRel[0]?.name ?? null
-          : !Array.isArray(leagueRel) && leagueRel
-            ? leagueRel.name ?? null
-            : null;
-
-      const title = 'Pickleball Session - Pickled Citizens';
-      const description = `${leagueName || 'Pickleball Session'} | ${sessionRow.player_count} Players | ${formatDateTimeForTitle(sessionRow.scheduled_for)}`;
-
+    const session = await getSessionById(sessionId);
+    if (session) {
+      const league = session.leagueId ? await getLeagueById(session.leagueId) : null;
+      const leagueName = league?.name ?? null;
+      const description = `${leagueName || 'Pickleball Session'} | ${session.playerCount} Players | ${formatDateTimeForTitle(session.scheduledFor)}`;
       return {
-        title,
+        title: fallbackTitle,
         description,
-        openGraph: {
-          title,
-          description,
-          url: `${siteUrl}/sessions/${sessionId}`,
-          siteName: 'Pickled Citizens',
-          locale: 'en_US',
-          type: 'website',
-          images: [
-            {
-              url: `${siteUrl}/images/Pickled-Citizens-Logo-Social.png`,
-              width: 1200,
-              height: 630,
-              alt: 'Pickled Citizens Logo',
-            },
-          ],
-        },
+        openGraph: { ...baseOg, title: fallbackTitle, description },
         twitter: {
           card: 'summary_large_image',
-          title,
+          title: fallbackTitle,
           description,
           images: [`${siteUrl}/images/Pickled-Citizens-Logo-Social.png`],
         },
       };
     }
   } catch {
-    // Fall through to fallback metadata
+    // Fall through to fallback
   }
-  
-  // Fallback metadata - with logo and updated description format
+
   return {
-    title: 'Pickleball Session - Pickled Citizens',
-    description: 'Pickleball Session | 0 Players | Not scheduled',
-    openGraph: {
-      title: 'Pickleball Session - Pickled Citizens',
-      description: 'Pickleball Session | 0 Players | Not scheduled',
-      url: `${siteUrl}/sessions/${sessionId}`,
-      siteName: 'Pickled Citizens',
-      locale: 'en_US',
-      type: 'website',
-      images: [
-        {
-          url: `${siteUrl}/images/Pickled-Citizens-Logo-Social.png`,
-          width: 1200,
-          height: 630,
-          alt: 'Pickled Citizens Logo',
-        },
-      ],
-    },
+    title: fallbackTitle,
+    description: fallbackDescription,
+    openGraph: { ...baseOg, title: fallbackTitle, description: fallbackDescription },
     twitter: {
       card: 'summary_large_image',
-      title: 'Pickleball Session - Pickled Citizens',
-      description: 'Pickleball Session | 0 Players | Not scheduled',
+      title: fallbackTitle,
+      description: fallbackDescription,
       images: [`${siteUrl}/images/Pickled-Citizens-Logo-Social.png`],
     },
   };
