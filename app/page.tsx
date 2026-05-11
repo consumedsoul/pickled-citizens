@@ -8,7 +8,6 @@ import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { formatDateTime, formatLeagueName } from '@/lib/formatters';
-import { FAQ_ITEMS } from '@/lib/faq';
 import {
   getHomeData,
   type HomeLeague,
@@ -254,23 +253,6 @@ export default function HomePage() {
             <li>League email invitation flow</li>
             <li>Session-specific invitation flow</li>
           </ul>
-        </div>
-      </div>
-
-      <div className="border-t border-app-border pt-8 pb-8">
-        <SectionLabel>Frequently Asked Questions</SectionLabel>
-        <div className="mt-4 divide-y divide-app-border">
-          {FAQ_ITEMS.map((item) => (
-            <details key={item.q} className="py-3 group">
-              <summary className="text-sm font-medium text-app-text cursor-pointer list-none flex justify-between items-center">
-                <span>{item.q}</span>
-                <span className="font-mono text-xs text-app-muted ml-4 group-open:rotate-45 transition-transform">
-                  +
-                </span>
-              </summary>
-              <p className="text-sm text-app-muted leading-relaxed mt-2">{item.a}</p>
-            </details>
-          ))}
         </div>
       </div>
 

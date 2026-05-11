@@ -10,7 +10,6 @@ import { AuthStatus } from "@/components/AuthStatus";
 import { Navigation } from "@/components/Navigation";
 import { AdminFooterLinks } from "@/components/AdminFooterLinks";
 import { BuildVersion } from "@/components/BuildVersion";
-import { FAQ_ITEMS } from "@/lib/faq";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pickledcitizens.com';
 
@@ -85,16 +84,6 @@ const softwareAppJsonLd = {
   },
 };
 
-const faqJsonLd = {
-  '@context': 'https://schema.org',
-  '@type': 'FAQPage',
-  mainEntity: FAQ_ITEMS.map((item) => ({
-    '@type': 'Question',
-    name: item.q,
-    acceptedAnswer: { '@type': 'Answer', text: item.a },
-  })),
-};
-
 export default function RootLayout({ children }: { children: ReactNode }) {
   const year = new Date().getFullYear();
   const nonce = headers().get('x-nonce') ?? undefined;
@@ -106,11 +95,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           type="application/ld+json"
           nonce={nonce}
           dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareAppJsonLd) }}
-        />
-        <script
-          type="application/ld+json"
-          nonce={nonce}
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
         />
       </head>
       <body className="font-sans">
