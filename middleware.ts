@@ -9,16 +9,21 @@ export default clerkMiddleware(async (auth, request) => {
   const { pathname } = request.nextUrl;
   const isDev = process.env.NODE_ENV === 'development';
 
+  // Clerk production keys serve their JS from a subdomain on the app's own
+  // domain (e.g. clerk.pickledcitizens.com), not *.clerk.com. Allow both.
+  const clerkOrigins =
+    'https://*.clerk.accounts.dev https://*.clerk.com https://clerk.pickledcitizens.com';
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
   const cspHeader = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' https://static.cloudflareinsights.com https://*.clerk.accounts.dev https://*.clerk.com${isDev ? " 'unsafe-eval'" : ''}`,
+    `script-src 'self' 'nonce-${nonce}' https://static.cloudflareinsights.com ${clerkOrigins}${isDev ? " 'unsafe-eval'" : ''}`,
+    `script-src-elem 'self' 'nonce-${nonce}' https://static.cloudflareinsights.com ${clerkOrigins}`,
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self' data:",
-    "connect-src 'self' https://*.clerk.accounts.dev https://*.clerk.com https://api.clerk.com",
+    `connect-src 'self' ${clerkOrigins} https://api.clerk.com`,
     "img-src 'self' data: https:",
     "worker-src 'self' blob:",
-    "frame-src 'self' https://*.clerk.accounts.dev https://*.clerk.com",
+    `frame-src 'self' ${clerkOrigins}`,
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
