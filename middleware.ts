@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { clerkClient, clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { ADMIN_EMAIL } from './src/lib/constants';
 
 const isAdminRoute = createRouteMatcher(['/admin(.*)']);
@@ -45,7 +45,11 @@ export default clerkMiddleware(async (auth, request) => {
     }
 
     if (isAdminRoute(request)) {
-      const email = (session.sessionClaims?.email as string | undefined)?.toLowerCase();
+      let email = (session.sessionClaims?.email as string | undefined)?.toLowerCase();
+      if (!email) {
+        const user = await (await clerkClient()).users.getUser(session.userId);
+        email = user.primaryEmailAddress?.emailAddress?.toLowerCase();
+      }
       if (email !== ADMIN_EMAIL) {
         return NextResponse.redirect(new URL('/', request.url));
       }
