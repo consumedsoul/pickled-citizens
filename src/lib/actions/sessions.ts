@@ -12,6 +12,7 @@ import {
   listGuestsForSession,
   addGuest,
   removeGuest,
+  canManageSession,
 } from '@/lib/db/queries/sessions';
 import {
   listMatchesForSession,
@@ -192,6 +193,30 @@ export async function recordMatchResultAction(input: {
     team2Score: input.team2Score,
   });
   await updateMatchStatus(userId, input.matchId, 'completed');
+  return { ok: true };
+}
+
+export async function clearMatchResultAction(input: { matchId: string }) {
+  const userId = await requireUserId();
+  const { getDbAsync } = await import('@/lib/db/client');
+  const { matchResults, matches: matchesTable } = await import('@/lib/db/schema');
+  const { eq } = await import('drizzle-orm');
+  const db = await getDbAsync();
+  // Authorization: ensure caller can manage the parent session
+  const matchRow = await db
+    .select({ sessionId: matchesTable.sessionId })
+    .from(matchesTable)
+    .where(eq(matchesTable.id, input.matchId))
+    .limit(1);
+  const sessionId = matchRow[0]?.sessionId;
+  if (sessionId) {
+    const session = await getSessionById(sessionId);
+    if (!session || !(await canManageSession(userId, session))) {
+      throw new Error('Cannot edit results for this match');
+    }
+  }
+  await db.delete(matchResults).where(eq(matchResults.matchId, input.matchId));
+  await updateMatchStatus(userId, input.matchId, 'scheduled');
   return { ok: true };
 }
 

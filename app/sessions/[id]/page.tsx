@@ -2,11 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
+import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Modal } from '@/components/ui/Modal';
 import { formatDateTime, displayPlayerName, displayPlayerNameShort } from '@/lib/formatters';
+import {
+  getSessionDetail,
+  recordMatchResultAction,
+  clearMatchResultAction,
+  deleteSessionAction,
+} from '@/lib/actions/sessions';
 
 type SessionPlayer = {
   id: string;
@@ -56,20 +62,15 @@ type PlayerStats = {
   games: number;
 };
 
-/* ------------------------------------------------------------------ */
-/* Shared inline sub-components (used by both normal & fullscreen)     */
-/* ------------------------------------------------------------------ */
-
-function TeamsPanel({ teamStats, hasMatches }: {
+function TeamsPanel({
+  teamStats,
+  hasMatches,
+}: {
   teamStats: { team1: TeamStats; team2: TeamStats };
   hasMatches: boolean;
 }) {
   if (!hasMatches) {
-    return (
-      <p className="text-app-muted text-sm mt-3">
-        No matches found for this session.
-      </p>
-    );
+    return <p className="text-app-muted text-sm mt-3">No matches found for this session.</p>;
   }
   return (
     <div className="mt-3 border border-app-border overflow-hidden">
@@ -113,7 +114,11 @@ function TeamsPanel({ teamStats, hasMatches }: {
   );
 }
 
-function PlayersPanel({ playerStats, matches, showEmptyState }: {
+function PlayersPanel({
+  playerStats,
+  matches,
+  showEmptyState,
+}: {
   playerStats: PlayerStats[];
   matches: MatchWithPlayers[];
   showEmptyState: boolean;
@@ -129,12 +134,10 @@ function PlayersPanel({ playerStats, matches, showEmptyState }: {
   return (
     <ul className="mt-3 list-none p-0 m-0 border border-app-border divide-y divide-app-border">
       {playerStats.map((ps) => {
-        const team1Count = matches.filter((m) =>
-          m.team1.some((p) => p.id === ps.player.id)
-        ).length;
-        const team2Count = matches.filter((m) =>
-          m.team2.some((p) => p.id === ps.player.id)
-        ).length;
+        const team1Count = matches.filter((m) => m.team1.some((p) => p.id === ps.player.id))
+          .length;
+        const team2Count = matches.filter((m) => m.team2.some((p) => p.id === ps.player.id))
+          .length;
         const isTeam1 = team1Count >= team2Count;
 
         return (
@@ -142,14 +145,18 @@ function PlayersPanel({ playerStats, matches, showEmptyState }: {
             key={ps.player.id}
             className="flex items-center justify-between gap-2 px-3 py-2 bg-white"
           >
-            <div className={`text-sm font-medium ${isTeam1 ? 'text-team-green' : 'text-team-blue'}`}>
+            <div
+              className={`text-sm font-medium ${isTeam1 ? 'text-team-green' : 'text-team-blue'}`}
+            >
               {displayPlayerName(ps.player)}
               {ps.player.self_reported_dupr != null &&
                 !Number.isNaN(ps.player.self_reported_dupr) && (
                   <> ({ps.player.self_reported_dupr.toFixed(2)})</>
                 )}
             </div>
-            <div className={`text-xs text-right ${isTeam1 ? 'text-team-green' : 'text-team-blue'}`}>
+            <div
+              className={`text-xs text-right ${isTeam1 ? 'text-team-green' : 'text-team-blue'}`}
+            >
               {ps.wins}-{ps.losses}
             </div>
           </li>
@@ -159,7 +166,13 @@ function PlayersPanel({ playerStats, matches, showEmptyState }: {
   );
 }
 
-function MatchupsPanel({ rounds, canEdit, updatingMatchId, onToggleWinner, variant }: {
+function MatchupsPanel({
+  rounds,
+  canEdit,
+  updatingMatchId,
+  onToggleWinner,
+  variant,
+}: {
   rounds: MatchWithPlayers[][];
   canEdit: boolean;
   updatingMatchId: string | null;
@@ -167,7 +180,6 @@ function MatchupsPanel({ rounds, canEdit, updatingMatchId, onToggleWinner, varia
   variant: 'compact' | 'fullscreen';
 }) {
   const isFullscreen = variant === 'fullscreen';
-
   return (
     <div className={isFullscreen ? 'mt-3' : 'border border-app-border bg-white px-3 py-2'}>
       {rounds.map((roundMatches, roundIndex) => (
@@ -175,7 +187,9 @@ function MatchupsPanel({ rounds, canEdit, updatingMatchId, onToggleWinner, varia
           key={roundIndex}
           className={roundIndex === 0 ? '' : isFullscreen ? 'mt-3' : 'mt-2'}
         >
-          <div className={`font-mono text-xs uppercase tracking-label font-medium text-app-muted text-center bg-app-bg-subtle py-1.5 ${isFullscreen ? '' : '-mx-3 px-3'}`}>
+          <div
+            className={`font-mono text-xs uppercase tracking-label font-medium text-app-muted text-center bg-app-bg-subtle py-1.5 ${isFullscreen ? '' : '-mx-3 px-3'}`}
+          >
             ROUND {roundIndex + 1}
           </div>
           {roundMatches.map((match, index) => (
@@ -204,12 +218,16 @@ function MatchupsPanel({ rounds, canEdit, updatingMatchId, onToggleWinner, varia
                   {match.team1.map((p, i) => (
                     <span key={p.id}>
                       {displayPlayerNameShort(p)}
-                      {i < match.team1.length - 1 && <span className="hidden md:inline"> +</span>}
+                      {i < match.team1.length - 1 && (
+                        <span className="hidden md:inline"> +</span>
+                      )}
                     </span>
                   ))}
                 </div>
               )}
-              <span className={`text-app-muted text-center ${isFullscreen ? 'text-sm' : 'text-xs'}`}>
+              <span
+                className={`text-app-muted text-center ${isFullscreen ? 'text-sm' : 'text-xs'}`}
+              >
                 vs
               </span>
               {isFullscreen ? (
@@ -221,7 +239,9 @@ function MatchupsPanel({ rounds, canEdit, updatingMatchId, onToggleWinner, varia
                   {match.team2.map((p, i) => (
                     <span key={p.id}>
                       {displayPlayerNameShort(p)}
-                      {i < match.team2.length - 1 && <span className="hidden md:inline"> +</span>}
+                      {i < match.team2.length - 1 && (
+                        <span className="hidden md:inline"> +</span>
+                      )}
                     </span>
                   ))}
                 </div>
@@ -249,6 +269,7 @@ function MatchupsPanel({ rounds, canEdit, updatingMatchId, onToggleWinner, varia
 export default function SessionDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { isLoaded, user } = useUser();
   const sessionId = params?.id as string | undefined;
 
   const [loading, setLoading] = useState(true);
@@ -256,20 +277,17 @@ export default function SessionDetailPage() {
 
   const [session, setSession] = useState<Session | null>(null);
   const [matches, setMatches] = useState<MatchWithPlayers[]>([]);
-
-  const [userId, setUserId] = useState<string | null>(null);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [updatingMatchId, setUpdatingMatchId] = useState<string | null>(null);
-
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const userId = user?.id ?? null;
 
   const toggleFullscreen = useCallback(() => {
     setIsFullscreen((prev) => !prev);
   }, []);
 
-  // Close fullscreen on Escape key
   useEffect(() => {
     if (!isFullscreen) return;
     function handleKeyDown(e: KeyboardEvent) {
@@ -280,280 +298,171 @@ export default function SessionDetailPage() {
   }, [isFullscreen]);
 
   useEffect(() => {
+    if (!sessionId) return;
+    if (!isLoaded) return;
+    if (!user) {
+      router.replace('/auth/signin');
+      return;
+    }
     let active = true;
-
-    async function load() {
-      if (!sessionId) return;
-
+    (async () => {
       setLoading(true);
       setError(null);
+      try {
+        const detail = await getSessionDetail(sessionId);
+        if (!active) return;
+        if (!detail) {
+          setError('Session not found.');
+          setSession(null);
+          setMatches([]);
+          return;
+        }
 
-      const { data: authData, error: authError } = await supabase.auth.getUser();
-      if (!active) return;
+        setSession({
+          id: detail.session.id,
+          league_id: detail.session.leagueId ?? null,
+          league_name: detail.leagueName ?? null,
+          created_by: detail.session.createdBy,
+          created_at: detail.session.createdAt ?? '',
+          scheduled_for: detail.session.scheduledFor ?? null,
+          player_count: detail.session.playerCount,
+        });
 
-      if (authError || !authData.user) {
-        router.replace('/');
-        return;
-      }
+        const profilesById = new Map(detail.profiles.map((p) => [p.id, p]));
+        const guestsById = new Map(detail.guests.map((g) => [g.id, g]));
+        const resultsByMatch = new Map(detail.results.map((r) => [r.matchId, r]));
 
-      const user = authData.user;
-      setUserId(user.id);
-      setUserEmail(user.email ?? null);
+        const playersByMatch = new Map<
+          string,
+          Array<{
+            userId: string | null;
+            guestId: string | null;
+            team: number;
+            position: number;
+          }>
+        >();
+        for (const p of detail.players) {
+          const list = playersByMatch.get(p.matchId) ?? [];
+          list.push({ userId: p.userId, guestId: p.guestId, team: p.team, position: p.position });
+          playersByMatch.set(p.matchId, list);
+        }
 
-      const { data: sessionRow, error: sessionError } = await supabase
-        .from('game_sessions')
-        .select(
-          'id, league_id, created_by, created_at, scheduled_for, player_count, league:leagues(name)'
-        )
-        .eq('id', sessionId)
-        .maybeSingle();
+        function toPlayer(mp: { userId: string | null; guestId: string | null }): SessionPlayer {
+          if (mp.guestId) {
+            const guest = guestsById.get(mp.guestId);
+            if (guest) {
+              const name = (guest.displayName ?? '').trim();
+              const firstSpace = name.indexOf(' ');
+              return {
+                id: guest.id,
+                first_name: firstSpace === -1 ? name : name.slice(0, firstSpace),
+                last_name:
+                  firstSpace === -1 ? null : name.slice(firstSpace + 1).trim() || null,
+                email: null,
+                self_reported_dupr: guest.dupr ?? null,
+              };
+            }
+            return {
+              id: mp.guestId,
+              first_name: null,
+              last_name: null,
+              email: null,
+              self_reported_dupr: null,
+            };
+          }
+          if (mp.userId) {
+            const profile = profilesById.get(mp.userId);
+            if (profile) {
+              return {
+                id: profile.id,
+                first_name: profile.firstName,
+                last_name: profile.lastName,
+                email: profile.email,
+                self_reported_dupr:
+                  profile.selfReportedDupr != null ? Number(profile.selfReportedDupr) : null,
+              };
+            }
+            return {
+              id: mp.userId,
+              first_name: null,
+              last_name: null,
+              email: null,
+              self_reported_dupr: null,
+            };
+          }
+          return {
+            id: 'unknown',
+            first_name: null,
+            last_name: null,
+            email: null,
+            self_reported_dupr: null,
+          };
+        }
 
-      if (!active) return;
+        const sortedMatches = [...detail.matches].sort(
+          (a, b) => (a.scheduledOrder ?? 0) - (b.scheduledOrder ?? 0),
+        );
 
-      if (sessionError || !sessionRow) {
-        setError(sessionError?.message ?? 'Session not found.');
-        setLoading(false);
-        return;
-      }
+        const built: MatchWithPlayers[] = sortedMatches.map((m) => {
+          const players = playersByMatch.get(m.id) ?? [];
+          const team1 = players
+            .filter((p) => p.team === 1)
+            .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+            .map(toPlayer);
+          const team2 = players
+            .filter((p) => p.team === 2)
+            .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+            .map(toPlayer);
 
-      const leagueRel = (sessionRow as Record<string, unknown>).league as
-        | { name: string }[]
-        | { name: string }
-        | null;
-      const leagueName =
-        Array.isArray(leagueRel) && leagueRel.length > 0
-          ? leagueRel[0]?.name ?? null
-          : !Array.isArray(leagueRel) && leagueRel
-            ? leagueRel.name ?? null
+          const r = resultsByMatch.get(m.id);
+          const result: MatchResult = r
+            ? {
+                team1_score: r.team1Score,
+                team2_score: r.team2Score,
+                completed_at: r.completedAt,
+              }
             : null;
-
-      const baseSession: Session = {
-        id: sessionRow.id,
-        league_id: sessionRow.league_id ?? null,
-        league_name: leagueName,
-        created_by: sessionRow.created_by,
-        created_at: sessionRow.created_at,
-        scheduled_for: sessionRow.scheduled_for ?? null,
-        player_count: sessionRow.player_count,
-      };
-
-      setSession(baseSession);
-
-      const { data: matchRows, error: matchesError } = await supabase
-        .from('matches')
-        .select(
-          'id, session_id, court_number, scheduled_order, status, match_players(user_id, guest_id, team, position), result:match_results(team1_score, team2_score, completed_at)'
-        )
-        .eq('session_id', sessionId)
-        .order('scheduled_order', { ascending: true });
-
-      if (!active) return;
-
-      if (matchesError) {
-        setError(matchesError.message);
-        setMatches([]);
-        setLoading(false);
-        return;
-      }
-
-      const playerIds = new Set<string>();
-      const guestIds = new Set<string>();
-      type MatchQueryRow = {
-        id: string;
-        session_id: string;
-        court_number: number | null;
-        scheduled_order: number | null;
-        status: string;
-        match_players: {
-          user_id: string | null;
-          guest_id: string | null;
-          team: number;
-          position: number;
-        }[];
-        result:
-          | { team1_score: number | null; team2_score: number | null; completed_at: string | null }
-          | { team1_score: number | null; team2_score: number | null; completed_at: string | null }[]
-          | null;
-      };
-      ((matchRows ?? []) as MatchQueryRow[]).forEach((row) => {
-        const mps = row.match_players ?? [];
-        mps.forEach((mp) => {
-          if (mp.user_id) playerIds.add(mp.user_id);
-          if (mp.guest_id) guestIds.add(mp.guest_id);
-        });
-      });
-
-      const profilesMap = new Map<string, SessionPlayer>();
-      if (playerIds.size > 0) {
-        const { data: profileRows, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, first_name, last_name, email, self_reported_dupr')
-          .in('id', Array.from(playerIds));
-
-        if (!active) return;
-
-        if (profilesError) {
-          setError(profilesError.message);
-          setMatches([]);
-          setLoading(false);
-          return;
-        }
-
-        type ProfileQueryRow = {
-          id: string;
-          first_name: string | null;
-          last_name: string | null;
-          email: string | null;
-          self_reported_dupr: number | null;
-        };
-        ((profileRows ?? []) as ProfileQueryRow[]).forEach((p) => {
-          let dupr: number | null = null;
-          if (p.self_reported_dupr != null) {
-            const n = Number(p.self_reported_dupr);
-            dupr = Number.isNaN(n) ? null : n;
+          let winner: 1 | 2 | null = null;
+          if (result && result.team1_score != null && result.team2_score != null) {
+            if (result.team1_score > result.team2_score) winner = 1;
+            else if (result.team2_score > result.team1_score) winner = 2;
           }
-          profilesMap.set(p.id, {
-            id: p.id,
-            first_name: p.first_name ?? null,
-            last_name: p.last_name ?? null,
-            email: p.email ?? null,
-            self_reported_dupr: dupr,
-          });
-        });
-      }
 
-      const guestsMap = new Map<string, SessionPlayer>();
-      if (guestIds.size > 0) {
-        const { data: guestRows, error: guestsError } = await supabase
-          .from('session_guests')
-          .select('id, display_name, dupr')
-          .in('id', Array.from(guestIds));
-
-        if (!active) return;
-
-        if (guestsError) {
-          setError(guestsError.message);
-          setMatches([]);
-          setLoading(false);
-          return;
-        }
-
-        type GuestQueryRow = {
-          id: string;
-          display_name: string;
-          dupr: number | string | null;
-        };
-        ((guestRows ?? []) as GuestQueryRow[]).forEach((g) => {
-          const name = (g.display_name ?? '').trim();
-          const firstSpace = name.indexOf(' ');
-          const first_name = firstSpace === -1 ? name : name.slice(0, firstSpace);
-          const last_name = firstSpace === -1 ? null : name.slice(firstSpace + 1).trim() || null;
-          let dupr: number | null = null;
-          if (g.dupr != null) {
-            const n = Number(g.dupr);
-            dupr = Number.isNaN(n) ? null : n;
-          }
-          guestsMap.set(g.id, {
-            id: g.id,
-            first_name,
-            last_name,
-            email: null,
-            self_reported_dupr: dupr,
-          });
-        });
-      }
-
-      function toPlayer(mp: { user_id: string | null; guest_id: string | null }): SessionPlayer {
-        if (mp.guest_id) {
-          const guest = guestsMap.get(mp.guest_id);
-          if (guest) return guest;
           return {
-            id: mp.guest_id,
-            first_name: null,
-            last_name: null,
-            email: null,
-            self_reported_dupr: null,
+            id: m.id,
+            court_number: m.courtNumber,
+            scheduled_order: m.scheduledOrder,
+            status: m.status,
+            team1,
+            team2,
+            result,
+            winner,
           };
-        }
-        if (mp.user_id) {
-          const profile = profilesMap.get(mp.user_id);
-          if (profile) return profile;
-          return {
-            id: mp.user_id,
-            first_name: null,
-            last_name: null,
-            email: null,
-            self_reported_dupr: null,
-          };
-        }
-        return {
-          id: 'unknown',
-          first_name: null,
-          last_name: null,
-          email: null,
-          self_reported_dupr: null,
-        };
+        });
+
+        setMatches(built);
+      } catch (err) {
+        if (active) setError(err instanceof Error ? err.message : 'Failed to load session.');
+      } finally {
+        if (active) setLoading(false);
       }
-
-      const loadedMatches: MatchWithPlayers[] = ((matchRows ?? []) as MatchQueryRow[]).map((row) => {
-        const mps = row.match_players ?? [];
-        const team1 = mps
-          .filter((mp) => mp.team === 1)
-          .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
-          .map((mp) => toPlayer(mp));
-        const team2 = mps
-          .filter((mp) => mp.team === 2)
-          .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
-          .map((mp) => toPlayer(mp));
-
-        const rawResult = row.result;
-
-        let result: MatchResult = null;
-        if (rawResult) {
-          if (Array.isArray(rawResult)) {
-            result = rawResult[0] ?? null;
-          } else {
-            result = rawResult;
-          }
-        }
-
-        let winner: 1 | 2 | null = null;
-        if (result && result.team1_score != null && result.team2_score != null) {
-          if (result.team1_score > result.team2_score) winner = 1;
-          else if (result.team2_score > result.team1_score) winner = 2;
-        }
-
-        return {
-          id: row.id,
-          court_number: row.court_number ?? null,
-          scheduled_order: row.scheduled_order ?? null,
-          status: row.status,
-          team1,
-          team2,
-          result,
-          winner,
-        };
-      });
-
-      setMatches(loadedMatches);
-      setLoading(false);
-    }
-
-    load();
-
+    })();
     return () => {
       active = false;
     };
-  }, [sessionId, router]);
+  }, [sessionId, isLoaded, user, router]);
 
   const canEdit = !!session && !!userId && session.created_by === userId;
 
-  const teamStats = useMemo<{
-    team1: TeamStats;
-    team2: TeamStats;
-  }>(() => {
-    const team1Roster = new Map<string, { player: SessionPlayer; firstMatchIndex: number; positionInMatch: number }>();
-    const team2Roster = new Map<string, { player: SessionPlayer; firstMatchIndex: number; positionInMatch: number }>();
+  const teamStats = useMemo<{ team1: TeamStats; team2: TeamStats }>(() => {
+    const team1Roster = new Map<
+      string,
+      { player: SessionPlayer; firstMatchIndex: number; positionInMatch: number }
+    >();
+    const team2Roster = new Map<
+      string,
+      { player: SessionPlayer; firstMatchIndex: number; positionInMatch: number }
+    >();
     let team1Wins = 0;
     let team1Losses = 0;
     let team2Wins = 0;
@@ -570,7 +479,6 @@ export default function SessionDetailPage() {
           team2Roster.set(p.id, { player: p, firstMatchIndex: matchIndex, positionInMatch });
         }
       });
-
       if (match.winner === 1) {
         team1Wins += 1;
         team2Losses += 1;
@@ -581,71 +489,53 @@ export default function SessionDetailPage() {
     });
 
     const team1RosterSorted = Array.from(team1Roster.values())
-      .sort((a, b) => {
-        if (a.firstMatchIndex !== b.firstMatchIndex) {
-          return a.firstMatchIndex - b.firstMatchIndex;
-        }
-        return a.positionInMatch - b.positionInMatch;
-      })
-      .map(entry => entry.player);
-
+      .sort((a, b) =>
+        a.firstMatchIndex !== b.firstMatchIndex
+          ? a.firstMatchIndex - b.firstMatchIndex
+          : a.positionInMatch - b.positionInMatch,
+      )
+      .map((entry) => entry.player);
     const team2RosterSorted = Array.from(team2Roster.values())
-      .sort((a, b) => {
-        if (a.firstMatchIndex !== b.firstMatchIndex) {
-          return a.firstMatchIndex - b.firstMatchIndex;
-        }
-        return a.positionInMatch - b.positionInMatch;
-      })
-      .map(entry => entry.player);
+      .sort((a, b) =>
+        a.firstMatchIndex !== b.firstMatchIndex
+          ? a.firstMatchIndex - b.firstMatchIndex
+          : a.positionInMatch - b.positionInMatch,
+      )
+      .map((entry) => entry.player);
 
     return {
-      team1: {
-        wins: team1Wins,
-        losses: team1Losses,
-        roster: team1RosterSorted,
-      },
-      team2: {
-        wins: team2Wins,
-        losses: team2Losses,
-        roster: team2RosterSorted,
-      },
+      team1: { wins: team1Wins, losses: team1Losses, roster: team1RosterSorted },
+      team2: { wins: team2Wins, losses: team2Losses, roster: team2RosterSorted },
     };
   }, [matches]);
 
   const playerStats = useMemo<PlayerStats[]>(() => {
     const map = new Map<string, PlayerStats>();
-
     matches.forEach((match) => {
       const participants: { player: SessionPlayer; team: 1 | 2 }[] = [
         ...match.team1.map((p) => ({ player: p, team: 1 as 1 | 2 })),
         ...match.team2.map((p) => ({ player: p, team: 2 as 1 | 2 })),
       ];
-
       participants.forEach(({ player, team }) => {
         let entry = map.get(player.id);
         if (!entry) {
           entry = { player, wins: 0, losses: 0, games: 0 };
           map.set(player.id, entry);
         }
-
         if (match.winner != null) {
           entry.games += 1;
-          if (match.winner === team) {
-            entry.wins += 1;
-          } else {
-            entry.losses += 1;
-          }
+          if (match.winner === team) entry.wins += 1;
+          else entry.losses += 1;
         }
       });
     });
-
     const list = Array.from(map.values());
     list.sort((a, b) => {
       if (b.wins !== a.wins) return b.wins - a.wins;
       if (b.games !== a.games) return b.games - a.games;
-      const an = displayPlayerName(a.player).toLowerCase();
-      const bn = displayPlayerName(b.player).toLowerCase();
-      return an.localeCompare(bn);
+      return displayPlayerName(a.player)
+        .toLowerCase()
+        .localeCompare(displayPlayerName(b.player).toLowerCase());
     });
     return list;
   }, [matches]);
@@ -671,48 +561,20 @@ export default function SessionDetailPage() {
 
   async function handleToggleWinner(matchId: string, team: 1 | 2) {
     if (!session || !canEdit) return;
-
     const match = matches.find((m) => m.id === matchId);
     if (!match) return;
-
     const currentWinner = match.winner;
     const nextWinner: 1 | 2 | null = currentWinner === team ? null : team;
-
     setUpdatingMatchId(matchId);
     setError(null);
-
     try {
       if (nextWinner === null) {
-        const { error: deleteError } = await supabase
-          .from('match_results')
-          .delete()
-          .eq('match_id', matchId);
-        if (deleteError) {
-          setError(deleteError.message);
-          setUpdatingMatchId(null);
-          return;
-        }
+        await clearMatchResultAction({ matchId });
       } else {
         const team1Score = nextWinner === 1 ? 1 : 0;
         const team2Score = nextWinner === 2 ? 1 : 0;
-        const { error: upsertError } = await supabase
-          .from('match_results')
-          .upsert(
-            {
-              match_id: matchId,
-              team1_score: team1Score,
-              team2_score: team2Score,
-              completed_at: new Date().toISOString(),
-            },
-            { onConflict: 'match_id' }
-          );
-        if (upsertError) {
-          setError(upsertError.message);
-          setUpdatingMatchId(null);
-          return;
-        }
+        await recordMatchResultAction({ matchId, team1Score, team2Score });
       }
-
       setMatches((prev) =>
         prev.map((m) =>
           m.id === matchId
@@ -728,10 +590,10 @@ export default function SessionDetailPage() {
                       },
                 winner: nextWinner,
               }
-            : m
-        )
+            : m,
+        ),
       );
-    } catch (e: unknown) {
+    } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to update match result.');
     } finally {
       setUpdatingMatchId(null);
@@ -749,42 +611,20 @@ export default function SessionDetailPage() {
   }
 
   async function handleDeleteSession() {
-    if (!session || !userId) return;
+    if (!session) return;
     setDeleteLoading(true);
     setError(null);
-
     try {
-      const { error: deleteError } = await supabase
-        .from('game_sessions')
-        .delete()
-        .eq('id', session.id)
-        .eq('created_by', userId);
-
-      if (deleteError) {
-        setError(deleteError.message);
-        setDeleteLoading(false);
-        return;
-      }
-
-      if (userEmail) {
-        await supabase.from('admin_events').insert({
-          event_type: 'session.deleted',
-          user_id: userId,
-          user_email: userEmail.toLowerCase(),
-          league_id: session.league_id,
-          payload: { session_id: session.id },
-        });
-      }
-
+      await deleteSessionAction({ sessionId: session.id });
       closeDeleteDialog();
       router.replace('/sessions');
-    } catch (e: unknown) {
+    } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to delete session.');
       setDeleteLoading(false);
     }
   }
 
-  if (loading) {
+  if (loading || !isLoaded) {
     return (
       <div>
         <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Session</h1>
@@ -825,30 +665,25 @@ export default function SessionDetailPage() {
         {session.league_name || 'Deleted league'} &middot; {session.player_count} players &middot;{' '}
         {formatDateTime(session.scheduled_for ?? session.created_at)}
       </p>
-      {error && (
-        <p className="text-app-danger text-sm mb-4">{error}</p>
-      )}
+      {error && <p className="text-app-danger text-sm mb-4">{error}</p>}
       {!canEdit && (
         <p className="text-app-muted text-xs mb-4">
-          Only the session creator can update match results. You can still view the
-          current standings.
+          Only the session creator can update match results. You can still view the current
+          standings.
         </p>
       )}
 
       <div className="mt-6 grid grid-cols-1 gap-0 md:grid-cols-[1fr_2fr] md:gap-x-6">
-        {/* Teams section - shows first on mobile */}
         <div className="order-1 md:col-start-1 md:row-start-1">
           <SectionLabel>TEAMS</SectionLabel>
           <TeamsPanel teamStats={teamStats} hasMatches={matches.length > 0} />
         </div>
 
-        {/* Players section - shows second on mobile */}
         <div className="order-3 mt-6 md:mt-0 md:col-start-1 md:row-start-2">
           <SectionLabel>PLAYERS</SectionLabel>
           <PlayersPanel playerStats={playerStats} matches={matches} showEmptyState />
         </div>
 
-        {/* Matchups section - shows third on mobile, second column on desktop */}
         <div className="order-2 mt-6 md:mt-0 md:col-start-2 md:row-start-1 md:row-span-2">
           <div className="flex items-center justify-between gap-2 mb-3">
             <SectionLabel>MATCHUPS</SectionLabel>
@@ -859,9 +694,7 @@ export default function SessionDetailPage() {
             )}
           </div>
           {matches.length === 0 ? (
-            <p className="text-app-muted text-sm">
-              No matchups to show yet.
-            </p>
+            <p className="text-app-muted text-sm">No matchups to show yet.</p>
           ) : (
             <MatchupsPanel
               rounds={rounds}
@@ -872,40 +705,35 @@ export default function SessionDetailPage() {
             />
           )}
         </div>
-
       </div>
 
       {isFullscreen && matches.length > 0 && (
         <div className="fixed inset-0 bg-white z-50 overflow-auto flex flex-col">
-          {/* Fullscreen header */}
           <div className="border-b border-app-border bg-app-bg-subtle px-6 py-3 flex items-center justify-between flex-shrink-0">
             <div>
-              <h2 className="font-display text-lg font-bold">
-                Matchups
-              </h2>
+              <h2 className="font-display text-lg font-bold">Matchups</h2>
               <p className="text-sm text-app-muted mt-0.5">
-                {session.league_name || 'Session'} &middot; {session.player_count} players &middot; {formatDateTime(session.scheduled_for ?? session.created_at)}
+                {session.league_name || 'Session'} &middot; {session.player_count} players &middot;{' '}
+                {formatDateTime(session.scheduled_for ?? session.created_at)}
               </p>
             </div>
             <Button variant="sm" onClick={toggleFullscreen}>
               Exit Full View
             </Button>
           </div>
-
-          {/* Fullscreen 2-column layout: Teams+Players | Matchups */}
           <div className="grid grid-cols-[1fr_2fr] gap-6 p-6 overflow-auto flex-1">
-            {/* Left column: Teams + Players */}
             <div className="overflow-auto">
               <SectionLabel>TEAMS</SectionLabel>
               <TeamsPanel teamStats={teamStats} hasMatches={matches.length > 0} />
-
               <div className="mt-6">
                 <SectionLabel>PLAYERS</SectionLabel>
-                <PlayersPanel playerStats={playerStats} matches={matches} showEmptyState={false} />
+                <PlayersPanel
+                  playerStats={playerStats}
+                  matches={matches}
+                  showEmptyState={false}
+                />
               </div>
             </div>
-
-            {/* Right column: Matchups */}
             <div className="overflow-auto">
               <SectionLabel>MATCHUPS</SectionLabel>
               <MatchupsPanel
@@ -929,19 +757,13 @@ export default function SessionDetailPage() {
               <Button variant="secondary" onClick={closeDeleteDialog}>
                 Cancel
               </Button>
-              <Button
-                variant="danger"
-                onClick={handleDeleteSession}
-                disabled={deleteLoading}
-              >
+              <Button variant="danger" onClick={handleDeleteSession} disabled={deleteLoading}>
                 {deleteLoading ? 'Deleting...' : 'Confirm Delete'}
               </Button>
             </>
           }
         >
-          <p>
-            Are you sure you want to delete this session? This action cannot be undone.
-          </p>
+          <p>Are you sure you want to delete this session? This action cannot be undone.</p>
         </Modal>
       )}
     </div>
