@@ -10,7 +10,7 @@ export default function SignInPage() {
       </p>
       <SignIn
         signUpUrl="/auth"
-        forceRedirectUrl="/profile"
+        forceRedirectUrl="/"
         signUpForceRedirectUrl="/auth/complete"
       />
       <p className="text-app-muted mt-6 text-sm">

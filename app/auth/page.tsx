@@ -12,7 +12,7 @@ export default function AuthPage() {
       <SignUp
         signInUrl="/auth/signin"
         forceRedirectUrl="/auth/complete"
-        signInForceRedirectUrl="/profile"
+        signInForceRedirectUrl="/"
       />
       <p className="text-app-muted mt-6 text-sm">
         Already have an account?{' '}
