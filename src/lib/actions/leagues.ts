@@ -136,6 +136,67 @@ export async function addMemberAction(input: {
   return { ok: true };
 }
 
+/**
+ * Add a player to a league by their email address. Looks up the profile and
+ * inserts the membership. Throws if no profile exists for that email.
+ */
+export async function addMemberByEmailAction(input: {
+  leagueId: string;
+  email: string;
+}): Promise<{
+  member: {
+    userId: string;
+    email: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    selfReportedDupr: number | null;
+    role: 'player';
+  };
+}> {
+  const callerId = await requireUserId();
+  const callerEmail = await getCurrentEmail();
+  const email = input.email.trim().toLowerCase();
+  if (!email) throw new Error('Email is required');
+
+  const { getDbAsync } = await import('@/lib/db/client');
+  const { profiles } = await import('@/lib/db/schema');
+  const { eq } = await import('drizzle-orm');
+  const db = await getDbAsync();
+  const rows = await db.select().from(profiles).where(eq(profiles.email, email)).limit(1);
+  const profile = rows[0];
+  if (!profile) {
+    throw new Error(
+      'No player found with that email. Ask them to sign up and save their profile first.',
+    );
+  }
+
+  await addMember(callerId, input.leagueId, {
+    userId: profile.id,
+    email: profile.email ?? email,
+    role: 'player',
+  });
+
+  await logAdminEvent({
+    eventType: 'league.member_added',
+    userId: callerId,
+    userEmail: callerEmail,
+    leagueId: input.leagueId,
+    payload: { member_user_id: profile.id, member_email: profile.email ?? email },
+  });
+  revalidatePath(`/leagues/${input.leagueId}`);
+
+  return {
+    member: {
+      userId: profile.id,
+      email: profile.email,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      selfReportedDupr: profile.selfReportedDupr,
+      role: 'player',
+    },
+  };
+}
+
 export async function setMemberRoleAction(input: {
   leagueId: string;
   userId: string;
