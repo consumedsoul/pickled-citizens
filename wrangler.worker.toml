@@ -11,5 +11,5 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "pickled-citizens"
-database_id = "TODO_REPLACE_WITH_REAL_D1_ID"
+database_id = "5a25165d-4e57-4ccc-b097-9a858bac33af"
 migrations_dir = "drizzle"
