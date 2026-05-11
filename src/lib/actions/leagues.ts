@@ -35,9 +35,19 @@ export async function listMyLeagues() {
   const memberships = await listMembershipsForUser(userId);
   const ids = memberships.map((m) => m.leagueId);
   const leagues = await getLeaguesByIds(ids);
+  // Member counts in one go: fetch all members for these leagues
+  const memberCountMap = new Map<string, number>();
+  for (const id of ids) {
+    const members = await listMembersOfLeague(id);
+    memberCountMap.set(id, members.length);
+  }
   return leagues.map((l) => {
     const m = memberships.find((mm) => mm.leagueId === l.id);
-    return { ...l, role: m?.role ?? 'player' };
+    return {
+      ...l,
+      role: m?.role ?? 'player',
+      memberCount: memberCountMap.get(l.id) ?? 0,
+    };
   });
 }
 
