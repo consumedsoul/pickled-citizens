@@ -32,7 +32,7 @@ export default function AuthCompleteClient() {
         if (!active) return;
         if (profile?.gender && profile.selfReportedDupr != null) {
           // Already complete — go straight to profile
-          router.replace('/profile');
+          router.replace('/');
           return;
         }
         if (profile?.gender) setGender(profile.gender);
@@ -79,7 +79,7 @@ export default function AuthCompleteClient() {
       });
       setStatus('success');
       setMessage('Profile complete. Redirecting...');
-      setTimeout(() => router.replace('/profile'), 600);
+      setTimeout(() => router.replace('/'), 600);
     } catch (err) {
       setStatus('error');
       setMessage(err instanceof Error ? err.message : 'Failed to save profile.');
