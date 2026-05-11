@@ -1,5 +1,6 @@
 import { eq, inArray } from 'drizzle-orm';
 import { getDbAsync } from '../client';
+import { chunkedInArray } from '../chunk';
 import {
   matches,
   matchPlayers,
@@ -29,7 +30,9 @@ export async function listMatchesForSession(sessionId: string): Promise<Match[]>
 export async function listMatchesForSessions(sessionIds: string[]): Promise<Match[]> {
   if (sessionIds.length === 0) return [];
   const db = await getDbAsync();
-  return db.select().from(matches).where(inArray(matches.sessionId, sessionIds));
+  return chunkedInArray(sessionIds, (chunk) =>
+    db.select().from(matches).where(inArray(matches.sessionId, chunk)),
+  );
 }
 
 export async function getMatchById(id: string): Promise<Match | null> {
@@ -41,13 +44,17 @@ export async function getMatchById(id: string): Promise<Match | null> {
 export async function listPlayersForMatches(matchIds: string[]): Promise<MatchPlayer[]> {
   if (matchIds.length === 0) return [];
   const db = await getDbAsync();
-  return db.select().from(matchPlayers).where(inArray(matchPlayers.matchId, matchIds));
+  return chunkedInArray(matchIds, (chunk) =>
+    db.select().from(matchPlayers).where(inArray(matchPlayers.matchId, chunk)),
+  );
 }
 
 export async function listResultsForMatches(matchIds: string[]): Promise<MatchResult[]> {
   if (matchIds.length === 0) return [];
   const db = await getDbAsync();
-  return db.select().from(matchResults).where(inArray(matchResults.matchId, matchIds));
+  return chunkedInArray(matchIds, (chunk) =>
+    db.select().from(matchResults).where(inArray(matchResults.matchId, chunk)),
+  );
 }
 
 export async function getResultForMatch(matchId: string): Promise<MatchResult | null> {

@@ -3,6 +3,7 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import { requireUserId } from '@/lib/db/auth-helpers';
 import { getDbAsync } from '@/lib/db/client';
+import { chunkedInArray } from '@/lib/db/chunk';
 import {
   leagueMembers,
   leagues as leaguesTable,
@@ -57,18 +58,16 @@ export async function getHomeData(): Promise<{
     .where(eq(leagueMembers.userId, userId));
 
   const leagueIds = memberships.map((m) => m.leagueId);
-  const leagueRows =
-    leagueIds.length === 0
-      ? []
-      : await db.select().from(leaguesTable).where(inArray(leaguesTable.id, leagueIds));
+  const leagueRows = await chunkedInArray(leagueIds, (chunk) =>
+    db.select().from(leaguesTable).where(inArray(leaguesTable.id, chunk)),
+  );
 
-  const memberCountRows =
-    leagueIds.length === 0
-      ? []
-      : await db
-          .select({ leagueId: leagueMembers.leagueId })
-          .from(leagueMembers)
-          .where(inArray(leagueMembers.leagueId, leagueIds));
+  const memberCountRows = await chunkedInArray(leagueIds, (chunk) =>
+    db
+      .select({ leagueId: leagueMembers.leagueId })
+      .from(leagueMembers)
+      .where(inArray(leagueMembers.leagueId, chunk)),
+  );
   const counts = new Map<string, number>();
   for (const row of memberCountRows) {
     counts.set(row.leagueId, (counts.get(row.leagueId) ?? 0) + 1);
@@ -98,18 +97,13 @@ export async function getHomeData(): Promise<{
     .where(eq(matchPlayers.userId, userId));
 
   const matchIds = Array.from(new Set(playerRows.map((p) => p.matchId)));
-  const matchRows =
-    matchIds.length === 0
-      ? []
-      : await db.select().from(matches).where(inArray(matches.id, matchIds));
+  const matchRows = await chunkedInArray(matchIds, (chunk) =>
+    db.select().from(matches).where(inArray(matches.id, chunk)),
+  );
   const sessionIdsFromMatches = Array.from(new Set(matchRows.map((m) => m.sessionId)));
-  const participantSessions =
-    sessionIdsFromMatches.length === 0
-      ? []
-      : await db
-          .select()
-          .from(gameSessions)
-          .where(inArray(gameSessions.id, sessionIdsFromMatches));
+  const participantSessions = await chunkedInArray(sessionIdsFromMatches, (chunk) =>
+    db.select().from(gameSessions).where(inArray(gameSessions.id, chunk)),
+  );
 
   const allSessions = new Map<string, (typeof gameSessions.$inferSelect)>();
   for (const s of [...ownedSessions, ...participantSessions]) {
@@ -122,13 +116,12 @@ export async function getHomeData(): Promise<{
         .filter((id): id is string => Boolean(id)),
     ),
   );
-  const leagueNameRows =
-    sessionLeagueIds.length === 0
-      ? []
-      : await db
-          .select({ id: leaguesTable.id, name: leaguesTable.name })
-          .from(leaguesTable)
-          .where(inArray(leaguesTable.id, sessionLeagueIds));
+  const leagueNameRows = await chunkedInArray(sessionLeagueIds, (chunk) =>
+    db
+      .select({ id: leaguesTable.id, name: leaguesTable.name })
+      .from(leaguesTable)
+      .where(inArray(leaguesTable.id, chunk)),
+  );
   const leagueNameMap = new Map(leagueNameRows.map((r) => [r.id, r.name]));
 
   const sessions: HomeSession[] = Array.from(allSessions.values())
@@ -154,13 +147,9 @@ export async function getHomeData(): Promise<{
   const userTeamMap = new Map<string, number>();
   for (const p of playerRows) userTeamMap.set(p.matchId, p.team);
 
-  const userMatchResults =
-    matchIds.length === 0
-      ? []
-      : await db
-          .select()
-          .from(matchResults)
-          .where(inArray(matchResults.matchId, matchIds));
+  const userMatchResults = await chunkedInArray(matchIds, (chunk) =>
+    db.select().from(matchResults).where(inArray(matchResults.matchId, chunk)),
+  );
 
   let individualWins = 0;
   let individualLosses = 0;
@@ -185,21 +174,13 @@ export async function getHomeData(): Promise<{
     if (team) userSessionTeams.set(m.sessionId, team);
   }
 
-  const allMatchesInSessions =
-    userSessionIds.length === 0
-      ? []
-      : await db
-          .select()
-          .from(matches)
-          .where(inArray(matches.sessionId, userSessionIds));
+  const allMatchesInSessions = await chunkedInArray(userSessionIds, (chunk) =>
+    db.select().from(matches).where(inArray(matches.sessionId, chunk)),
+  );
   const allMatchIdsInSessions = allMatchesInSessions.map((m) => m.id);
-  const allResultsInSessions =
-    allMatchIdsInSessions.length === 0
-      ? []
-      : await db
-          .select()
-          .from(matchResults)
-          .where(inArray(matchResults.matchId, allMatchIdsInSessions));
+  const allResultsInSessions = await chunkedInArray(allMatchIdsInSessions, (chunk) =>
+    db.select().from(matchResults).where(inArray(matchResults.matchId, chunk)),
+  );
   const matchToSession = new Map(allMatchesInSessions.map((m) => [m.id, m.sessionId]));
 
   const sessionScores = new Map<string, { t1: number; t2: number; userTeam: number }>();

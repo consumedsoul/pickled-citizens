@@ -1,5 +1,6 @@
 import { eq, inArray } from 'drizzle-orm';
 import { getDbAsync } from '../client';
+import { chunkedInArray } from '../chunk';
 import {
   gameSessions,
   sessionGuests,
@@ -18,7 +19,9 @@ export async function listSessions(): Promise<GameSession[]> {
 export async function listSessionsForLeagues(leagueIds: string[]): Promise<GameSession[]> {
   if (leagueIds.length === 0) return [];
   const db = await getDbAsync();
-  return db.select().from(gameSessions).where(inArray(gameSessions.leagueId, leagueIds));
+  return chunkedInArray(leagueIds, (chunk) =>
+    db.select().from(gameSessions).where(inArray(gameSessions.leagueId, chunk)),
+  );
 }
 
 export async function getSessionById(id: string): Promise<GameSession | null> {

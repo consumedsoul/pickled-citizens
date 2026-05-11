@@ -351,25 +351,21 @@ export async function getSessionsListData(): Promise<SessionsListData> {
     .from(gameSessions)
     .where(eq(gameSessions.createdBy, userId));
 
+  const { chunkedInArray } = await import('@/lib/db/chunk');
   const playerRows = await db
     .select({ matchId: matchPlayers.matchId })
     .from(matchPlayers)
     .where(eq(matchPlayers.userId, userId));
   const matchIds = Array.from(new Set(playerRows.map((p) => p.matchId)));
-  const participantMatches =
-    matchIds.length === 0
-      ? []
-      : await db.select().from(matches).where(inArray(matches.id, matchIds));
+  const participantMatches = await chunkedInArray(matchIds, (chunk) =>
+    db.select().from(matches).where(inArray(matches.id, chunk)),
+  );
   const participantSessionIds = Array.from(
     new Set(participantMatches.map((m) => m.sessionId)),
   );
-  const participantSessions =
-    participantSessionIds.length === 0
-      ? []
-      : await db
-          .select()
-          .from(gameSessions)
-          .where(inArray(gameSessions.id, participantSessionIds));
+  const participantSessions = await chunkedInArray(participantSessionIds, (chunk) =>
+    db.select().from(gameSessions).where(inArray(gameSessions.id, chunk)),
+  );
 
   const allSessions = new Map<string, (typeof gameSessions.$inferSelect)>();
   for (const s of [...ownedSessions, ...participantSessions]) {
@@ -382,13 +378,12 @@ export async function getSessionsListData(): Promise<SessionsListData> {
         .filter((id): id is string => Boolean(id)),
     ),
   );
-  const leagueNameRows =
-    sessionLeagueIds.length === 0
-      ? []
-      : await db
-          .select({ id: leagues.id, name: leagues.name })
-          .from(leagues)
-          .where(inArray(leagues.id, sessionLeagueIds));
+  const leagueNameRows = await chunkedInArray(sessionLeagueIds, (chunk) =>
+    db
+      .select({ id: leagues.id, name: leagues.name })
+      .from(leagues)
+      .where(inArray(leagues.id, chunk)),
+  );
   const leagueNameMap = new Map(leagueNameRows.map((l) => [l.id, l.name]));
 
   const sessionList: SessionListItem[] = Array.from(allSessions.values()).map((s) => ({
@@ -403,18 +398,13 @@ export async function getSessionsListData(): Promise<SessionsListData> {
 
   // Aggregate match results per session
   const sessionIds = sessionList.map((s) => s.id);
-  const allMatches =
-    sessionIds.length === 0
-      ? []
-      : await db.select().from(matches).where(inArray(matches.sessionId, sessionIds));
+  const allMatches = await chunkedInArray(sessionIds, (chunk) =>
+    db.select().from(matches).where(inArray(matches.sessionId, chunk)),
+  );
   const allMatchIds = allMatches.map((m) => m.id);
-  const allResults =
-    allMatchIds.length === 0
-      ? []
-      : await db
-          .select()
-          .from(matchResults)
-          .where(inArray(matchResults.matchId, allMatchIds));
+  const allResults = await chunkedInArray(allMatchIds, (chunk) =>
+    db.select().from(matchResults).where(inArray(matchResults.matchId, chunk)),
+  );
   const matchToSession = new Map(allMatches.map((m) => [m.id, m.sessionId]));
   const results: Record<string, { teamGreenWins: number; teamBlueWins: number }> = {};
   for (const r of allResults) {
@@ -441,10 +431,11 @@ export async function listLeagueRosterAction(leagueId: string) {
     .from(leagueMembers)
     .where(eq(leagueMembers.leagueId, leagueId));
   if (members.length === 0) return [];
-  const profileRows = await db
-    .select()
-    .from(profiles)
-    .where(inArray(profiles.id, members.map((m) => m.userId)));
+  const { chunkedInArray } = await import('@/lib/db/chunk');
+  const profileRows = await chunkedInArray(
+    members.map((m) => m.userId),
+    (chunk) => db.select().from(profiles).where(inArray(profiles.id, chunk)),
+  );
   return members.map((m) => {
     const profile = profileRows.find((p) => p.id === m.userId);
     return {

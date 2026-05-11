@@ -1,5 +1,6 @@
 import { eq, inArray } from 'drizzle-orm';
 import { getDbAsync } from '../client';
+import { chunkedInArray } from '../chunk';
 import { profiles, type Profile, type NewProfile } from '../schema';
 
 export async function getProfileById(userId: string): Promise<Profile | null> {
@@ -11,7 +12,9 @@ export async function getProfileById(userId: string): Promise<Profile | null> {
 export async function getProfilesByIds(userIds: string[]): Promise<Profile[]> {
   if (userIds.length === 0) return [];
   const db = await getDbAsync();
-  return db.select().from(profiles).where(inArray(profiles.id, userIds));
+  return chunkedInArray(userIds, (chunk) =>
+    db.select().from(profiles).where(inArray(profiles.id, chunk)),
+  );
 }
 
 export async function listAllProfiles(): Promise<Profile[]> {
