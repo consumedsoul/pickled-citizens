@@ -1,21 +1,24 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { ADMIN_EMAIL } from './src/lib/constants';
 
-export async function middleware(request: NextRequest) {
+const isAdminRoute = createRouteMatcher(['/admin(.*)']);
+const isProtectedRoute = createRouteMatcher(['/profile(.*)', '/admin(.*)']);
+
+export default clerkMiddleware(async (auth, request) => {
   const { pathname } = request.nextUrl;
-  const isAdminRoute = pathname.startsWith('/admin');
   const isDev = process.env.NODE_ENV === 'development';
 
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
   const cspHeader = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' https://static.cloudflareinsights.com${isDev ? " 'unsafe-eval'" : ''}`,
+    `script-src 'self' 'nonce-${nonce}' https://static.cloudflareinsights.com https://*.clerk.accounts.dev https://*.clerk.com${isDev ? " 'unsafe-eval'" : ''}`,
     "style-src 'self' 'unsafe-inline'",
-    "font-src 'self'",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+    "font-src 'self' data:",
+    "connect-src 'self' https://*.clerk.accounts.dev https://*.clerk.com https://api.clerk.com",
     "img-src 'self' data: https:",
+    "worker-src 'self' blob:",
+    "frame-src 'self' https://*.clerk.accounts.dev https://*.clerk.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -28,42 +31,31 @@ export async function middleware(request: NextRequest) {
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set('Content-Security-Policy', cspHeader);
 
-  if (!isAdminRoute) {
-    return response;
-  }
+  if (isProtectedRoute(request)) {
+    const session = await auth();
+    if (!session.userId) {
+      const signInUrl = new URL('/auth/signin', request.url);
+      signInUrl.searchParams.set('redirect_url', pathname);
+      return NextResponse.redirect(signInUrl);
+    }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return NextResponse.redirect(new URL('/', request.url));
-  }
-
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value, options }) => {
-          response.cookies.set(name, value, options);
-        });
-      },
-    },
-  });
-
-  const { data: { user } } = await supabase.auth.getUser();
-  const userEmail = user?.email?.toLowerCase();
-  if (!user || userEmail !== ADMIN_EMAIL) {
-    return NextResponse.redirect(new URL('/', request.url));
+    if (isAdminRoute(request)) {
+      const email = (session.sessionClaims?.email as string | undefined)?.toLowerCase();
+      if (email !== ADMIN_EMAIL) {
+        return NextResponse.redirect(new URL('/', request.url));
+      }
+    }
   }
 
   return response;
-}
+});
 
 export const config = {
   matcher: [
-    // Match all routes except static assets, image/OG endpoints, and public files.
-    // API routes are excluded so JSON responses don't carry the HTML CSP.
-    '/((?!api|_next/static|_next/image|favicon.ico|images/|llms.txt|robots.txt|sitemap.xml).*)',
+    // Skip Next internals, static assets, and the Clerk webhook (which uses
+    // svix headers and its own signature verification).
+    '/((?!_next/static|_next/image|favicon.ico|images/|llms.txt|robots.txt|sitemap.xml|api/webhooks/).*)',
+    // Always run on API routes for auth context (Clerk needs this).
+    '/(api|trpc)(.*)',
   ],
 };

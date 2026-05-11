@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { headers } from "next/headers";
 import { Inter, Space_Grotesk, IBM_Plex_Mono } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
 import favicon from "./images/Pickled-Citizens-Logo-Favicon.png";
 import { AuthStatus } from "@/components/AuthStatus";
 import { Navigation } from "@/components/Navigation";
@@ -98,6 +99,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   const year = new Date().getFullYear();
   const nonce = headers().get('x-nonce') ?? undefined;
   return (
+    <ClerkProvider>
     <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable} ${ibmPlexMono.variable}`}>
       <head>
         <script
@@ -147,5 +149,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </div>
       </body>
     </html>
+    </ClerkProvider>
   );
 }

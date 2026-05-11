@@ -2,15 +2,16 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
+import { useClerk } from '@clerk/nextjs';
 import { useAuthUser } from '@/lib/hooks/useAuthUser';
 
 export function AuthStatus() {
   const router = useRouter();
+  const { signOut } = useClerk();
   const state = useAuthUser();
 
   async function handleSignOut() {
-    await supabase.auth.signOut();
+    await signOut();
     router.push('/');
   }
 

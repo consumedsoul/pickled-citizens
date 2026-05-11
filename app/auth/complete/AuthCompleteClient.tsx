@@ -1,110 +1,172 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
-import type { Database } from '@/types/database';
+import { FormEvent, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useUser } from '@clerk/nextjs';
+import { completeMyProfile, getMyProfile } from '@/lib/actions/profile';
+import { Button } from '@/components/ui/Button';
+import { Input, Select } from '@/components/ui/Input';
+import { GENDER_OPTIONS } from '@/lib/constants';
 
-type ProfileInsert = Database['public']['Tables']['profiles']['Insert'];
-type Status = 'loading' | 'success' | 'error';
+type Status = 'loading' | 'needs-fields' | 'saving' | 'success' | 'error';
 
 export default function AuthCompleteClient() {
-  const searchParams = useSearchParams();
   const router = useRouter();
+  const { isLoaded, user } = useUser();
   const [status, setStatus] = useState<Status>('loading');
   const [message, setMessage] = useState<string | null>(null);
+  const [gender, setGender] = useState('');
+  const [selfDupr, setSelfDupr] = useState('');
 
   useEffect(() => {
-    let active = true;
-
-    async function run() {
-      setStatus('loading');
-      setMessage(null);
-
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (!active) return;
-
-      if (userError || !userData.user) {
-        setStatus('error');
-        setMessage('Sign-in not complete. Try using the magic link again.');
-        return;
-      }
-
-      const user = userData.user;
-
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      const isNewUser = !existingProfile;
-
-      const firstName = searchParams.get('firstName') ?? '';
-      const lastName = searchParams.get('lastName') ?? '';
-      const gender = searchParams.get('gender') ?? '';
-      const selfDuprParam = searchParams.get('selfDupr') ?? '';
-
-      const payload: ProfileInsert = {
-        id: user.id,
-        email: user.email ?? null,
-        updated_at: new Date().toISOString(),
-        ...(firstName ? { first_name: firstName } : {}),
-        ...(lastName ? { last_name: lastName } : {}),
-        ...(gender ? { gender } : {}),
-      };
-      if (selfDuprParam) {
-        const n = Number(selfDuprParam);
-        if (!Number.isNaN(n)) {
-          payload.self_reported_dupr = n;
-        }
-      }
-
-      const { error: upsertError } = await supabase.from('profiles').upsert(payload);
-
-      if (!active) return;
-
-      if (upsertError) {
-        setStatus('error');
-        setMessage(upsertError.message);
-        return;
-      }
-
-      if (isNewUser) {
-        await supabase.from('admin_events').insert({
-          event_type: 'user.signup',
-          user_id: user.id,
-          user_email: user.email?.toLowerCase() ?? null,
-          payload,
-        });
-      }
-
-      setStatus('success');
-      setMessage('Signed in. Redirecting to your profile...');
-
-      setTimeout(() => {
-        router.replace('/profile');
-      }, 800);
+    if (!isLoaded) return;
+    if (!user) {
+      setStatus('error');
+      setMessage('Sign-in not complete. Please try again.');
+      return;
     }
-
-    run();
-
+    let active = true;
+    (async () => {
+      try {
+        const profile = await getMyProfile();
+        if (!active) return;
+        if (profile?.gender && profile.selfReportedDupr != null) {
+          // Already complete — go straight to profile
+          router.replace('/profile');
+          return;
+        }
+        if (profile?.gender) setGender(profile.gender);
+        if (profile?.selfReportedDupr != null) setSelfDupr(String(profile.selfReportedDupr));
+        setStatus('needs-fields');
+      } catch (err) {
+        if (!active) return;
+        setStatus('error');
+        setMessage(err instanceof Error ? err.message : 'Could not load profile.');
+      }
+    })();
     return () => {
       active = false;
     };
-  }, [router, searchParams]);
+  }, [isLoaded, user, router]);
 
-  let text = 'Finishing your sign-in...';
-  if (status === 'success') {
-    text = message ?? 'Signed in. Redirecting...';
-  } else if (status === 'error') {
-    text = message ?? 'There was a problem completing sign-in.';
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (!gender) {
+      setStatus('needs-fields');
+      setMessage('Gender is required.');
+      return;
+    }
+    if (!selfDupr.trim() || !/^\d{1,2}(\.\d{1,2})?$/.test(selfDupr.trim())) {
+      setStatus('needs-fields');
+      setMessage('DUPR must look like 3.75.');
+      return;
+    }
+    const dupr = Number(selfDupr.trim());
+    if (dupr < 1.0 || dupr > 8.5) {
+      setStatus('needs-fields');
+      setMessage('DUPR must be between 1.0 and 8.5.');
+      return;
+    }
+    setStatus('saving');
+    setMessage(null);
+    try {
+      await completeMyProfile({
+        firstName: user?.firstName ?? null,
+        lastName: user?.lastName ?? null,
+        email: user?.primaryEmailAddress?.emailAddress ?? undefined,
+        gender,
+        selfReportedDupr: dupr,
+      });
+      setStatus('success');
+      setMessage('Profile complete. Redirecting...');
+      setTimeout(() => router.replace('/profile'), 600);
+    } catch (err) {
+      setStatus('error');
+      setMessage(err instanceof Error ? err.message : 'Failed to save profile.');
+    }
+  }
+
+  if (status === 'loading') {
+    return (
+      <div className="max-w-[420px]">
+        <h1 className="font-display text-2xl font-bold tracking-tight mb-2">
+          Finishing Sign-in
+        </h1>
+        <p className="text-sm text-app-muted">Loading your profile...</p>
+      </div>
+    );
+  }
+
+  if (status === 'error') {
+    return (
+      <div className="max-w-[420px]">
+        <h1 className="font-display text-2xl font-bold tracking-tight mb-2">
+          Sign-in Issue
+        </h1>
+        <p className="text-sm text-app-danger">{message ?? 'Something went wrong.'}</p>
+      </div>
+    );
   }
 
   return (
     <div className="max-w-[420px]">
-      <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Completing Sign-in</h1>
-      <p className={`text-sm ${status === 'error' ? 'text-app-danger' : 'text-app-muted'}`}>{text}</p>
+      <h1 className="font-display text-2xl font-bold tracking-tight mb-2">
+        Complete Your Profile
+      </h1>
+      <p className="text-app-muted text-sm mb-6">
+        We need a couple more details to balance teams fairly.
+      </p>
+      <form onSubmit={handleSubmit} className="grid gap-4">
+        <Select
+          label="Gender"
+          value={gender}
+          onChange={(e) => setGender(e.target.value)}
+          required
+        >
+          <option value="">Select gender</option>
+          {GENDER_OPTIONS.map((g) => (
+            <option key={g} value={g}>
+              {g.charAt(0).toUpperCase() + g.slice(1)}
+            </option>
+          ))}
+        </Select>
+
+        <div>
+          <Input
+            label="Self-reported DUPR"
+            type="text"
+            value={selfDupr}
+            onChange={(e) => setSelfDupr(e.target.value)}
+            placeholder="e.g. 3.75"
+          />
+          <p className="text-app-muted text-xs mt-1.5">
+            Need help estimating?{' '}
+            <a
+              href="https://www.pickleheads.com/guides/pickleball-rating"
+              target="_blank"
+              rel="noreferrer"
+              className="text-app-text underline"
+            >
+              See this guide
+            </a>
+            .
+          </p>
+        </div>
+
+        <Button type="submit" disabled={status === 'saving'}>
+          {status === 'saving' ? 'Saving...' : 'Save and Continue'}
+        </Button>
+
+        {message && (
+          <p
+            className={`mt-2 text-sm ${
+              status === 'success' ? 'text-app-muted' : 'text-app-danger'
+            }`}
+          >
+            {message}
+          </p>
+        )}
+      </form>
     </div>
   );
 }
