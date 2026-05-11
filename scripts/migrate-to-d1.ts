@@ -18,11 +18,12 @@
  *   wrangler d1 execute pickled-citizens --remote --file=scripts/migration-out/data.sql
  */
 
-import 'dotenv/config';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import * as dotenv from 'dotenv';
+dotenv.config({ path: path.resolve(__dirname, '../.env.local') });
+dotenv.config();
 import { createClient } from '@supabase/supabase-js';
-import { Client as PgClient } from 'pg';
 
 const OUT_DIR = path.join(__dirname, 'migration-out');
 const DATA_SQL = path.join(OUT_DIR, 'data.sql');
@@ -32,8 +33,6 @@ type SupabaseUser = {
   id: string;
   email: string | null;
   encrypted_password: string | null;
-  email_confirmed_at: string | null;
-  created_at: string;
 };
 
 function requireEnv(name: string): string {
@@ -96,7 +95,6 @@ async function importUserToClerk(
 async function main() {
   const supabaseUrl = requireEnv('SUPABASE_URL');
   const serviceKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
-  const dbUrl = requireEnv('SUPABASE_DB_URL');
   const clerkSecret = requireEnv('CLERK_SECRET_KEY');
 
   fs.mkdirSync(OUT_DIR, { recursive: true });
@@ -104,16 +102,26 @@ async function main() {
   const supabase = createClient(supabaseUrl, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
-  const pg = new PgClient({ connectionString: dbUrl });
-  await pg.connect();
 
-  console.log('--- Step 1: Read Supabase auth.users (with bcrypt hashes) ---');
-  const usersRes = await pg.query<SupabaseUser>(
-    `SELECT id::text, email, encrypted_password, email_confirmed_at, created_at::text
-     FROM auth.users ORDER BY created_at`,
-  );
-  const supabaseUsers = usersRes.rows;
-  console.log(`  Found ${supabaseUsers.length} users`);
+  console.log('--- Step 1: Read Supabase auth users via Admin API ---');
+  const supabaseUsers: SupabaseUser[] = [];
+  let page = 1;
+  const PER_PAGE = 1000;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: PER_PAGE });
+    if (error) throw new Error(`Failed to list users: ${error.message}`);
+    for (const u of data.users) {
+      supabaseUsers.push({
+        id: u.id,
+        email: u.email ?? null,
+        encrypted_password: null, // Not exposed by admin API; users will reset on first login
+      });
+    }
+    if (data.users.length < PER_PAGE) break;
+    page += 1;
+  }
+  console.log(`  Found ${supabaseUsers.length} users (importing without passwords)`);
 
   console.log('--- Step 2: Import users to Clerk ---');
   const mapping: Record<string, string> = {};
@@ -286,8 +294,6 @@ async function main() {
 
   fs.writeFileSync(DATA_SQL, out.join('\n'));
   console.log(`  Wrote ${DATA_SQL}`);
-
-  await pg.end();
 
   console.log('\n--- Done ---');
   console.log(`Apply with:`);
