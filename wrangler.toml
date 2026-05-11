@@ -6,5 +6,15 @@ pages_build_output_dir = ".open-next/pages"
 
 [vars]
 NEXT_PUBLIC_SITE_URL = "https://pickledcitizens.com"
+# Supabase env vars retained until Phase 5 cutover; remove after data migration.
 NEXT_PUBLIC_SUPABASE_URL = "https://alyqhhyvpebvmdcssahn.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_c6B_tg9PKslCicc4Y1Cz0A_CqnUJ_P8"
+# Clerk publishable key (set after creating the Clerk project).
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = ""
+
+# D1 binding. Run `wrangler d1 create pickled-citizens` and paste the database_id.
+[[d1_databases]]
+binding = "DB"
+database_name = "pickled-citizens"
+database_id = "TODO_REPLACE_WITH_REAL_D1_ID"
+migrations_dir = "drizzle"
