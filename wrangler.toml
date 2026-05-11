@@ -6,8 +6,8 @@ pages_build_output_dir = ".open-next/pages"
 
 [vars]
 NEXT_PUBLIC_SITE_URL = "https://pickledcitizens.com"
-# Clerk publishable key (set after creating the Clerk project).
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = ""
+# Clerk publishable key (safe to commit — meant for client-side).
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsucGlja2xlZGNpdGl6ZW5zLmNvbSQ"
 # Server-only Clerk redirect/landing config (also fine in vars).
 NEXT_PUBLIC_CLERK_SIGN_IN_URL = "/auth/signin"
 NEXT_PUBLIC_CLERK_SIGN_UP_URL = "/auth"
