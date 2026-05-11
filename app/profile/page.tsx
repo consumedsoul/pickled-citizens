@@ -2,125 +2,89 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
+import Link from 'next/link';
+import { useUser, useClerk, UserProfile } from '@clerk/nextjs';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Modal } from '@/components/ui/Modal';
 import { formatLeagueName } from '@/lib/formatters';
 import { GENDER_OPTIONS } from '@/lib/constants';
+import { getMyProfile, updateMyProfile } from '@/lib/actions/profile';
+import { listMyLeagues, leaveLeagueAction } from '@/lib/actions/leagues';
+import { deleteMyAccount } from '@/lib/actions/account';
 
-type Profile = {
-  first_name: string | null;
-  last_name: string | null;
-  gender: string | null;
-  self_reported_dupr: number | null;
-};
-
-type League = {
+type LeagueRow = {
   id: string;
   name: string;
-  owner_id: string;
-  created_at: string;
+  ownerId: string;
+  createdAt: string | null;
+  role: 'player' | 'admin' | string;
 };
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { isLoaded, user } = useUser();
+  const { signOut } = useClerk();
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [gender, setGender] = useState('');
   const [selfDupr, setSelfDupr] = useState('');
 
-  const [newEmail, setNewEmail] = useState('');
-
-  const [leagues, setLeagues] = useState<League[]>([]);
-
+  const [leagues, setLeagues] = useState<LeagueRow[]>([]);
   const [leaveLeagueId, setLeaveLeagueId] = useState<string | null>(null);
+
+  const [showAccountSettings, setShowAccountSettings] = useState(false);
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [password, setPassword] = useState('');
-  const [passwordConfirm, setPasswordConfirm] = useState('');
 
   useEffect(() => {
+    if (!isLoaded) return;
+    if (!user) {
+      router.replace('/auth/signin');
+      return;
+    }
     let active = true;
-
-    async function load() {
+    (async () => {
       setLoading(true);
       setError(null);
-      setSuccess(null);
-
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (!active) return;
-
-      if (userError || !userData.user) {
-        router.replace('/');
-        return;
+      try {
+        const [profile, leagueRows] = await Promise.all([getMyProfile(), listMyLeagues()]);
+        if (!active) return;
+        if (profile) {
+          setFirstName(profile.firstName ?? user.firstName ?? '');
+          setLastName(profile.lastName ?? user.lastName ?? '');
+          setGender(profile.gender ?? '');
+          setSelfDupr(
+            profile.selfReportedDupr != null ? profile.selfReportedDupr.toFixed(2) : '',
+          );
+        } else {
+          setFirstName(user.firstName ?? '');
+          setLastName(user.lastName ?? '');
+        }
+        setLeagues(leagueRows as LeagueRow[]);
+      } catch (err) {
+        if (active) setError(err instanceof Error ? err.message : 'Failed to load profile.');
+      } finally {
+        if (active) setLoading(false);
       }
-
-      const user = userData.user;
-
-      setUserId(user.id);
-      setUserEmail(user.email ?? null);
-
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('first_name, last_name, gender, self_reported_dupr')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (!active) return;
-
-      if (profileError) {
-        setError(profileError.message);
-      } else if (profile) {
-        const p = profile as Profile;
-        setFirstName(p.first_name ?? '');
-        setLastName(p.last_name ?? '');
-        setGender(p.gender ?? '');
-        setSelfDupr(
-          p.self_reported_dupr !== null && p.self_reported_dupr !== undefined
-            ? p.self_reported_dupr.toFixed(2)
-            : ''
-        );
-      }
-
-      const { data: memberRows, error: leaguesError } = await supabase
-        .from('league_members')
-        .select('league:leagues(id, name, owner_id, created_at)')
-        .eq('user_id', user.id);
-
-      if (!active) return;
-
-      if (!leaguesError && memberRows) {
-        type LeagueJoinRow = {
-          league: League | null;
-        };
-        const mapped: League[] = (memberRows as unknown as LeagueJoinRow[])
-          .map((row) => row.league)
-          .filter((l): l is League => l !== null);
-        setLeagues(mapped);
-      }
-
-      setLoading(false);
-    }
-
-    load();
-
+    })();
     return () => {
       active = false;
     };
-  }, [router]);
+  }, [isLoaded, user, router]);
+
+  const userEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? null;
+  const userId = user?.id ?? null;
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -131,17 +95,10 @@ export default function ProfilePage() {
       setError('First name, last name, and gender are required.');
       return;
     }
-
-    if (!selfDupr.trim()) {
-      setError('Self-reported DUPR is required.');
-      return;
-    }
-
-    if (!/^\d{1,2}(\.\d{1,2})?$/.test(selfDupr.trim())) {
+    if (!selfDupr.trim() || !/^\d{1,2}(\.\d{1,2})?$/.test(selfDupr.trim())) {
       setError('Self-reported DUPR must be a number like 3.75.');
       return;
     }
-
     const selfDuprParsed = Number(selfDupr.trim());
     if (selfDuprParsed < 1.0 || selfDuprParsed > 8.5) {
       setError('DUPR must be between 1.0 and 8.5.');
@@ -149,177 +106,48 @@ export default function ProfilePage() {
     }
 
     setSaving(true);
-
-    const {
-      data: userData,
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !userData.user) {
-      setError(userError?.message ?? 'You must be signed in.');
-      setSaving(false);
-      return;
-    }
-
-    const { error: upsertError } = await supabase.from('profiles').upsert({
-      id: userData.user.id,
-      email: userData.user.email?.toLowerCase() ?? null,
-      first_name: firstName.trim(),
-      last_name: lastName.trim(),
-      gender,
-      self_reported_dupr: selfDuprParsed,
-      updated_at: new Date().toISOString(),
-    });
-
-    if (upsertError) {
-      setError(upsertError.message);
-    } else {
+    try {
+      await updateMyProfile({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        gender,
+        selfReportedDupr: selfDuprParsed,
+      });
+      // Sync first/last name to Clerk so they show up everywhere.
+      await user?.update({ firstName: firstName.trim(), lastName: lastName.trim() });
       setSuccess('Profile saved.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save profile.');
+    } finally {
+      setSaving(false);
     }
-
-    setSaving(false);
-  }
-
-  function openLeaveLeagueDialog(leagueId: string) {
-    setLeaveLeagueId(leagueId);
-    setError(null);
-    setSuccess(null);
   }
 
   async function confirmLeaveLeague() {
     if (!leaveLeagueId) return;
-    await handleLeaveLeague(leaveLeagueId);
-    setLeaveLeagueId(null);
-  }
-
-  function closeLeaveLeagueDialog() {
-    setLeaveLeagueId(null);
-  }
-
-  async function handleLeaveLeague(leagueId: string) {
-    if (!userId) return;
-
     setSaving(true);
     setError(null);
     setSuccess(null);
-
-    const {
-      data: sessionData,
-      error: sessionError,
-    } = await supabase.auth.getSession();
-
-    const accessToken = sessionData.session?.access_token;
-
-    if (sessionError || !accessToken) {
-      setError(sessionError?.message ?? 'You must be signed in.');
+    try {
+      await leaveLeagueAction({ leagueId: leaveLeagueId });
+      setLeagues((prev) => prev.filter((l) => l.id !== leaveLeagueId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to leave league.');
+    } finally {
       setSaving(false);
-      return;
+      setLeaveLeagueId(null);
     }
-
-    const response = await fetch('/api/leagues/leave', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({ leagueId }),
-    });
-
-    const json = (await response.json().catch(() => null)) as
-      | { ok?: boolean; error?: string }
-      | null;
-
-    if (!response.ok) {
-      setError(json?.error ?? 'Unable to leave league. Please refresh and try again.');
-      setSaving(false);
-      return;
-    }
-
-    setLeagues((prev) => prev.filter((league) => league.id !== leagueId));
-
-    const { data: currentUser } = await supabase.auth.getUser();
-    if (currentUser?.user) {
-      await supabase.from('admin_events').insert({
-        event_type: 'league.member_removed',
-        user_id: currentUser.user.id,
-        user_email: currentUser.user.email?.toLowerCase() ?? null,
-        league_id: leagueId,
-        payload: {
-          via: 'self_leave',
-        },
-      });
-    }
-
-    setSaving(false);
   }
 
   async function openDeleteDialog() {
     setDeleteError(null);
-
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-
-    if (userError || !userData.user) {
-      setDeleteError('Failed to verify user status. Please try again.');
-      return;
+    try {
+      // Server-side check is authoritative; we rely on deleteMyAccount throwing.
+      setDeleteOpen(true);
+      setDeleteConfirm('');
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to open delete dialog.');
     }
-
-    const { data: adminMemberships, error: adminError } = await supabase
-      .from('league_members')
-      .select('league:leagues(id, name)')
-      .eq('user_id', userData.user.id)
-      .eq('role', 'admin');
-
-    if (adminError) {
-      setDeleteError('Failed to check league admin status. Please try again.');
-      return;
-    }
-
-    const memberships = adminMemberships as unknown as { league: { id: string; name: string } }[] || [];
-    const leaguesToCheck = memberships.map(m => m.league.id);
-    const soleAdminLeagues: { id: string; name: string }[] = [];
-
-    if (leaguesToCheck.length > 0) {
-      // Single query to get all admins for all leagues the user administers
-      const { data: allAdmins, error: adminsError } = await supabase
-        .from('league_members')
-        .select('league_id, user_id')
-        .in('league_id', leaguesToCheck)
-        .eq('role', 'admin');
-
-      if (adminsError) {
-        setDeleteError('Failed to check league admin status. Please try again.');
-        return;
-      }
-
-      // Count admins per league
-      const adminCountByLeague = new Map<string, number>();
-      const adminRows = (allAdmins ?? []) as unknown as { league_id: string; user_id: string }[];
-      for (const row of adminRows) {
-        adminCountByLeague.set(row.league_id, (adminCountByLeague.get(row.league_id) ?? 0) + 1);
-      }
-
-      // Find leagues where this user is the sole admin
-      for (const leagueId of leaguesToCheck) {
-        if ((adminCountByLeague.get(leagueId) ?? 0) === 1) {
-          const league = memberships.find(m => m.league.id === leagueId)?.league;
-          if (league) {
-            soleAdminLeagues.push(league);
-          }
-        }
-      }
-    }
-
-    if (soleAdminLeagues.length > 0) {
-      const leagueNames = soleAdminLeagues.map(l => l.name).join(', ');
-      setDeleteError(
-        `Cannot delete account: You are the sole admin of ${soleAdminLeagues.length} league(s): ${leagueNames}. ` +
-        `Please promote another member to admin in these leagues before deleting your account.`
-      );
-      return;
-    }
-
-    setDeleteOpen(true);
-    setDeleteConfirm('');
   }
 
   function closeDeleteDialog() {
@@ -329,79 +157,21 @@ export default function ProfilePage() {
     setDeleteError(null);
   }
 
-  async function handleEmailUpdate(event: FormEvent) {
-    event.preventDefault();
-    setError(null);
-    setSuccess(null);
-
-    if (!newEmail.trim()) {
-      setError('New email is required.');
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(newEmail.trim())) {
-      setError('Please enter a valid email address.');
-      return;
-    }
-
-    if (newEmail.trim().toLowerCase() === userEmail?.toLowerCase()) {
-      setError('New email must be different from your current email.');
-      return;
-    }
-
-    setSaving(true);
-
-    const { error: updateError } = await supabase.auth.updateUser({
-      email: newEmail.trim().toLowerCase(),
-    });
-
-    if (updateError) {
-      setError(updateError.message);
-    } else {
-      setSuccess('Confirmation email sent to your new address. Please check your inbox and confirm to complete the change.');
-      setNewEmail('');
-    }
-
-    setSaving(false);
-  }
-
   async function handleDeleteAccount() {
     if (deleteConfirm !== 'delete') return;
-
     setDeleteLoading(true);
     setError(null);
-    setSuccess(null);
-
-    const {
-      data: userData,
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !userData.user) {
-      setError(userError?.message ?? 'You must be signed in.');
+    try {
+      await deleteMyAccount();
+      await signOut();
+      window.location.href = '/account-deleted';
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete account.');
       setDeleteLoading(false);
-      return;
     }
-
-    const user = userData.user;
-
-    const { error: deleteError } = await supabase.rpc('delete_user_cascade', {
-      target_user_id: user.id,
-    });
-
-    if (deleteError) {
-      setError(`Failed to delete account: ${deleteError.message}`);
-      setDeleteLoading(false);
-      return;
-    }
-
-    await supabase.auth.signOut();
-
-    window.location.href = '/account-deleted';
   }
 
-  if (loading) {
+  if (loading || !isLoaded) {
     return (
       <div>
         <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Profile</h1>
@@ -410,27 +180,12 @@ export default function ProfilePage() {
     );
   }
 
-  if (error && !saving && !success && !firstName && !lastName && !gender) {
-    return (
-      <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Profile</h1>
-        <p className="text-app-danger text-sm">{error}</p>
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-[640px]">
       <h1 className="font-display text-2xl font-bold tracking-tight mb-2">Profile</h1>
-      {userEmail && (
-        <p className="text-app-muted text-sm mb-6">{userEmail}</p>
-      )}
-      {error && (
-        <p className="text-app-danger text-sm mb-4">{error}</p>
-      )}
-      {success && (
-        <p className="text-app-success text-sm mb-4">{success}</p>
-      )}
+      {userEmail && <p className="text-app-muted text-sm mb-6">{userEmail}</p>}
+      {error && <p className="text-app-danger text-sm mb-4">{error}</p>}
+      {success && <p className="text-app-success text-sm mb-4">{success}</p>}
 
       <form onSubmit={handleSubmit} className="grid gap-4">
         <div className="grid gap-4 grid-cols-2">
@@ -458,7 +213,9 @@ export default function ProfilePage() {
         >
           <option value="">Select gender</option>
           {GENDER_OPTIONS.map((g) => (
-            <option key={g} value={g}>{g.charAt(0).toUpperCase() + g.slice(1)}</option>
+            <option key={g} value={g}>
+              {g.charAt(0).toUpperCase() + g.slice(1)}
+            </option>
           ))}
         </Select>
 
@@ -499,18 +256,21 @@ export default function ProfilePage() {
         ) : (
           <div className="divide-y divide-app-border mt-3">
             {leagues.map((league) => {
-              const isOwner = league.owner_id === userId;
+              const isOwner = league.ownerId === userId;
               return (
                 <div
                   key={league.id}
                   className="flex items-center justify-between gap-3 py-3"
                 >
-                  <span className="text-sm">{formatLeagueName(league.name, league.created_at)}</span>
+                  <span className="text-sm">
+                    {formatLeagueName(league.name, league.createdAt ?? '')}
+                  </span>
                   <Button
                     variant="sm"
-                    onClick={() => isOwner
-                      ? router.push(`/leagues/${league.id}`)
-                      : openLeaveLeagueDialog(league.id)
+                    onClick={() =>
+                      isOwner
+                        ? router.push(`/leagues/${league.id}`)
+                        : setLeaveLeagueId(league.id)
                     }
                   >
                     {isOwner ? 'Manage' : 'Leave'}
@@ -522,106 +282,34 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {/* Change Email */}
+      {/* Account: email + password managed by Clerk */}
       <div className="border-t border-app-border mt-8 pt-8">
-        <SectionLabel>Change Email</SectionLabel>
+        <SectionLabel>Account</SectionLabel>
         <p className="text-app-muted text-sm mt-3 mb-4">
-          Update your email address. You will receive a confirmation email at your new address.
+          Manage your email address, password, and connected accounts.
         </p>
-        <form onSubmit={handleEmailUpdate} className="grid gap-4">
-          <Input
-            label="New email address"
-            type="email"
-            value={newEmail}
-            onChange={(e) => setNewEmail(e.target.value)}
-            placeholder="Enter new email"
-          />
-          <div>
-            <Button type="submit" disabled={saving}>
-              {saving ? 'Updating...' : 'Update Email'}
-            </Button>
+        <Button variant="secondary" onClick={() => setShowAccountSettings((v) => !v)}>
+          {showAccountSettings ? 'Hide Account Settings' : 'Open Account Settings'}
+        </Button>
+        {showAccountSettings && (
+          <div className="mt-6">
+            <UserProfile routing="hash" />
           </div>
-        </form>
-      </div>
-
-      {/* Password */}
-      <div className="border-t border-app-border mt-8 pt-8">
-        <SectionLabel>Password</SectionLabel>
-        <p className="text-app-muted text-sm mt-3 mb-4">
-          Set or change your password. You can still use magic link sign-in if you prefer.
-        </p>
-        <form
-          onSubmit={async (event) => {
-            event.preventDefault();
-            setError(null);
-            setSuccess(null);
-
-            if (!password || !passwordConfirm) {
-              setError('Password and confirmation are required.');
-              return;
-            }
-
-            if (password !== passwordConfirm) {
-              setError('Passwords do not match.');
-              return;
-            }
-
-            if (password.length < 8) {
-              setError('Password must be at least 8 characters long.');
-              return;
-            }
-
-            setSaving(true);
-
-            const { error: updateError } = await supabase.auth.updateUser({
-              password,
-            });
-
-            if (updateError) {
-              setError(updateError.message);
-            } else {
-              setSuccess('Password updated.');
-              setPassword('');
-              setPasswordConfirm('');
-            }
-
-            setSaving(false);
-          }}
-          className="grid gap-4"
-        >
-          <Input
-            label="New password (min 8 characters)"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <Input
-            label="Confirm new password"
-            type="password"
-            value={passwordConfirm}
-            onChange={(e) => setPasswordConfirm(e.target.value)}
-          />
-          <div>
-            <Button type="submit" disabled={saving}>
-              {saving ? 'Updating...' : 'Update Password'}
-            </Button>
-          </div>
-        </form>
+        )}
       </div>
 
       {/* Danger Zone */}
       <div className="border-t border-app-border mt-8 pt-8">
         <SectionLabel>Danger Zone</SectionLabel>
         <p className="text-app-muted text-sm mt-3">
-          This will delete your profile and league data in Pickled Citizens. This
-          action cannot be undone.
+          This will delete your profile and league data in Pickled Citizens. This action
+          cannot be undone.
         </p>
         <div className="mt-4">
           <Button variant="danger" onClick={openDeleteDialog}>
             Delete Account
           </Button>
         </div>
-
         {deleteError && (
           <div className="mt-4 p-3 border border-app-danger text-app-danger text-sm leading-relaxed">
             {deleteError}
@@ -629,7 +317,6 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {/* Delete Account Modal */}
       {deleteOpen && (
         <Modal
           title="Delete Account"
@@ -664,14 +351,13 @@ export default function ProfilePage() {
         </Modal>
       )}
 
-      {/* Leave League Modal */}
       {leaveLeagueId && (
         <Modal
           title="Leave League"
-          onClose={closeLeaveLeagueDialog}
+          onClose={() => setLeaveLeagueId(null)}
           footer={
             <div className="flex justify-end gap-3">
-              <Button variant="secondary" onClick={closeLeaveLeagueDialog}>
+              <Button variant="secondary" onClick={() => setLeaveLeagueId(null)}>
                 Cancel
               </Button>
               <Button onClick={confirmLeaveLeague} disabled={saving}>
@@ -682,11 +368,13 @@ export default function ProfilePage() {
         >
           <p className="text-app-muted text-sm">
             Are you sure you want to leave{' '}
-            {leagues.find((league) => league.id === leaveLeagueId)?.name ?? 'this league'}
-            ?
+            {leagues.find((league) => league.id === leaveLeagueId)?.name ?? 'this league'}?
           </p>
         </Modal>
       )}
+
+      {/* Hidden link kept for routing reference */}
+      <Link href="/" className="hidden" />
     </div>
   );
 }
