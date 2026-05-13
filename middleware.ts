@@ -13,17 +13,19 @@ export default clerkMiddleware(async (auth, request) => {
   // domain (e.g. clerk.pickledcitizens.com), not *.clerk.com. Allow both.
   const clerkOrigins =
     'https://*.clerk.accounts.dev https://*.clerk.com https://clerk.pickledcitizens.com';
+  // Clerk's bot protection uses Cloudflare Turnstile.
+  const turnstileOrigin = 'https://challenges.cloudflare.com';
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
   const cspHeader = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' https://static.cloudflareinsights.com ${clerkOrigins}${isDev ? " 'unsafe-eval'" : ''}`,
-    `script-src-elem 'self' 'nonce-${nonce}' https://static.cloudflareinsights.com ${clerkOrigins}`,
+    `script-src 'self' 'nonce-${nonce}' https://static.cloudflareinsights.com ${clerkOrigins} ${turnstileOrigin}${isDev ? " 'unsafe-eval'" : ''}`,
+    `script-src-elem 'self' 'nonce-${nonce}' https://static.cloudflareinsights.com ${clerkOrigins} ${turnstileOrigin}`,
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self' data:",
-    `connect-src 'self' ${clerkOrigins} https://api.clerk.com`,
+    `connect-src 'self' ${clerkOrigins} https://api.clerk.com ${turnstileOrigin}`,
     "img-src 'self' data: https:",
     "worker-src 'self' blob:",
-    `frame-src 'self' ${clerkOrigins}`,
+    `frame-src 'self' ${clerkOrigins} ${turnstileOrigin}`,
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
