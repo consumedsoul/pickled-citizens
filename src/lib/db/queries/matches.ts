@@ -113,16 +113,23 @@ export async function replaceSessionMatches(
     position: p.position ?? 0,
   }));
 
+  // D1 enforces SQLite's SQLITE_MAX_VARIABLE_NUMBER = 100 per statement, so
+  // we have to split multi-row inserts. matches has 6 bound columns and
+  // match_players has 6 → cap at 15 rows per statement (90 params).
+  const INSERT_CHUNK = 15;
   const ops = [];
   if (existingIds.length > 0) {
     // Cascading FK deletes match_players + match_results rows
-    ops.push(db.delete(matches).where(inArray(matches.id, existingIds)));
+    for (let i = 0; i < existingIds.length; i += INSERT_CHUNK) {
+      const chunk = existingIds.slice(i, i + INSERT_CHUNK);
+      ops.push(db.delete(matches).where(inArray(matches.id, chunk)));
+    }
   }
-  if (matchInserts.length > 0) {
-    ops.push(db.insert(matches).values(matchInserts));
+  for (let i = 0; i < matchInserts.length; i += INSERT_CHUNK) {
+    ops.push(db.insert(matches).values(matchInserts.slice(i, i + INSERT_CHUNK)));
   }
-  if (playerInserts.length > 0) {
-    ops.push(db.insert(matchPlayers).values(playerInserts));
+  for (let i = 0; i < playerInserts.length; i += INSERT_CHUNK) {
+    ops.push(db.insert(matchPlayers).values(playerInserts.slice(i, i + INSERT_CHUNK)));
   }
 
   if (ops.length > 0) {
