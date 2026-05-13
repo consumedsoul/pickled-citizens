@@ -222,6 +222,7 @@ Each match stores:
 - Payments  
 - Advanced rotation logic  
 - League calendars  
+- Per-league timezone — store an IANA `timezone` on `leagues` (default `America/Los_Angeles`), let admins pick it at league creation, and format every session in that league's timezone instead of the viewer's local zone. Replaces the current `ClientDateTime` mount-gate workaround in [src/components/ClientDateTime.tsx](../src/components/ClientDateTime.tsx) with a SSR-safe formatter that reads from data.  
 
 ---
 

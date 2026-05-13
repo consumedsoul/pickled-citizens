@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { SectionLabel } from '@/components/ui/SectionLabel';
-import { formatDateTime, displayPlayerName } from '@/lib/formatters';
+import { displayPlayerName } from '@/lib/formatters';
+import { ClientDateTime } from '@/components/ClientDateTime';
 import {
   getSessionsListData,
   listLeagueRosterAction,
@@ -807,7 +808,7 @@ export default function SessionsPage() {
                           players
                         </div>
                         <div className="text-app-muted text-sm mt-0.5">
-                          {formatDateTime(session.scheduledFor ?? session.createdAt ?? '')}
+                          <ClientDateTime value={session.scheduledFor ?? session.createdAt} />
                         </div>
                       </div>
                       <Link
@@ -839,7 +840,7 @@ export default function SessionsPage() {
                           players
                         </div>
                         <div className="text-app-muted text-sm mt-0.5">
-                          {formatDateTime(session.scheduledFor ?? session.createdAt ?? '')}
+                          <ClientDateTime value={session.scheduledFor ?? session.createdAt} />
                         </div>
                         {(() => {
                           const summary = sessionResults[session.id];

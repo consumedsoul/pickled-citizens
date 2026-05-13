@@ -6,7 +6,8 @@ import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Modal } from '@/components/ui/Modal';
-import { formatDateTime, displayPlayerName, displayPlayerNameShort } from '@/lib/formatters';
+import { displayPlayerName, displayPlayerNameShort } from '@/lib/formatters';
+import { ClientDateTime } from '@/components/ClientDateTime';
 import {
   getSessionDetail,
   recordMatchResultAction,
@@ -663,7 +664,7 @@ export default function SessionDetailPage() {
       </div>
       <p className="text-sm text-app-muted mb-4">
         {session.league_name || 'Deleted league'} &middot; {session.player_count} players &middot;{' '}
-        {formatDateTime(session.scheduled_for ?? session.created_at)}
+        <ClientDateTime value={session.scheduled_for ?? session.created_at} />
       </p>
       {error && <p className="text-app-danger text-sm mb-4">{error}</p>}
       {!canEdit && (
@@ -714,7 +715,7 @@ export default function SessionDetailPage() {
               <h2 className="font-display text-lg font-bold">Matchups</h2>
               <p className="text-sm text-app-muted mt-0.5">
                 {session.league_name || 'Session'} &middot; {session.player_count} players &middot;{' '}
-                {formatDateTime(session.scheduled_for ?? session.created_at)}
+                <ClientDateTime value={session.scheduled_for ?? session.created_at} />
               </p>
             </div>
             <Button variant="sm" onClick={toggleFullscreen}>

@@ -35,7 +35,9 @@ export function formatDateTime(value: string | null | undefined): string {
  * Format a league name with its establishment year, e.g. "My League (est. 2024)".
  */
 export function formatLeagueName(name: string, createdAt: string): string {
-  const year = new Date(createdAt).getFullYear();
+  // UTC year is deterministic across server (UTC) and client (local tz);
+  // local getFullYear() can disagree near Jan 1 in non-UTC zones.
+  const year = new Date(createdAt).getUTCFullYear();
   return `${name} (est. ${year})`;
 }
 

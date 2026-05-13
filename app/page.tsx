@@ -7,7 +7,8 @@ import Image from 'next/image';
 import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
-import { formatDateTime, formatLeagueName } from '@/lib/formatters';
+import { formatLeagueName } from '@/lib/formatters';
+import { ClientDateTime } from '@/components/ClientDateTime';
 import {
   getHomeData,
   type HomeLeague,
@@ -180,7 +181,7 @@ export default function HomePage() {
                           {session.playerCount} players
                         </div>
                         <div className="text-xs text-app-muted mt-0.5">
-                          {formatDateTime(session.scheduledFor ?? session.createdAt ?? '')}
+                          <ClientDateTime value={session.scheduledFor ?? session.createdAt} />
                         </div>
                       </div>
                       <Button
