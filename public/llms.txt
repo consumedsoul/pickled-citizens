@@ -8,8 +8,8 @@
 - /leagues/[id]: League detail — member management, role assignment, email invites
 - /sessions/[id]: Session detail — team matchups, match scores, player stats
 - /profile: User profile — name and self-reported DUPR rating
-- /auth/signup: Create a new account
-- /auth/signin: Sign in with email and password
+- /auth/signup: Create a new account (Clerk)
+- /auth/signin: Sign in (Clerk — password or magic link)
 
 ## Features
 
@@ -23,7 +23,7 @@
 
 ## Tech Stack
 
-Next.js 14 (App Router), TypeScript, Supabase (PostgreSQL + Auth), Cloudflare Workers
+Next.js 14 (App Router), TypeScript, Cloudflare D1 (Drizzle ORM), Clerk auth, Cloudflare/OpenNext
 
 ## About
 

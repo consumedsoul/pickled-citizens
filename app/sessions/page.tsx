@@ -16,27 +16,18 @@ import {
   createSessionWithTeamsAction,
   type SessionListItem,
 } from '@/lib/actions/sessions';
+import {
+  PLAYER_COUNTS,
+  generateMatchups,
+  sortPlayersByDupr,
+  type Player,
+} from '@/lib/teamGeneration';
 
-type Member = {
-  user_id: string;
-  first_name: string | null;
-  last_name: string | null;
-  email: string | null;
-  self_reported_dupr: number | null;
+type Member = Player & {
   is_guest?: boolean;
 };
 
-type Pair = [Member, Member];
-
 type LeagueOption = { id: string; name: string };
-
-const PLAYER_COUNTS = [6, 8, 10, 12] as const;
-const MAX_GAMES_BY_TOTAL_PLAYERS: Record<number, number> = {
-  6: 6,
-  8: 6,
-  10: 5,
-  12: 5,
-};
 
 export default function SessionsPage() {
   const router = useRouter();
@@ -195,18 +186,7 @@ export default function SessionsPage() {
       seen.add(g.user_id);
       chosen.push(g);
     });
-    chosen.sort((a, b) => {
-      const da = a.self_reported_dupr;
-      const db = b.self_reported_dupr;
-      if (da == null && db == null) return 0;
-      if (da == null) return 1;
-      if (db == null) return -1;
-      if (db !== da) return db - da;
-      const an = `${a.first_name ?? ''} ${a.last_name ?? ''}`.trim();
-      const bn = `${b.first_name ?? ''} ${b.last_name ?? ''}`.trim();
-      return an.localeCompare(bn);
-    });
-    setOrderedPlayers(chosen);
+    setOrderedPlayers(sortPlayersByDupr(chosen));
   }, [selectedPlayerIds, members, guests]);
 
   function handleLeagueChange(id: string) {
@@ -326,34 +306,6 @@ export default function SessionsPage() {
     setGuests((prev) => prev.filter((g) => g.user_id !== guestId));
   }
 
-  function buildTeams(players: Member[]): { teamA: Member[]; teamB: Member[] } {
-    const teamA: Member[] = [];
-    const teamB: Member[] = [];
-    for (let i = 0; i + 1 < players.length; i += 2) {
-      const p1 = players[i];
-      const p2 = players[i + 1];
-      const pairIndex = i / 2;
-      if (pairIndex % 2 === 0) {
-        teamA.push(p1);
-        teamB.push(p2);
-      } else {
-        teamB.push(p1);
-        teamA.push(p2);
-      }
-    }
-    return { teamA, teamB };
-  }
-
-  function buildPairs(team: Member[]): Pair[] {
-    const pairs: Pair[] = [];
-    for (let i = 0; i < team.length; i += 1) {
-      for (let j = i + 1; j < team.length; j += 1) {
-        pairs.push([team[i], team[j]]);
-      }
-    }
-    return pairs;
-  }
-
   async function handleGenerate(event: FormEvent) {
     event.preventDefault();
     setError(null);
@@ -395,79 +347,10 @@ export default function SessionsPage() {
       return;
     }
 
-    const { teamA, teamB } = buildTeams(orderedPlayers);
-    const totalPlayers = teamA.length + teamB.length;
-    let gamesPlan: { pairA: Pair; pairB: Pair }[] = [];
-
-    if (playerCount === 8 && teamA.length === 4 && teamB.length === 4) {
-      const [a1, a2, a3, a4] = teamA;
-      const [b1, b2, b3, b4] = teamB;
-      gamesPlan = [
-        { pairA: [a1, a2], pairB: [b1, b2] },
-        { pairA: [a3, a4], pairB: [b3, b4] },
-        { pairA: [a1, a3], pairB: [b1, b3] },
-        { pairA: [a2, a4], pairB: [b2, b4] },
-        { pairA: [a1, a4], pairB: [b1, b4] },
-        { pairA: [a2, a3], pairB: [b2, b3] },
-        { pairA: [a1, a2], pairB: [b1, b2] },
-        { pairA: [a3, a4], pairB: [b3, b4] },
-        { pairA: [a1, a3], pairB: [b1, b3] },
-        { pairA: [a2, a4], pairB: [b2, b4] },
-        { pairA: [a1, a4], pairB: [b1, b4] },
-        { pairA: [a2, a3], pairB: [b2, b3] },
-      ];
-    } else if (playerCount === 10 && teamA.length === 5 && teamB.length === 5) {
-      const [a1, a2, a3, a4, a5] = teamA;
-      const [b1, b2, b3, b4, b5] = teamB;
-      gamesPlan = [
-        { pairA: [a1, a2], pairB: [b1, b2] },
-        { pairA: [a3, a4], pairB: [b3, b4] },
-        { pairA: [a2, a3], pairB: [b2, b3] },
-        { pairA: [a4, a5], pairB: [b4, b5] },
-        { pairA: [a1, a4], pairB: [b1, b4] },
-        { pairA: [a3, a5], pairB: [b3, b5] },
-        { pairA: [a1, a3], pairB: [b1, b3] },
-        { pairA: [a2, a5], pairB: [b2, b5] },
-        { pairA: [a1, a5], pairB: [b1, b5] },
-        { pairA: [a2, a4], pairB: [b2, b4] },
-      ];
-    } else if (playerCount === 12 && teamA.length === 6 && teamB.length === 6) {
-      const [a1, a2, a3, a4, a5, a6] = teamA;
-      const [b1, b2, b3, b4, b5, b6] = teamB;
-      gamesPlan = [
-        { pairA: [a1, a2], pairB: [b1, b2] },
-        { pairA: [a3, a4], pairB: [b3, b4] },
-        { pairA: [a5, a6], pairB: [b5, b6] },
-        { pairA: [a1, a3], pairB: [b1, b3] },
-        { pairA: [a2, a5], pairB: [b2, b5] },
-        { pairA: [a4, a6], pairB: [b4, b6] },
-        { pairA: [a1, a4], pairB: [b1, b4] },
-        { pairA: [a2, a6], pairB: [b2, b6] },
-        { pairA: [a3, a5], pairB: [b3, b5] },
-        { pairA: [a1, a5], pairB: [b1, b5] },
-        { pairA: [a2, a4], pairB: [b2, b4] },
-        { pairA: [a3, a6], pairB: [b3, b6] },
-        { pairA: [a1, a6], pairB: [b1, b6] },
-        { pairA: [a2, a3], pairB: [b2, b3] },
-        { pairA: [a4, a5], pairB: [b4, b5] },
-      ];
-    } else {
-      const pairsA = buildPairs(teamA);
-      const pairsB = buildPairs(teamB);
-      const baseGames: { pairA: Pair; pairB: Pair }[] = [];
-      const limit = Math.min(pairsA.length, pairsB.length);
-      for (let i = 0; i < limit; i += 1) {
-        baseGames.push({ pairA: pairsA[i], pairB: pairsB[i] });
-      }
-      if (baseGames.length === 0) {
-        setError('Unable to generate matchups for this player selection.');
-        return;
-      }
-      const maxGames = MAX_GAMES_BY_TOTAL_PLAYERS[totalPlayers] ?? baseGames.length;
-      for (let i = 0; i < maxGames; i += 1) {
-        const base = baseGames[i % baseGames.length];
-        gamesPlan.push({ pairA: base.pairA, pairB: base.pairB });
-      }
+    const gamesPlan = generateMatchups(orderedPlayers);
+    if (gamesPlan.length === 0) {
+      setError('Unable to generate matchups for this player selection.');
+      return;
     }
 
     setGenerating(true);

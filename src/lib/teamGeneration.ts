@@ -18,11 +18,11 @@ export type Player = {
   self_reported_dupr: number | null;
 };
 
-export type Pair = [Player, Player];
+export type Pair<T extends Player = Player> = [T, T];
 
-export type GamePlan = {
-  pairA: Pair;
-  pairB: Pair;
+export type GamePlan<T extends Player = Player> = {
+  pairA: Pair<T>;
+  pairB: Pair<T>;
 };
 
 export const PLAYER_COUNTS = [6, 8, 10, 12] as const;
@@ -38,7 +38,7 @@ export const MAX_GAMES_BY_TOTAL_PLAYERS: Record<number, number> = {
  * Sort players by DUPR descending, then alphabetically by name.
  * Players with null DUPR are placed at the end.
  */
-export function sortPlayersByDupr(players: Player[]): Player[] {
+export function sortPlayersByDupr<T extends Player>(players: T[]): T[] {
   const sorted = [...players];
   sorted.sort((a, b) => {
     const da = a.self_reported_dupr;
@@ -65,9 +65,9 @@ export function sortPlayersByDupr(players: Player[]): Player[] {
  *
  * This creates balanced teams by snaking through the ranked list.
  */
-export function buildTeams(players: Player[]): { teamA: Player[]; teamB: Player[] } {
-  const teamA: Player[] = [];
-  const teamB: Player[] = [];
+export function buildTeams<T extends Player>(players: T[]): { teamA: T[]; teamB: T[] } {
+  const teamA: T[] = [];
+  const teamB: T[] = [];
 
   for (let i = 0; i + 1 < players.length; i += 2) {
     const p1 = players[i];
@@ -88,8 +88,8 @@ export function buildTeams(players: Player[]): { teamA: Player[]; teamB: Player[
 /**
  * Generate all possible pairs from a team.
  */
-export function buildPairs(team: Player[]): Pair[] {
-  const pairs: Pair[] = [];
+export function buildPairs<T extends Player>(team: T[]): Pair<T>[] {
+  const pairs: Pair<T>[] = [];
   for (let i = 0; i < team.length; i += 1) {
     for (let j = i + 1; j < team.length; j += 1) {
       pairs.push([team[i], team[j]]);
@@ -108,14 +108,14 @@ export function buildPairs(team: Player[]): Pair[] {
  *
  * Players should already be sorted in the desired order (typically by DUPR descending).
  */
-export function generateMatchups(orderedPlayers: Player[]): GamePlan[] {
+export function generateMatchups<T extends Player>(orderedPlayers: T[]): GamePlan<T>[] {
   const playerCount = orderedPlayers.length;
   if (!(PLAYER_COUNTS as readonly number[]).includes(playerCount)) {
     return [];
   }
   const { teamA, teamB } = buildTeams(orderedPlayers);
 
-  let gamesPlan: GamePlan[] = [];
+  let gamesPlan: GamePlan<T>[] = [];
 
   if (playerCount === 8 && teamA.length === 4 && teamB.length === 4) {
     const [a1, a2, a3, a4] = teamA;
@@ -192,7 +192,7 @@ export function generateMatchups(orderedPlayers: Player[]): GamePlan[] {
     // Generic fallback (used for 6 players)
     const pairsA = buildPairs(teamA);
     const pairsB = buildPairs(teamB);
-    const baseGames: GamePlan[] = [];
+    const baseGames: GamePlan<T>[] = [];
     const limit = Math.min(pairsA.length, pairsB.length);
 
     for (let i = 0; i < limit; i += 1) {

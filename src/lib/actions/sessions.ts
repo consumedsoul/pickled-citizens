@@ -230,7 +230,6 @@ export async function listSessionsForLeaguesAction(leagueIds: string[]) {
 
 /**
  * Create a session, matches, guests, and match_players in one shot.
- * Replaces the multi-step Supabase insert flow in /sessions.
  */
 export async function createSessionWithTeamsAction(input: {
   leagueId: string;
