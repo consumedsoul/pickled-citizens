@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClerkClient } from '@clerk/backend';
-import { ADMIN_EMAIL } from '@/lib/constants';
 import { requireAdmin, AuthorizationError } from '@/lib/db/auth-helpers';
 import { upsertProfile, updateProfile } from '@/lib/db/queries/profiles';
 import { deleteUserAppData, logAdminEvent } from '@/lib/db/queries/admin';
@@ -169,6 +168,3 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-
-// Used to silence unused-import warnings until the constants get inlined into messages.
-void ADMIN_EMAIL;
