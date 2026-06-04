@@ -160,3 +160,13 @@ D1 is server-only. Client components must NOT import from `@/lib/db`; they call 
 - **`next dev` does NOT expose the D1 binding** — use `npm run preview` for DB work.
 - **`admin_events.payload` is TEXT, not JSONB** — use `encodeJson/decodeJson`.
 - **`migrate-to-d1.ts`** is the one-shot Supabase→D1 importer; no longer part of normal workflow.
+
+## Sync Policy (always — no prompting needed)
+
+After ANY code/content change, finish the session by syncing without being asked:
+
+1. `git add -A && git commit -m "<concise message>" && git push origin main`
+2. Push = deploy: Cloudflare's Pages GitHub integration builds and deploys `main` (the GH Action is a CI gate only — it does not deploy).
+3. If D1 schema/migrations changed, also run `wrangler d1 migrations apply pickled-citizens --remote`.
+
+Never leave work uncommitted or unpushed. Never wait for Hun to say "push/commit/sync".
