@@ -6,7 +6,7 @@ match results with lifetime statistics.
 
 **Live site:** [pickledcitizens.com](https://pickledcitizens.com)
 
-> _Last updated: 2026-05-22_
+> _Last updated: 2026-06-05_
 
 ---
 
@@ -60,6 +60,7 @@ app/                       Next.js App Router pages + API routes
   sitemap.ts               Dynamic sitemap (/sitemap.xml)
 src/
   components/ui/           Reusable UI library (Button, Input, Modal, SectionLabel)
+  components/sessions/     CreateSessionForm, SessionsList, GuestModal
   lib/
     db/schema.ts           Drizzle schema — source of truth for D1
     db/client.ts           getDbAsync() — Drizzle client over the Worker DB binding
@@ -110,9 +111,8 @@ Server-only (set as Cloudflare secrets — never commit):
 - `CLERK_WEBHOOK_SIGNING_SECRET` — verifies the Clerk user lifecycle webhook
 - `DISPLAY_TIMEZONE` — IANA timezone for session metadata (default `America/Los_Angeles`)
 
-> The `.env.example` file currently documents the legacy Supabase variables and
-> should be updated to the Clerk variables above. Local `.env.local` files are
-> git-ignored.
+> Copy `.env.example` to `.env.local` and fill in the values above to run locally.
+> Local `.env.local` files are git-ignored.
 
 ---
 

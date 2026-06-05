@@ -13,3 +13,9 @@ cloudflare-env.d.ts
 .wrangler
 *.bak
 scripts/migration-out/
+
+# Local Claude Code artifacts (settings + worktrees)
+.claude/
+
+# Legacy build-version artifact (now injected via next.config env, not a file)
+src/lib/buildVersion.ts

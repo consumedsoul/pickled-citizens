@@ -9,7 +9,6 @@ import {
   addMember,
   updateMemberRole,
   removeMember,
-  listLeagues,
   getLeagueById,
   listMembersOfLeague,
   listMembershipsForUser,
@@ -25,10 +24,6 @@ import {
 } from '@/lib/db/queries/invites';
 import { logAdminEvent } from '@/lib/db/queries/admin';
 import { getProfilesByIds } from '@/lib/db/queries/profiles';
-
-export async function listAllLeagues() {
-  return listLeagues();
-}
 
 export async function listMyLeagues() {
   const userId = await requireUserId();

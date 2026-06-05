@@ -1,9 +1,9 @@
 import { execSync } from 'child_process';
-import { writeFileSync } from 'fs';
 
 // Generate build version at build time: v20260407.1935
-// Written to a file so client components can import it directly
-// (process.env.NEXT_PUBLIC_* isn't reliably replaced in all runtimes)
+// Inlined into the bundle via `env` below (webpack DefinePlugin replaces
+// process.env.NEXT_PUBLIC_BUILD_VERSION with this literal at build time),
+// so there is no generated source file to track or dirty the working tree.
 function getBuildVersion() {
   try {
     return execSync('TZ=America/Los_Angeles date +v%Y%m%d.%H%M', { encoding: 'utf8' }).trim();
@@ -12,17 +12,12 @@ function getBuildVersion() {
   }
 }
 
-const buildVersion = getBuildVersion();
-try {
-  writeFileSync(
-    'src/lib/buildVersion.ts',
-    `// Auto-generated at build time — do not edit\nexport const BUILD_VERSION = '${buildVersion}';\n`
-  );
-} catch { /* ignore in environments where this path is read-only */ }
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  env: {
+    NEXT_PUBLIC_BUILD_VERSION: getBuildVersion(),
+  },
   async headers() {
     return [
       {

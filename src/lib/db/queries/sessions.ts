@@ -11,11 +11,6 @@ import {
 import { AuthorizationError } from '../auth-helpers';
 import { isLeagueOwner } from './leagues';
 
-export async function listSessions(): Promise<GameSession[]> {
-  const db = await getDbAsync();
-  return db.select().from(gameSessions);
-}
-
 export async function listSessionsForLeagues(leagueIds: string[]): Promise<GameSession[]> {
   if (leagueIds.length === 0) return [];
   const db = await getDbAsync();

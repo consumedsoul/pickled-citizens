@@ -74,6 +74,7 @@ app/                    # Next.js App Router pages & API routes
 src/
   components/
     ui/                 # Reusable UI components (Button, Input, Modal, SectionLabel)
+    sessions/           # CreateSessionForm, SessionsList, GuestModal (extracted from app/sessions/page.tsx)
     AuthStatus.tsx, Navigation.tsx, AdminFooterLinks.tsx, BuildVersion.tsx
   lib/
     db/

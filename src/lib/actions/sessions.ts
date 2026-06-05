@@ -7,7 +7,6 @@ import {
   updateSession,
   deleteSession,
   getSessionById,
-  listSessions,
   listSessionsForLeagues,
   listGuestsForSession,
   addGuest,
@@ -27,13 +26,10 @@ import {
   listMembershipsForUser,
   getLeaguesByIds,
   listMembersOfLeague,
+  isLeagueMember,
 } from '@/lib/db/queries/leagues';
 import { getProfilesByIds } from '@/lib/db/queries/profiles';
 import { logAdminEvent } from '@/lib/db/queries/admin';
-
-export async function listSessionsAction() {
-  return listSessions();
-}
 
 export async function listMySessionsAction() {
   const userId = await requireUserId();
@@ -249,6 +245,9 @@ export async function createSessionWithTeamsAction(input: {
   }>;
 }): Promise<{ sessionId: string }> {
   const userId = await requireUserId();
+  if (!(await isLeagueMember(input.leagueId, userId))) {
+    throw new Error('Not a member of this league');
+  }
   const callerEmail = await getCurrentEmail();
 
   const session = await createSession(userId, {
@@ -420,7 +419,10 @@ export async function getSessionsListData(): Promise<SessionsListData> {
 }
 
 export async function listLeagueRosterAction(leagueId: string) {
-  await requireUserId();
+  const userId = await requireUserId();
+  if (!(await isLeagueMember(leagueId, userId))) {
+    throw new Error('Not a member of this league');
+  }
   const { getDbAsync } = await import('@/lib/db/client');
   const { leagueMembers, profiles } = await import('@/lib/db/schema');
   const { eq, inArray } = await import('drizzle-orm');

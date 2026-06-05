@@ -56,6 +56,18 @@ export async function isLeagueOwner(leagueId: string, userId: string): Promise<b
   return league?.ownerId === userId;
 }
 
+export async function isLeagueMember(leagueId: string, userId: string): Promise<boolean> {
+  const league = await getLeagueById(leagueId);
+  if (league?.ownerId === userId) return true;
+  const db = await getDbAsync();
+  const rows = await db
+    .select({ userId: leagueMembers.userId })
+    .from(leagueMembers)
+    .where(and(eq(leagueMembers.leagueId, leagueId), eq(leagueMembers.userId, userId)))
+    .limit(1);
+  return rows.length > 0;
+}
+
 export async function createLeague(
   callerId: string,
   input: Pick<NewLeague, 'name'> & { id?: string },
