@@ -10,6 +10,7 @@ import { AuthStatus } from "@/components/AuthStatus";
 import { Navigation } from "@/components/Navigation";
 import { AdminFooterLinks } from "@/components/AdminFooterLinks";
 import { BuildVersion } from "@/components/BuildVersion";
+import { DiagnosticsProbe } from "@/components/DiagnosticsProbe";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pickledcitizens.com';
 
@@ -131,6 +132,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             </div>
           </footer>
         </div>
+        <DiagnosticsProbe />
       </body>
     </html>
     </ClerkProvider>
