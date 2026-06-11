@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
@@ -24,6 +24,19 @@ type Member = Player & {
 
 export type LeagueOption = { id: string; name: string };
 
+// Survives an accidental full-page reload (deployment skew, Clerk handshake,
+// etc.) so an in-progress session isn't lost. Cleared on successful create and
+// when the tab closes (sessionStorage scope). Bump the suffix on shape changes.
+const DRAFT_STORAGE_KEY = 'pc:create-session-draft:v1';
+
+type SessionDraft = {
+  selectedLeagueId: string;
+  scheduledFor: string;
+  playerCount: 6 | 8 | 10 | 12;
+  selectedPlayerIds: string[];
+  guests: Member[];
+};
+
 type CreateSessionFormProps = {
   leagues: LeagueOption[];
   userId: string;
@@ -31,6 +44,15 @@ type CreateSessionFormProps = {
 
 export function CreateSessionForm({ leagues, userId }: CreateSessionFormProps) {
   const router = useRouter();
+
+  // Draft persistence bookkeeping. `hydrated` gates the save effect so we don't
+  // overwrite the stored draft with empty initial state on first render.
+  // `pendingRestore` holds player selections that must wait for the league
+  // roster to load (the league-change effect clears selections by design).
+  const hydratedRef = useRef(false);
+  const pendingRestoreRef = useRef<
+    { leagueId: string; selectedPlayerIds: string[]; guests: Member[] } | null
+  >(null);
 
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>('');
   const [membersLoading, setMembersLoading] = useState(false);
@@ -101,8 +123,19 @@ export function CreateSessionForm({ leagues, userId }: CreateSessionFormProps) {
           self_reported_dupr: m.selfReportedDupr,
         }));
         setMembers(mapped);
-        setGuests([]);
-        setSelectedPlayerIds([]);
+        const restore = pendingRestoreRef.current;
+        if (restore && restore.leagueId === selectedLeagueId) {
+          const validIds = new Set(mapped.map((m) => m.user_id));
+          setGuests(restore.guests);
+          // Preserve slot positions; drop ids no longer in the roster.
+          setSelectedPlayerIds(
+            restore.selectedPlayerIds.map((id) => (id && validIds.has(id) ? id : '')),
+          );
+          pendingRestoreRef.current = null;
+        } else {
+          setGuests([]);
+          setSelectedPlayerIds([]);
+        }
         setOrderedPlayers([]);
       } catch (err) {
         if (active) setError(err instanceof Error ? err.message : 'Failed to load members.');
@@ -138,6 +171,61 @@ export function CreateSessionForm({ leagues, userId }: CreateSessionFormProps) {
     });
     setOrderedPlayers(sortPlayersByDupr(chosen));
   }, [selectedPlayerIds, members, guests]);
+
+  // Restore an in-progress draft after an accidental reload. Player selections
+  // are deferred to pendingRestore and applied once the roster loads.
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(DRAFT_STORAGE_KEY);
+      if (raw) {
+        const draft = JSON.parse(raw) as Partial<SessionDraft>;
+        if (draft && typeof draft === 'object') {
+          if (typeof draft.scheduledFor === 'string') setScheduledFor(draft.scheduledFor);
+          if (([6, 8, 10, 12] as number[]).includes(draft.playerCount as number)) {
+            setPlayerCount(draft.playerCount as 6 | 8 | 10 | 12);
+          }
+          if (draft.selectedLeagueId) {
+            pendingRestoreRef.current = {
+              leagueId: draft.selectedLeagueId,
+              selectedPlayerIds: Array.isArray(draft.selectedPlayerIds)
+                ? draft.selectedPlayerIds
+                : [],
+              guests: Array.isArray(draft.guests) ? draft.guests : [],
+            };
+            setSelectedLeagueId(draft.selectedLeagueId);
+          }
+        }
+      }
+    } catch {
+      // Corrupt or unavailable storage — start with an empty form.
+    }
+    hydratedRef.current = true;
+  }, []);
+
+  // Persist the draft as it changes. Skipped until hydration completes and
+  // while a restore is pending, so we never clobber the stored draft with the
+  // transient empty state produced during restore.
+  useEffect(() => {
+    if (!hydratedRef.current || pendingRestoreRef.current) return;
+    try {
+      const isEmpty =
+        !selectedLeagueId && !scheduledFor && !guests.length && !selectedPlayerIds.some(Boolean);
+      if (isEmpty) {
+        sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+        return;
+      }
+      const draft: SessionDraft = {
+        selectedLeagueId,
+        scheduledFor,
+        playerCount,
+        selectedPlayerIds,
+        guests,
+      };
+      sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+    } catch {
+      // Storage unavailable (private mode, quota) — draft simply won't persist.
+    }
+  }, [selectedLeagueId, scheduledFor, playerCount, selectedPlayerIds, guests]);
 
   function handleLeagueChange(id: string) {
     setSelectedLeagueId(id);
@@ -339,6 +427,11 @@ export function CreateSessionForm({ leagues, userId }: CreateSessionFormProps) {
         guests: guestPayload,
         matches: matchesPayload,
       });
+      try {
+        sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+      } catch {
+        // Non-fatal — the draft will be overwritten by the next session anyway.
+      }
       router.push(`/sessions/${sessionId}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unexpected error creating session.');
