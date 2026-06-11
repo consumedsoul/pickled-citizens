@@ -65,7 +65,7 @@ export default function LeagueMembersPage() {
   useEffect(() => {
     if (!leagueId) return;
     if (!isLoaded) return;
-    if (!user) {
+    if (!currentUserId) {
       router.replace('/auth/signin');
       return;
     }
@@ -107,7 +107,7 @@ export default function LeagueMembersPage() {
     return () => {
       active = false;
     };
-  }, [leagueId, isLoaded, user, router, isSuperAdmin]);
+  }, [leagueId, isLoaded, currentUserId, router, isSuperAdmin]);
 
   function memberSort(a: Member, b: Member) {
     const an = `${a.firstName ?? ''} ${a.lastName ?? ''}`.trim().toLowerCase();

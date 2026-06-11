@@ -27,6 +27,13 @@ export default function ProfilePage() {
   const { isLoaded, user } = useUser();
   const { signOut } = useClerk();
 
+  // Depend on stable primitives, not the Clerk user object: it gets a new
+  // reference on every ~60s token refresh, which would re-run the load effect
+  // and visibly reload the page.
+  const userId = user?.id ?? null;
+  const userFirstName = user?.firstName ?? '';
+  const userLastName = user?.lastName ?? '';
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +56,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!isLoaded) return;
-    if (!user) {
+    if (!userId) {
       router.replace('/auth/signin');
       return;
     }
@@ -61,15 +68,15 @@ export default function ProfilePage() {
         const [profile, leagueRows] = await Promise.all([getMyProfile(), listMyLeagues()]);
         if (!active) return;
         if (profile) {
-          setFirstName(profile.firstName ?? user.firstName ?? '');
-          setLastName(profile.lastName ?? user.lastName ?? '');
+          setFirstName(profile.firstName ?? userFirstName);
+          setLastName(profile.lastName ?? userLastName);
           setGender(profile.gender ?? '');
           setSelfDupr(
             profile.selfReportedDupr != null ? profile.selfReportedDupr.toFixed(2) : '',
           );
         } else {
-          setFirstName(user.firstName ?? '');
-          setLastName(user.lastName ?? '');
+          setFirstName(userFirstName);
+          setLastName(userLastName);
         }
         setLeagues(leagueRows as LeagueRow[]);
       } catch (err) {
@@ -81,10 +88,9 @@ export default function ProfilePage() {
     return () => {
       active = false;
     };
-  }, [isLoaded, user, router]);
+  }, [isLoaded, userId, userFirstName, userLastName, router]);
 
   const userEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? null;
-  const userId = user?.id ?? null;
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();

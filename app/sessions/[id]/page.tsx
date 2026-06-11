@@ -301,7 +301,7 @@ export default function SessionDetailPage() {
   useEffect(() => {
     if (!sessionId) return;
     if (!isLoaded) return;
-    if (!user) {
+    if (!userId) {
       router.replace('/auth/signin');
       return;
     }
@@ -451,7 +451,7 @@ export default function SessionDetailPage() {
     return () => {
       active = false;
     };
-  }, [sessionId, isLoaded, user, router]);
+  }, [sessionId, isLoaded, userId, router]);
 
   const canEdit = !!session && !!userId && session.created_by === userId;
 

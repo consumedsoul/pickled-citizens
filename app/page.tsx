@@ -27,6 +27,10 @@ const EMPTY_STATS: LifetimeStats = {
 export default function HomePage() {
   const router = useRouter();
   const { isLoaded, user } = useUser();
+  // Depend on the stable user id, not the user object: Clerk hands back a new
+  // user object reference on every ~60s token refresh, which would otherwise
+  // re-run this effect and visibly reload the page.
+  const userId = user?.id ?? null;
   const [leagues, setLeagues] = useState<HomeLeague[]>([]);
   const [sessions, setSessions] = useState<HomeSession[]>([]);
   const [stats, setStats] = useState<LifetimeStats>(EMPTY_STATS);
@@ -37,7 +41,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!isLoaded) return;
-    if (!user) {
+    if (!userId) {
       setLeagues([]);
       setSessions([]);
       setStats(EMPTY_STATS);
@@ -73,7 +77,7 @@ export default function HomePage() {
     return () => {
       active = false;
     };
-  }, [isLoaded, user]);
+  }, [isLoaded, userId]);
 
   const upcomingSessions = useMemo(() => {
     const nowTime = new Date().getTime();
@@ -91,7 +95,6 @@ export default function HomePage() {
 
   const showCtas = isLoaded && !user;
   const showPersonalizedContent = isLoaded && !!user;
-  const userId = user?.id ?? null;
 
   return (
     <section>

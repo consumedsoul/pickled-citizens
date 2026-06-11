@@ -13,6 +13,8 @@ type Status = 'loading' | 'needs-fields' | 'saving' | 'success' | 'error';
 export default function AuthCompleteClient() {
   const router = useRouter();
   const { isLoaded, user } = useUser();
+  // Stable id avoids re-running on Clerk's ~60s token refresh (new user ref).
+  const userId = user?.id ?? null;
   const [status, setStatus] = useState<Status>('loading');
   const [message, setMessage] = useState<string | null>(null);
   const [gender, setGender] = useState('');
@@ -20,7 +22,7 @@ export default function AuthCompleteClient() {
 
   useEffect(() => {
     if (!isLoaded) return;
-    if (!user) {
+    if (!userId) {
       setStatus('error');
       setMessage('Sign-in not complete. Please try again.');
       return;
@@ -47,7 +49,7 @@ export default function AuthCompleteClient() {
     return () => {
       active = false;
     };
-  }, [isLoaded, user, router]);
+  }, [isLoaded, userId, router]);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();

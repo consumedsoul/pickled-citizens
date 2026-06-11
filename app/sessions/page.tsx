@@ -28,7 +28,7 @@ export default function SessionsPage() {
 
   useEffect(() => {
     if (!isLoaded) return;
-    if (!user) {
+    if (!userId) {
       router.replace('/auth/signin');
       return;
     }
@@ -63,7 +63,7 @@ export default function SessionsPage() {
     return () => {
       active = false;
     };
-  }, [isLoaded, user, router]);
+  }, [isLoaded, userId, router]);
 
   if (loading || !isLoaded) {
     return (

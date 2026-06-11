@@ -34,7 +34,7 @@ export default function LeaguesPage() {
 
   useEffect(() => {
     if (!isLoaded) return;
-    if (!user) {
+    if (!userId) {
       router.replace('/auth/signin');
       return;
     }
@@ -60,7 +60,7 @@ export default function LeaguesPage() {
     return () => {
       active = false;
     };
-  }, [isLoaded, user, router]);
+  }, [isLoaded, userId, router]);
 
   async function handleCreate(event: FormEvent) {
     event.preventDefault();
