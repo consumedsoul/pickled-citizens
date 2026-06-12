@@ -156,7 +156,7 @@ D1 is server-only. Client components must NOT import from `@/lib/db`; they call 
 - **Admin email is hardcoded** in `src/lib/constants.ts`. Changing it is a one-line edit.
 - **CSP**: nonce-based CSP is set per-request in `middleware.ts` (includes Clerk + Turnstile + Cloudflare Insights). The layout reads the nonce via `headers().get('x-nonce')`.
 - **`robots.txt` references `/sitemap.xml`** — generated dynamically by `app/sitemap.ts`.
-- **Build version generated at build time**: `next.config.mjs` writes `src/lib/buildVersion.ts` during `next build`. Don't remove the file — the footer imports it.
+- **Build version injected at build time**: `next.config.mjs` sets `env: { NEXT_PUBLIC_BUILD_VERSION }`, read in `BuildVersion.tsx` via `process.env.NEXT_PUBLIC_BUILD_VERSION`. No generated source file — the old `src/lib/buildVersion.ts` is git-ignored.
 - **D1 access in OpenNext**: use `getDbAsync()` (`getCloudflareContext({ async: true })`) inside Server Components and server actions.
 - **`next dev` does NOT expose the D1 binding** — use `npm run preview` for DB work.
 - **`admin_events.payload` is TEXT, not JSONB** — use `encodeJson/decodeJson`.
