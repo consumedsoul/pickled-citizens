@@ -15,7 +15,6 @@ import {
 } from '@/lib/db/queries/sessions';
 import {
   listMatchesForSession,
-  listMatchesForSessions,
   listPlayersForMatches,
   listResultsForMatches,
   replaceSessionMatches,
@@ -214,14 +213,6 @@ export async function clearMatchResultAction(input: { matchId: string }) {
   await db.delete(matchResults).where(eq(matchResults.matchId, input.matchId));
   await updateMatchStatus(userId, input.matchId, 'scheduled');
   return { ok: true };
-}
-
-export async function listSessionsForLeaguesAction(leagueIds: string[]) {
-  if (leagueIds.length === 0) return { sessions: [], matches: [], results: [] };
-  const sessions = await listSessionsForLeagues(leagueIds);
-  const matches = await listMatchesForSessions(sessions.map((s) => s.id));
-  const results = await listResultsForMatches(matches.map((m) => m.id));
-  return { sessions, matches, results };
 }
 
 /**
