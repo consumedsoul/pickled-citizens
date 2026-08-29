@@ -1,4 +1,4 @@
-# Pickled Citizens — CLAUDE.md
+# Pickled Citizens — AGENTS.md
 
 ## Project Overview
 
