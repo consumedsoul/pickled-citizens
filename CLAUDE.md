@@ -93,7 +93,7 @@ src/
 middleware.ts           # clerkMiddleware — CSP nonce + admin gating
 drizzle/                # Drizzle-generated D1 migrations (apply via wrangler)
 scripts/                # migrate-to-d1.ts (one-shot importer), write-pages-worker.mjs
-__tests__/              # Vitest tests for team generation
+__tests__/              # Vitest: team generation + authorization rules
 docs/                   # prd.md + weekly audit reports
 ```
 
@@ -120,6 +120,7 @@ D1 is SQLite. The schema is defined in TypeScript via Drizzle at `src/lib/db/sch
 
 ### Important Details
 
+- **Authorization is tested.** `__tests__/authorization.test.ts` covers `isLeagueMember`, `canManageSession`, `canViewSession`, `removeMember`'s sole-admin guard and `chunkedInArray`'s 90-param boundary. It stubs `getDbAsync` only — no database needed. Add a case here when you add a rule.
 - **D1 has no RLS.** Authorization is enforced in TypeScript, but **not uniformly at the query layer**. *Mutations* in `src/lib/db/queries/` take the caller's ID and check ownership/membership themselves. *Reads* (`getSessionById`, `listLeagues`, `listMembersOfLeague`, `listAllProfiles`, `listAdminEvents`, `listGuestsForSession`, `listMatchesForSession`, `listPlayersForMatches`) take **no caller ID and perform no check** — the calling server action or page owns the gate. Server actions are POST-reachable RPC endpoints; "the page only renders for members" is not a defense.
 - **All user-id columns are `text`** — Clerk user IDs are not UUIDs. No FKs to an `auth.users` table.
 - `player_count` on `game_sessions` is constrained to 6, 8, 10, or 12; `match_players.team` to 1 or 2.

@@ -10,6 +10,7 @@ import {
   updateMemberRole,
   removeMember,
   getLeagueById,
+  isLeagueMember,
   listMembersOfLeague,
   listMembershipsForUser,
   getLeaguesByIds,
@@ -50,6 +51,12 @@ export async function getLeagueDetail(leagueId: string) {
   const userId = await requireUserId();
   const league = await getLeagueById(leagueId);
   if (!league) throw new AuthorizationError(404, 'League not found');
+  // isAdmin/isOwner below are UI capability flags, not a gate — membership has
+  // to be required explicitly or any authenticated caller with a league ID can
+  // read the full roster and every member's profile row, email included.
+  if (!(await isLeagueMember(leagueId, userId))) {
+    throw new AuthorizationError(404, 'League not found');
+  }
   const members = await listMembersOfLeague(leagueId);
   const profiles = await getProfilesByIds(members.map((m) => m.userId));
   const isAdmin = await isLeagueAdmin(leagueId, userId);

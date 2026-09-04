@@ -9,7 +9,7 @@ import {
   type SessionGuest,
 } from '../schema';
 import { AuthorizationError } from '../auth-helpers';
-import { isLeagueOwner } from './leagues';
+import { isLeagueOwner, isLeagueMember } from './leagues';
 
 export async function listSessionsForLeagues(leagueIds: string[]): Promise<GameSession[]> {
   if (leagueIds.length === 0) return [];
@@ -31,6 +31,26 @@ export async function canManageSession(
 ): Promise<boolean> {
   if (session.createdBy === callerId) return true;
   if (session.leagueId && (await isLeagueOwner(session.leagueId, callerId))) return true;
+  return false;
+}
+
+/**
+ * Read access to a session. Broader than canManageSession: any league member
+ * may view, not just the creator and league owner.
+ *
+ * `participantIds` are the user IDs already loaded from match_players. They
+ * matter because `game_sessions.league_id` is ON DELETE SET NULL — deleting a
+ * league orphans its sessions, and the people who played in them should keep
+ * access to their own history even though there is no league left to join.
+ */
+export async function canViewSession(
+  callerId: string,
+  session: Pick<GameSession, 'createdBy' | 'leagueId'>,
+  participantIds: ReadonlyArray<string | null>,
+): Promise<boolean> {
+  if (session.createdBy === callerId) return true;
+  if (participantIds.includes(callerId)) return true;
+  if (session.leagueId && (await isLeagueMember(session.leagueId, callerId))) return true;
   return false;
 }
 

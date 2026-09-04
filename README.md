@@ -69,7 +69,7 @@ src/
     teamGeneration.ts      Snaking team-balance algorithm (unit-tested)
 middleware.ts              Clerk middleware — CSP nonce + /admin gating
 drizzle/                   Drizzle-generated D1 migrations
-__tests__/                 Vitest tests
+__tests__/                 Vitest tests (team generation, authorization)
 ```
 
 Path alias: `@/*` maps to `./src/*`.

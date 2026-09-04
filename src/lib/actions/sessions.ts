@@ -12,6 +12,7 @@ import {
   addGuest,
   removeGuest,
   canManageSession,
+  canViewSession,
 } from '@/lib/db/queries/sessions';
 import {
   listMatchesForSession,
@@ -53,14 +54,9 @@ export async function getSessionDetail(sessionId: string) {
 
   // Server actions are POST-reachable RPC endpoints, so "the page only renders
   // for members" is not a gate — this action must authorize for itself.
-  // Participants are checked too because `league_id` is ON DELETE SET NULL:
-  // deleting a league orphans its sessions, and the people who played in them
-  // should keep access to their own history.
-  const authorized =
-    session.createdBy === userId ||
-    players.some((p) => p.userId === userId) ||
-    (session.leagueId ? await isLeagueMember(session.leagueId, userId) : false);
-  if (!authorized) return null;
+  if (!(await canViewSession(userId, session, players.map((p) => p.userId)))) {
+    return null;
+  }
 
   const userIds = Array.from(
     new Set(
@@ -91,36 +87,6 @@ export async function getSessionDetail(sessionId: string) {
     leagueMembers,
     viewerId: userId,
   };
-}
-
-export async function createSessionAction(input: {
-  leagueId?: string | null;
-  scheduledFor?: string | null;
-  location?: string | null;
-  playerCount: number;
-}) {
-  const userId = await requireUserId();
-  const callerEmail = await getCurrentEmail();
-  const session = await createSession(userId, {
-    leagueId: input.leagueId ?? null,
-    scheduledFor: input.scheduledFor ?? null,
-    location: input.location ?? null,
-    playerCount: input.playerCount,
-  });
-  await logAdminEvent({
-    eventType: 'session.created',
-    userId,
-    userEmail: callerEmail,
-    leagueId: session.leagueId,
-    payload: {
-      session_id: session.id,
-      player_count: session.playerCount,
-      scheduled_for: session.scheduledFor,
-    },
-  });
-  revalidatePath('/sessions');
-  if (session.leagueId) revalidatePath(`/leagues/${session.leagueId}`);
-  return session;
 }
 
 export async function updateSessionAction(input: {
