@@ -128,9 +128,19 @@ wrangler d1 migrations apply pickled-citizens --local    # local
 wrangler d1 migrations apply pickled-citizens --remote   # production
 ```
 
-D1 has **no row-level security** — all authorization is enforced in TypeScript
-inside `src/lib/db/queries/`. Each query function takes the calling user's ID
-explicitly and checks ownership/membership.
+D1 has **no row-level security** — all authorization is enforced in TypeScript,
+but *not uniformly at the query layer*:
+
+- **Mutations** in `src/lib/db/queries/` take the calling user's ID explicitly
+  and check ownership/membership themselves (`canManageSession`,
+  `isLeagueOwner`).
+- **Reads** — `getSessionById`, `listLeagues`, `listMembersOfLeague`,
+  `listAllProfiles`, `listAdminEvents` and others — take **no caller ID and
+  perform no check**. Their caller is responsible for the gate.
+
+So when adding a read path, the authorization check belongs in the server action
+or page, not in the query module. Server actions are POST-reachable RPC
+endpoints: "the page only renders for members" is not a defense.
 
 Tables: `profiles`, `leagues`, `league_members`, `league_invites`,
 `game_sessions`, `matches`, `match_players`, `match_results`, `session_guests`,

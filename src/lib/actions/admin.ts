@@ -4,6 +4,7 @@ import { requireAdmin } from '@/lib/db/auth-helpers';
 import { listAdminEvents } from '@/lib/db/queries/admin';
 import { listAllProfiles } from '@/lib/db/queries/profiles';
 import { getDbAsync } from '@/lib/db/client';
+import { chunkedInArray } from '@/lib/db/chunk';
 import { leagueMembers, leagues } from '@/lib/db/schema';
 import { inArray } from 'drizzle-orm';
 
@@ -32,21 +33,21 @@ export async function listAdminUsersAction(): Promise<AdminUserView[]> {
   await requireAdmin();
   const profiles = await listAllProfiles();
   const db = await getDbAsync();
-  const memberships =
-    profiles.length === 0
-      ? []
-      : await db
-          .select({ userId: leagueMembers.userId, leagueId: leagueMembers.leagueId })
-          .from(leagueMembers)
-          .where(inArray(leagueMembers.userId, profiles.map((p) => p.id)));
+  const memberships = await chunkedInArray(
+    profiles.map((p) => p.id),
+    (chunk) =>
+      db
+        .select({ userId: leagueMembers.userId, leagueId: leagueMembers.leagueId })
+        .from(leagueMembers)
+        .where(inArray(leagueMembers.userId, chunk)),
+  );
   const leagueIds = Array.from(new Set(memberships.map((m) => m.leagueId)));
-  const leagueRows =
-    leagueIds.length === 0
-      ? []
-      : await db
-          .select({ id: leagues.id, name: leagues.name })
-          .from(leagues)
-          .where(inArray(leagues.id, leagueIds));
+  const leagueRows = await chunkedInArray(leagueIds, (chunk) =>
+    db
+      .select({ id: leagues.id, name: leagues.name })
+      .from(leagues)
+      .where(inArray(leagues.id, chunk)),
+  );
   const leagueMap = new Map(leagueRows.map((l) => [l.id, l]));
 
   const userLeagues = new Map<string, Array<{ id: string; name: string }>>();

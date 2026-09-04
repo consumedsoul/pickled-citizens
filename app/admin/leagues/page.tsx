@@ -1,7 +1,11 @@
 import Link from 'next/link';
+import { requireAdmin } from '@/lib/db/auth-helpers';
 import { listLeagues } from '@/lib/db/queries/leagues';
 
 export default async function AdminLeaguesPage() {
+  // Defense in depth: middleware.ts already gates /admin(.*), but these query
+  // modules take no caller ID, so the page authorizes for itself.
+  await requireAdmin();
   const leagues = await listLeagues();
   const sorted = [...leagues].sort((a, b) =>
     (b.createdAt ?? '').localeCompare(a.createdAt ?? ''),

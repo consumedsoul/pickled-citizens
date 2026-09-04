@@ -28,6 +28,9 @@ export function Button({
   children,
   className = "",
   disabled,
+  // HTML defaults a bare <button> to type="submit", which made in-form Cancel
+  // buttons submit their form. Submitting buttons opt in explicitly.
+  type = "button",
   ...props
 }: ButtonProps) {
   const base =
@@ -36,6 +39,7 @@ export function Button({
 
   return (
     <button
+      type={type}
       className={`${base} ${sizeClass} ${variantClasses[variant]} ${className}`}
       disabled={disabled}
       {...props}

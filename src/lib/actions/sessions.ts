@@ -42,6 +42,7 @@ export async function getSessionDetail(sessionId: string) {
   const userId = await requireUserId();
   const session = await getSessionById(sessionId);
   if (!session) return null;
+
   const matches = await listMatchesForSession(sessionId);
   const matchIds = matches.map((m) => m.id);
   const [players, results, guests] = await Promise.all([
@@ -49,6 +50,17 @@ export async function getSessionDetail(sessionId: string) {
     listResultsForMatches(matchIds),
     listGuestsForSession(sessionId),
   ]);
+
+  // Server actions are POST-reachable RPC endpoints, so "the page only renders
+  // for members" is not a gate — this action must authorize for itself.
+  // Participants are checked too because `league_id` is ON DELETE SET NULL:
+  // deleting a league orphans its sessions, and the people who played in them
+  // should keep access to their own history.
+  const authorized =
+    session.createdBy === userId ||
+    players.some((p) => p.userId === userId) ||
+    (session.leagueId ? await isLeagueMember(session.leagueId, userId) : false);
+  if (!authorized) return null;
 
   const userIds = Array.from(
     new Set(

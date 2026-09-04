@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { requireAdmin } from '@/lib/db/auth-helpers';
 import { listAdminEvents } from '@/lib/db/queries/admin';
 import AdminEventsClient from './AdminEventsClient';
 
@@ -19,6 +20,9 @@ export default async function AdminEventsPage({
 }: {
   searchParams?: Search;
 }) {
+  // Defense in depth: middleware.ts already gates /admin(.*), but listAdminEvents
+  // takes no caller ID, so the page authorizes for itself.
+  await requireAdmin();
   const filter = searchParams?.filter ?? 'all';
   const selectedFilter =
     filter === 'all' ||
