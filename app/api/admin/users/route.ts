@@ -69,8 +69,8 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const auth = handleAuthError(err);
     if (auth) return auth;
-    const message = err instanceof Error ? err.message : 'Internal server error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('POST /api/admin/users failed:', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -116,8 +116,8 @@ export async function PATCH(request: NextRequest) {
   } catch (err) {
     const auth = handleAuthError(err);
     if (auth) return auth;
-    const message = err instanceof Error ? err.message : 'Internal server error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('PATCH /api/admin/users failed:', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -164,7 +164,7 @@ export async function DELETE(request: NextRequest) {
   } catch (err) {
     const auth = handleAuthError(err);
     if (auth) return auth;
-    const message = err instanceof Error ? err.message : 'Internal server error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('DELETE /api/admin/users failed:', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

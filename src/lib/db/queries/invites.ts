@@ -1,6 +1,6 @@
-import { and, eq, or } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { getDbAsync } from '../client';
-import { leagueInvites, leagueMembers, leagues, type LeagueInvite } from '../schema';
+import { leagueInvites, leagueMembers, type LeagueInvite } from '../schema';
 import { AuthorizationError } from '../auth-helpers';
 import { isLeagueAdmin } from './leagues';
 
@@ -13,16 +13,6 @@ export async function listInvitesForLeague(
   }
   const db = await getDbAsync();
   return db.select().from(leagueInvites).where(eq(leagueInvites.leagueId, leagueId));
-}
-
-export async function listInvitesByEmail(email: string): Promise<LeagueInvite[]> {
-  const db = await getDbAsync();
-  return db
-    .select()
-    .from(leagueInvites)
-    .where(
-      and(eq(leagueInvites.email, email.toLowerCase()), eq(leagueInvites.status, 'pending')),
-    );
 }
 
 export async function createInvite(
@@ -101,30 +91,4 @@ export async function revokeInvite(callerId: string, inviteId: string): Promise<
     .update(leagueInvites)
     .set({ status: 'revoked' })
     .where(eq(leagueInvites.id, inviteId));
-}
-
-/**
- * Lookup helper: which leagues can the caller see invites for?
- * Used by admin views that aggregate invites across all admin'd leagues.
- */
-export async function listInvitesAcrossAdminLeagues(
-  callerId: string,
-): Promise<LeagueInvite[]> {
-  const db = await getDbAsync();
-  const adminLeagues = await db
-    .select({ leagueId: leagueMembers.leagueId })
-    .from(leagueMembers)
-    .where(and(eq(leagueMembers.userId, callerId), eq(leagueMembers.role, 'admin')));
-  const ownedLeagues = await db
-    .select({ id: leagues.id })
-    .from(leagues)
-    .where(eq(leagues.ownerId, callerId));
-  const ids = Array.from(
-    new Set([...adminLeagues.map((r) => r.leagueId), ...ownedLeagues.map((r) => r.id)]),
-  );
-  if (ids.length === 0) return [];
-  return db
-    .select()
-    .from(leagueInvites)
-    .where(or(...ids.map((id) => eq(leagueInvites.leagueId, id)))!);
 }

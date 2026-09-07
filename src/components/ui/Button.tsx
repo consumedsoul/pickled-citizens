@@ -33,8 +33,10 @@ export function Button({
   type = "button",
   ...props
 }: ButtonProps) {
+  // focus-visible (not focus) so the ring shows for keyboard users without
+  // outlining every mouse click.
   const base =
-    "inline-flex items-center gap-2 font-mono uppercase tracking-button font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer";
+    "inline-flex items-center gap-2 font-mono uppercase tracking-button font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-text focus-visible:ring-offset-2 focus-visible:ring-offset-app-bg";
   const sizeClass = variant === "sm" || variant === "ghost" ? "text-[0.65rem]" : "text-xs";
 
   return (

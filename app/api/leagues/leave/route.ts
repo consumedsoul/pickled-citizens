@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     if (err instanceof AuthorizationError) {
       return NextResponse.json({ error: err.message }, { status: err.statusCode });
     }
-    const message = err instanceof Error ? err.message : 'Internal server error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('POST /api/leagues/leave failed:', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

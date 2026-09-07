@@ -1,7 +1,7 @@
 'use server';
 
 import { createClerkClient } from '@clerk/backend';
-import { count, eq, and, ne, inArray } from 'drizzle-orm';
+import { count, eq, and, ne } from 'drizzle-orm';
 import { requireUserId, getCurrentEmail } from '@/lib/db/auth-helpers';
 import { getDbAsync } from '@/lib/db/client';
 import { leagueMembers, leagues } from '@/lib/db/schema';
@@ -88,6 +88,3 @@ export async function deleteMyAccount(): Promise<{ ok: true }> {
 
   return { ok: true };
 }
-
-// Suppress unused-import for inArray if lint is strict
-void inArray;

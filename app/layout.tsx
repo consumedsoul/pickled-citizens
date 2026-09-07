@@ -98,6 +98,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body className="font-sans">
+        {/* Keyboard users land here first; hidden off-screen until focused. */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:border focus:border-app-text focus:bg-white focus:px-4 focus:py-2 focus:font-mono focus:text-xs focus:uppercase focus:tracking-label focus:text-app-text"
+        >
+          Skip to content
+        </a>
         <div className="min-h-screen flex flex-col">
           <header className="border-b border-app-border bg-white">
             <div className="max-w-app mx-auto px-6 py-4 flex items-center justify-between md:flex-row flex-col md:gap-0 gap-3">
@@ -121,7 +128,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               </div>
             </div>
           </header>
-          <main className="flex-1 max-w-app mx-auto px-6 py-8 w-full">{children}</main>
+          <main id="main-content" className="flex-1 max-w-app mx-auto px-6 py-8 w-full">{children}</main>
           <footer className="border-t border-app-border mt-8">
             <div className="max-w-app mx-auto px-6 py-6 flex items-center justify-between flex-wrap gap-4">
               <span className="font-mono text-[0.65rem] uppercase tracking-label text-app-muted">

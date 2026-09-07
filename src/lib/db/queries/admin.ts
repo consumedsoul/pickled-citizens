@@ -13,12 +13,15 @@ import { encodeJson, decodeJson, type Json } from '../json';
 export type AdminEventOut = Omit<AdminEvent, 'payload'> & { payload: Json | null };
 
 export async function listAdminEvents(
-  options: { limit?: number; offset?: number } = {},
+  options: { limit?: number; offset?: number; eventType?: string } = {},
 ): Promise<AdminEventOut[]> {
   const db = await getDbAsync();
+  // The event-type filter must be applied in SQL, not after slicing a page —
+  // filtering an already-paginated page silently returns fewer rows than exist.
   const rows = await db
     .select()
     .from(adminEvents)
+    .where(options.eventType ? eq(adminEvents.eventType, options.eventType) : undefined)
     .orderBy(desc(adminEvents.createdAt))
     .limit(options.limit ?? 100)
     .offset(options.offset ?? 0);

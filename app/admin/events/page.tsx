@@ -31,14 +31,15 @@ export default async function AdminEventsPage({
       : filter;
   const page = Math.max(0, Number(searchParams?.page ?? 0) || 0);
 
+  // Fetch one extra row so `hasMore` is known without a second count query.
+  // The filter is pushed into the query so the page is a page of *matching*
+  // rows, not a page of all rows that is then filtered down.
   const events = await listAdminEvents({
     limit: PAGE_SIZE + 1,
     offset: page * PAGE_SIZE,
+    eventType: selectedFilter === 'all' ? undefined : selectedFilter,
   });
-  const filtered =
-    selectedFilter === 'all'
-      ? events.slice(0, PAGE_SIZE)
-      : events.filter((e) => e.eventType === selectedFilter).slice(0, PAGE_SIZE);
+  const filtered = events.slice(0, PAGE_SIZE);
   const hasMore = events.length > PAGE_SIZE;
 
   return (

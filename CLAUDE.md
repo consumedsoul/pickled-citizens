@@ -121,9 +121,9 @@ src/
 
 middleware.ts           # clerkMiddleware — CSP nonce + admin gating
 drizzle/                # Drizzle-generated D1 migrations (apply via wrangler)
-scripts/                # migrate-to-d1.ts (one-shot importer), write-pages-worker.mjs
+scripts/                # write-pages-worker.mjs
 __tests__/              # Vitest: team generation + authorization rules
-docs/                   # prd.md + weekly audit reports
+docs/                   # prd.md + AUDITS.md (pointer to the external audit trail)
 ```
 
 Path alias: `@/*` maps to `./src/*`.
@@ -190,7 +190,7 @@ D1 is server-only. Client components must NOT import from `@/lib/db`; they call 
 - **D1 access in OpenNext**: use `getDbAsync()` (`getCloudflareContext({ async: true })`) inside Server Components and server actions.
 - **`next dev` does NOT expose the D1 binding** — use `npm run preview` for DB work.
 - **`admin_events.payload` is TEXT, not JSONB** — use `encodeJson/decodeJson`.
-- **`migrate-to-d1.ts`** is the one-shot Supabase→D1 importer; no longer part of normal workflow.
+- **Audits live outside this repo** — see `docs/AUDITS.md`. The old in-repo `docs/audits/` trail was retired to `_delete/2026-09-07/`; its "Open" items are stale.
 
 ## Sync Policy (always — no prompting needed)
 
