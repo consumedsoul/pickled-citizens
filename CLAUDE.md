@@ -31,7 +31,7 @@ last. An ask buried in the middle is an ask he will miss.
 
 ## Project Overview
 
-Pickled Citizens is a pickleball league management app at **pickledcitizens.com**. It handles league creation, player invites, game session scheduling, balanced team generation, match results, and session history/stats.
+Pickled Citizens is a pickleball league management app at **pickledcitizens.com**. It handles league creation, adding players by email, game session scheduling, balanced team generation, match results, and session history/stats.
 
 ## Tech Stack
 
@@ -139,7 +139,6 @@ D1 is SQLite. The schema is defined in TypeScript via Drizzle at `src/lib/db/sch
 | `profiles` | User profile. `id` is the Clerk user ID (text). |
 | `leagues` | League container with `owner_id` (Clerk user ID). |
 | `league_members` | League membership with `role` (player/admin). |
-| `league_invites` | Pending/accepted/revoked invites by email. |
 | `game_sessions` | Session metadata (league, creator, scheduled time, player count). |
 | `matches` | Individual matches within a session. |
 | `match_players` | Players per match with `team` (1/2). XOR constraint on user_id/guest_id. |

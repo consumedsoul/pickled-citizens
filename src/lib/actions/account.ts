@@ -67,7 +67,7 @@ export async function deleteMyAccount(): Promise<{ ok: true }> {
     );
   }
 
-  await deleteUserAppData(userId, email);
+  await deleteUserAppData(userId);
   try {
     await clerk().users.deleteUser(userId);
   } catch (err) {

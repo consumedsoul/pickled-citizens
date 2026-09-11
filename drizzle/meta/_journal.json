@@ -15,6 +15,13 @@
       "when": 1789110302455,
       "tag": "0001_admin_events_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1789110787709,
+      "tag": "0002_drop_league_invites",
+      "breakpoints": true
     }
   ]
 }

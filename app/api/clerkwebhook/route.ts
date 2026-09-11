@@ -77,7 +77,7 @@ export async function POST(request: Request) {
     case 'user.deleted': {
       const userId = event.data.id;
       if (userId) {
-        await deleteUserAppData(userId, null);
+        await deleteUserAppData(userId);
         await deleteProfile(userId);
         await logAdminEvent({
           eventType: 'user.deleted',

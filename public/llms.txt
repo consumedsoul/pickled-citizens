@@ -5,7 +5,7 @@
 ## Key Pages
 
 - /: Home — league list, session history, lifetime win/loss stats
-- /leagues/[id]: League detail — member management, role assignment, email invites
+- /leagues/[id]: League detail — member management, role assignment, add players by email
 - /sessions/[id]: Session detail — team matchups, match scores, player stats
 - /profile: User profile — name and self-reported DUPR rating
 - /auth/signup: Create a new account (Clerk)
@@ -13,7 +13,7 @@
 
 ## Features
 
-- League creation and member management with invite-by-email
+- League creation and member management (add existing players by email)
 - Balanced team generation using DUPR ratings and a snaking algorithm
 - Session scheduling with 6, 8, 10, or 12-player support
 - Match result tracking with individual and team win/loss records

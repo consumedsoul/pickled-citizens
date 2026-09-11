@@ -57,29 +57,6 @@ export const leagueMembers = sqliteTable(
   }),
 );
 
-export const leagueInvites = sqliteTable(
-  'league_invites',
-  {
-    id: text('id').primaryKey().$defaultFn(newId),
-    leagueId: text('league_id')
-      .notNull()
-      .references(() => leagues.id, { onDelete: 'cascade' }),
-    email: text('email').notNull(),
-    invitedBy: text('invited_by').notNull(),
-    status: text('status').notNull().default('pending'),
-    createdAt: text('created_at').default(sql`(datetime('now'))`),
-    acceptedAt: text('accepted_at'),
-  },
-  (t) => ({
-    statusCheck: check(
-      'league_invites_status',
-      sql`${t.status} in ('pending', 'accepted', 'revoked')`,
-    ),
-    emailIdx: index('idx_league_invites_email').on(t.email),
-    leagueIdx: index('idx_league_invites_league_id').on(t.leagueId),
-  }),
-);
-
 export const gameSessions = sqliteTable(
   'game_sessions',
   {
@@ -212,7 +189,6 @@ export const profilesRelations = relations(profiles, ({ many }) => ({
 
 export const leaguesRelations = relations(leagues, ({ many }) => ({
   members: many(leagueMembers),
-  invites: many(leagueInvites),
   sessions: many(gameSessions),
 }));
 
@@ -252,8 +228,6 @@ export type League = typeof leagues.$inferSelect;
 export type NewLeague = typeof leagues.$inferInsert;
 export type LeagueMember = typeof leagueMembers.$inferSelect;
 export type NewLeagueMember = typeof leagueMembers.$inferInsert;
-export type LeagueInvite = typeof leagueInvites.$inferSelect;
-export type NewLeagueInvite = typeof leagueInvites.$inferInsert;
 export type GameSession = typeof gameSessions.$inferSelect;
 export type NewGameSession = typeof gameSessions.$inferInsert;
 export type Match = typeof matches.$inferSelect;

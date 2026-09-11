@@ -400,7 +400,7 @@ export default function AdminUsersPage() {
             Delete profile for <strong>{pendingDeleteUser.email ?? 'this user'}</strong>?
           </p>
           <p className="mt-2 text-app-muted">
-            This removes their leagues, invites, and membership data. This cannot be undone.
+            This removes their leagues and membership data. This cannot be undone.
           </p>
         </Modal>
       )}

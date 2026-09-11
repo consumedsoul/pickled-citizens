@@ -138,7 +138,7 @@ export async function DELETE(request: NextRequest) {
     // Cascade-delete app data first; if Clerk delete then fails, the next
     // run can be re-attempted manually. Using app-data-first ordering makes
     // re-runs idempotent at the DB layer.
-    await deleteUserAppData(body.userId, body.userEmail ?? null);
+    await deleteUserAppData(body.userId);
 
     try {
       await clerk().users.deleteUser(body.userId);

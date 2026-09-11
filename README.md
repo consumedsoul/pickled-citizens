@@ -142,8 +142,7 @@ So when adding a read path, the authorization check belongs in the server action
 or page, not in the query module. Server actions are POST-reachable RPC
 endpoints: "the page only renders for members" is not a defense.
 
-Tables: `profiles`, `leagues`, `league_members`, `league_invites`,
-`game_sessions`, `matches`, `match_players`, `match_results`, `session_guests`,
+Tables: `profiles`, `leagues`, `league_members`, `game_sessions`, `matches`, `match_players`, `match_results`, `session_guests`,
 `admin_events`.
 
 ---

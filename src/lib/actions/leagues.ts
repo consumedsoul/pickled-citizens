@@ -18,12 +18,6 @@ import {
   isLeagueAdmin,
   isLeagueOwner,
 } from '@/lib/db/queries/leagues';
-import {
-  createInvite,
-  listInvitesForLeague,
-  acceptInvite,
-  revokeInvite,
-} from '@/lib/db/queries/invites';
 import { logAdminEvent } from '@/lib/db/queries/admin';
 import { getProfilesByIds } from '@/lib/db/queries/profiles';
 
@@ -187,41 +181,4 @@ export async function removeMemberAction(input: { leagueId: string; userId: stri
   const result = await removeMember(callerId, input.leagueId, input.userId);
   revalidatePath(`/leagues/${input.leagueId}`);
   return result;
-}
-
-// ---- Invites ----
-
-export async function listInvitesAction(leagueId: string) {
-  const callerId = await requireUserId();
-  return listInvitesForLeague(callerId, leagueId);
-}
-
-export async function createInviteAction(input: { leagueId: string; email: string }) {
-  const callerId = await requireUserId();
-  const callerEmail = await getCurrentEmail();
-  const invite = await createInvite(callerId, input);
-  await logAdminEvent({
-    eventType: 'league.invite_created',
-    userId: callerId,
-    userEmail: callerEmail,
-    leagueId: input.leagueId,
-    payload: { invited_email: input.email.toLowerCase() },
-  });
-  revalidatePath(`/leagues/${input.leagueId}`);
-  return invite;
-}
-
-export async function acceptInviteAction(inviteId: string) {
-  const callerId = await requireUserId();
-  const callerEmail = await getCurrentEmail();
-  if (!callerEmail) throw new AuthorizationError(401, 'Email required to accept invite');
-  await acceptInvite(callerId, callerEmail, inviteId);
-  revalidatePath('/leagues');
-  return { ok: true };
-}
-
-export async function revokeInviteAction(inviteId: string) {
-  const callerId = await requireUserId();
-  await revokeInvite(callerId, inviteId);
-  return { ok: true };
 }
