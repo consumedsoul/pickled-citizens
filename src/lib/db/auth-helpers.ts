@@ -16,11 +16,6 @@ export async function requireUserId(): Promise<string> {
   return userId;
 }
 
-export async function getOptionalUserId(): Promise<string | null> {
-  const { userId } = await auth();
-  return userId ?? null;
-}
-
 export async function requireAdmin(): Promise<{ userId: string; email: string }> {
   const userId = await requireUserId();
   const user = await currentUser();

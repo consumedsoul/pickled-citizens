@@ -12,6 +12,7 @@ import {
   getLeagueById,
   isLeagueMember,
   listMembersOfLeague,
+  countMembersByLeague,
   listMembershipsForUser,
   getLeaguesByIds,
   isLeagueAdmin,
@@ -31,12 +32,7 @@ export async function listMyLeagues() {
   const memberships = await listMembershipsForUser(userId);
   const ids = memberships.map((m) => m.leagueId);
   const leagues = await getLeaguesByIds(ids);
-  // Member counts in one go: fetch all members for these leagues
-  const memberCountMap = new Map<string, number>();
-  for (const id of ids) {
-    const members = await listMembersOfLeague(id);
-    memberCountMap.set(id, members.length);
-  }
+  const memberCountMap = await countMembersByLeague(ids);
   return leagues.map((l) => {
     const m = memberships.find((mm) => mm.leagueId === l.id);
     return {
@@ -112,30 +108,6 @@ export async function deleteLeagueAction(input: { leagueId: string }) {
 export async function leaveLeagueAction(input: { leagueId: string }) {
   const userId = await requireUserId();
   return removeMember(userId, input.leagueId, userId);
-}
-
-export async function addMemberAction(input: {
-  leagueId: string;
-  userId: string;
-  email?: string;
-  role?: 'player' | 'admin';
-}) {
-  const callerId = await requireUserId();
-  const callerEmail = await getCurrentEmail();
-  await addMember(callerId, input.leagueId, {
-    userId: input.userId,
-    email: input.email,
-    role: input.role,
-  });
-  await logAdminEvent({
-    eventType: 'league.member_added',
-    userId: callerId,
-    userEmail: callerEmail,
-    leagueId: input.leagueId,
-    payload: { added_user_id: input.userId, role: input.role ?? 'player' },
-  });
-  revalidatePath(`/leagues/${input.leagueId}`);
-  return { ok: true };
 }
 
 /**

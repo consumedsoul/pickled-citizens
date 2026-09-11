@@ -1,7 +1,8 @@
 "use client";
 
-import { type ReactNode, useEffect, useRef, useId } from "react";
+import { type ReactNode, useId } from "react";
 import { SectionLabel } from "./SectionLabel";
+import { useDialogBehavior } from "./useDialogBehavior";
 
 interface ModalProps {
   title: string;
@@ -11,64 +12,8 @@ interface ModalProps {
 }
 
 export function Modal({ title, children, footer, onClose }: ModalProps) {
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
-  const onCloseRef = useRef(onClose);
+  const dialogRef = useDialogBehavior<HTMLDivElement>(onClose);
   const titleId = useId();
-
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  }, [onClose]);
-
-  // Lock body scroll, manage focus, handle Escape key
-  useEffect(() => {
-    previousFocusRef.current = document.activeElement as HTMLElement | null;
-    const original = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    // Focus the dialog container
-    dialogRef.current?.focus();
-
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onCloseRef.current();
-        return;
-      }
-
-      // Focus trap: keep Tab within the dialog
-      if (e.key === "Tab" && dialogRef.current) {
-        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-        if (focusable.length === 0) return;
-
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-
-        if (e.shiftKey) {
-          if (document.activeElement === first) {
-            e.preventDefault();
-            last.focus();
-          }
-        } else {
-          if (document.activeElement === last) {
-            e.preventDefault();
-            first.focus();
-          }
-        }
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = original;
-      document.removeEventListener("keydown", handleKeyDown);
-      // Restore focus to previously focused element
-      previousFocusRef.current?.focus();
-    };
-  }, []);
 
   return (
     <>

@@ -262,3 +262,39 @@ describe('removeMember', () => {
     expect(h.deleteCalls).toHaveLength(0);
   });
 });
+
+describe('clearMatchResult', () => {
+  it('fails closed on a match that does not exist', async () => {
+    const { clearMatchResult } = await import('@/lib/db/queries/matches');
+    // The old inline version skipped the manager check when this lookup missed.
+    const h = useDb([[]]);
+    await expect(clearMatchResult('anyone', 'missing')).rejects.toMatchObject({
+      statusCode: 404,
+    });
+    expect(h.deleteCalls).toHaveLength(0);
+  });
+
+  it('rejects a league member who cannot manage the session', async () => {
+    const { clearMatchResult } = await import('@/lib/db/queries/matches');
+    const h = useDb([
+      [{ id: 'M1', sessionId: 'S1' }], // the match
+      [{ id: 'S1', createdBy: 'creator', leagueId: 'L1' }], // its session
+      [{ id: 'L1', ownerId: 'owner' }], // league lookup for the owner check
+    ]);
+    await expect(clearMatchResult('member', 'M1')).rejects.toMatchObject({
+      statusCode: 403,
+    });
+    expect(h.deleteCalls).toHaveLength(0);
+  });
+
+  it('lets the league owner clear a result on a session they did not create', async () => {
+    const { clearMatchResult } = await import('@/lib/db/queries/matches');
+    const h = useDb([
+      [{ id: 'M1', sessionId: 'S1' }],
+      [{ id: 'S1', createdBy: 'creator', leagueId: 'L1' }],
+      [{ id: 'L1', ownerId: 'owner' }],
+    ]);
+    await clearMatchResult('owner', 'M1');
+    expect(h.deleteCalls).toHaveLength(1);
+  });
+});

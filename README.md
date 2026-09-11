@@ -1,18 +1,18 @@
 # Pickled Citizens
 
-Lightweight web app for running casual pickleball leagues: create leagues, invite
+Lightweight web app for running casual pickleball leagues: create leagues, add
 players, schedule game sessions, auto-generate balanced doubles matchups, and track
 match results with lifetime statistics.
 
 **Live site:** [pickledcitizens.com](https://pickledcitizens.com)
 
-> _Last updated: 2026-09-07_
+> _Last updated: 2026-09-11_
 
 ---
 
 ## What it does
 
-- **Leagues** — create leagues, invite members by email, assign per-league admin roles.
+- **Leagues** — create leagues, add existing players by email, assign per-league admin roles.
   Sole-admin protection prevents a league from being orphaned.
 - **Game sessions** — schedule sessions for 6, 8, 10, or 12 players. The app sorts
   players by self-reported DUPR and generates balanced doubles teams with a snaking

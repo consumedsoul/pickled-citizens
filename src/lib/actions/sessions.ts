@@ -4,13 +4,10 @@ import { revalidatePath } from 'next/cache';
 import { requireUserId, getCurrentEmail } from '@/lib/db/auth-helpers';
 import {
   createSession,
-  updateSession,
   deleteSession,
   getSessionById,
-  listSessionsForLeagues,
   listGuestsForSession,
   addGuest,
-  removeGuest,
   canManageSession,
   canViewSession,
 } from '@/lib/db/queries/sessions';
@@ -21,23 +18,15 @@ import {
   replaceSessionMatches,
   upsertMatchResult,
   updateMatchStatus,
+  clearMatchResult,
 } from '@/lib/db/queries/matches';
 import {
-  listMembershipsForUser,
   getLeaguesByIds,
   listMembersOfLeague,
   isLeagueMember,
 } from '@/lib/db/queries/leagues';
 import { getProfilesByIds } from '@/lib/db/queries/profiles';
 import { logAdminEvent } from '@/lib/db/queries/admin';
-
-export async function listMySessionsAction() {
-  const userId = await requireUserId();
-  const memberships = await listMembershipsForUser(userId);
-  const leagueIds = memberships.map((m) => m.leagueId);
-  const sessions = await listSessionsForLeagues(leagueIds);
-  return sessions;
-}
 
 export async function getSessionDetail(sessionId: string) {
   const userId = await requireUserId();
@@ -86,21 +75,10 @@ export async function getSessionDetail(sessionId: string) {
     leagueName,
     leagueMembers,
     viewerId: userId,
+    // The page's edit controls must follow the same rule the write paths
+    // enforce (creator or league owner), not a narrower copy of it.
+    canManage: await canManageSession(userId, session),
   };
-}
-
-export async function updateSessionAction(input: {
-  sessionId: string;
-  scheduledFor?: string | null;
-  location?: string | null;
-}) {
-  const userId = await requireUserId();
-  await updateSession(userId, input.sessionId, {
-    scheduledFor: input.scheduledFor,
-    location: input.location,
-  });
-  revalidatePath(`/sessions/${input.sessionId}`);
-  return { ok: true };
 }
 
 export async function deleteSessionAction(input: { sessionId: string }) {
@@ -120,41 +98,6 @@ export async function deleteSessionAction(input: { sessionId: string }) {
   return { ok: true };
 }
 
-export async function addGuestAction(input: {
-  sessionId: string;
-  displayName: string;
-  dupr: number;
-}) {
-  const userId = await requireUserId();
-  const guest = await addGuest(userId, input);
-  revalidatePath(`/sessions/${input.sessionId}`);
-  return guest;
-}
-
-export async function removeGuestAction(input: { guestId: string; sessionId: string }) {
-  const userId = await requireUserId();
-  await removeGuest(userId, input.guestId);
-  revalidatePath(`/sessions/${input.sessionId}`);
-  return { ok: true };
-}
-
-export async function replaceSessionMatchesAction(input: {
-  sessionId: string;
-  matches: Array<{ courtNumber?: number | null; scheduledOrder?: number; status?: 'scheduled' | 'completed' | 'canceled' }>;
-  players: Array<{
-    matchIndex: number;
-    userId?: string | null;
-    guestId?: string | null;
-    team: 1 | 2;
-    position?: number;
-  }>;
-}) {
-  const userId = await requireUserId();
-  const result = await replaceSessionMatches(userId, input.sessionId, input.matches, input.players);
-  revalidatePath(`/sessions/${input.sessionId}`);
-  return result;
-}
-
 export async function recordMatchResultAction(input: {
   matchId: string;
   team1Score: number | null;
@@ -171,24 +114,7 @@ export async function recordMatchResultAction(input: {
 
 export async function clearMatchResultAction(input: { matchId: string }) {
   const userId = await requireUserId();
-  const { getDbAsync } = await import('@/lib/db/client');
-  const { matchResults, matches: matchesTable } = await import('@/lib/db/schema');
-  const { eq } = await import('drizzle-orm');
-  const db = await getDbAsync();
-  // Authorization: ensure caller can manage the parent session
-  const matchRow = await db
-    .select({ sessionId: matchesTable.sessionId })
-    .from(matchesTable)
-    .where(eq(matchesTable.id, input.matchId))
-    .limit(1);
-  const sessionId = matchRow[0]?.sessionId;
-  if (sessionId) {
-    const session = await getSessionById(sessionId);
-    if (!session || !(await canManageSession(userId, session))) {
-      throw new Error('Cannot edit results for this match');
-    }
-  }
-  await db.delete(matchResults).where(eq(matchResults.matchId, input.matchId));
+  await clearMatchResult(userId, input.matchId);
   await updateMatchStatus(userId, input.matchId, 'scheduled');
   return { ok: true };
 }

@@ -1,9 +1,10 @@
 'use server';
 
 import { createClerkClient } from '@clerk/backend';
-import { count, eq, and, ne } from 'drizzle-orm';
+import { eq, and, ne, inArray } from 'drizzle-orm';
 import { requireUserId, getCurrentEmail } from '@/lib/db/auth-helpers';
 import { getDbAsync } from '@/lib/db/client';
+import { chunkedInArray } from '@/lib/db/chunk';
 import { leagueMembers, leagues } from '@/lib/db/schema';
 import { deleteUserAppData, logAdminEvent } from '@/lib/db/queries/admin';
 
@@ -13,10 +14,11 @@ function clerk() {
   return createClerkClient({ secretKey: secret });
 }
 
-export async function checkSoleAdminLeagues(): Promise<
-  Array<{ id: string; name: string }>
-> {
-  const userId = await requireUserId();
+// Not exported: every export of a 'use server' module becomes a POST-reachable
+// action, and this is only a helper for deleteMyAccount.
+async function checkSoleAdminLeagues(
+  userId: string,
+): Promise<Array<{ id: string; name: string }>> {
   const db = await getDbAsync();
 
   const adminMemberships = await db
@@ -26,28 +28,27 @@ export async function checkSoleAdminLeagues(): Promise<
   const leagueIds = adminMemberships.map((m) => m.leagueId);
   if (leagueIds.length === 0) return [];
 
-  const sole: Array<{ id: string; name: string }> = [];
-  for (const leagueId of leagueIds) {
-    const otherAdmins = await db
-      .select({ count: count() })
+  // Other admins across all of those leagues in one pass, not a count per league.
+  const otherAdmins = await chunkedInArray(leagueIds, (chunk) =>
+    db
+      .select({ leagueId: leagueMembers.leagueId })
       .from(leagueMembers)
       .where(
         and(
-          eq(leagueMembers.leagueId, leagueId),
+          inArray(leagueMembers.leagueId, chunk),
           eq(leagueMembers.role, 'admin'),
           ne(leagueMembers.userId, userId),
         ),
-      );
-    if ((otherAdmins[0]?.count ?? 0) === 0) {
-      const league = await db
-        .select({ id: leagues.id, name: leagues.name })
-        .from(leagues)
-        .where(eq(leagues.id, leagueId))
-        .limit(1);
-      if (league[0]) sole.push(league[0]);
-    }
-  }
-  return sole;
+      ),
+  );
+  const covered = new Set(otherAdmins.map((r) => r.leagueId));
+  const soleIds = leagueIds.filter((id) => !covered.has(id));
+  return chunkedInArray(soleIds, (chunk) =>
+    db
+      .select({ id: leagues.id, name: leagues.name })
+      .from(leagues)
+      .where(inArray(leagues.id, chunk)),
+  );
 }
 
 /**
@@ -58,7 +59,7 @@ export async function deleteMyAccount(): Promise<{ ok: true }> {
   const userId = await requireUserId();
   const email = await getCurrentEmail();
 
-  const sole = await checkSoleAdminLeagues();
+  const sole = await checkSoleAdminLeagues(userId);
   if (sole.length > 0) {
     throw new Error(
       `You are the sole admin of: ${sole.map((l) => l.name).join(', ')}. ` +

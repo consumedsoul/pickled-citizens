@@ -27,14 +27,6 @@ export async function listMatchesForSession(sessionId: string): Promise<Match[]>
   return db.select().from(matches).where(eq(matches.sessionId, sessionId));
 }
 
-export async function listMatchesForSessions(sessionIds: string[]): Promise<Match[]> {
-  if (sessionIds.length === 0) return [];
-  const db = await getDbAsync();
-  return chunkedInArray(sessionIds, (chunk) =>
-    db.select().from(matches).where(inArray(matches.sessionId, chunk)),
-  );
-}
-
 export async function getMatchById(id: string): Promise<Match | null> {
   const db = await getDbAsync();
   const rows = await db.select().from(matches).where(eq(matches.id, id)).limit(1);
@@ -55,16 +47,6 @@ export async function listResultsForMatches(matchIds: string[]): Promise<MatchRe
   return chunkedInArray(matchIds, (chunk) =>
     db.select().from(matchResults).where(inArray(matchResults.matchId, chunk)),
   );
-}
-
-export async function getResultForMatch(matchId: string): Promise<MatchResult | null> {
-  const db = await getDbAsync();
-  const rows = await db
-    .select()
-    .from(matchResults)
-    .where(eq(matchResults.matchId, matchId))
-    .limit(1);
-  return rows[0] ?? null;
 }
 
 /**
@@ -178,4 +160,13 @@ export async function updateMatchStatus(
   await requireSessionManager(callerId, match.sessionId);
   const db = await getDbAsync();
   await db.update(matches).set({ status }).where(eq(matches.id, matchId));
+}
+
+export async function clearMatchResult(callerId: string, matchId: string): Promise<void> {
+  // A missing match must fail the gate, not skip it.
+  const match = await getMatchById(matchId);
+  if (!match) throw new AuthorizationError(404, 'Match not found');
+  await requireSessionManager(callerId, match.sessionId);
+  const db = await getDbAsync();
+  await db.delete(matchResults).where(eq(matchResults.matchId, matchId));
 }

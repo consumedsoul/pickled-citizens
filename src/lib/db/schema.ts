@@ -185,15 +185,25 @@ export const matchResults = sqliteTable('match_results', {
   completedAt: text('completed_at'),
 });
 
-export const adminEvents = sqliteTable('admin_events', {
-  id: text('id').primaryKey().$defaultFn(newId),
-  createdAt: text('created_at').default(sql`(datetime('now'))`),
-  eventType: text('event_type').notNull(),
-  userId: text('user_id'),
-  userEmail: text('user_email'),
-  leagueId: text('league_id').references(() => leagues.id, { onDelete: 'set null' }),
-  payload: text('payload'),
-});
+export const adminEvents = sqliteTable(
+  'admin_events',
+  {
+    id: text('id').primaryKey().$defaultFn(newId),
+    createdAt: text('created_at').default(sql`(datetime('now'))`),
+    eventType: text('event_type').notNull(),
+    userId: text('user_id'),
+    userEmail: text('user_email'),
+    leagueId: text('league_id').references(() => leagues.id, { onDelete: 'set null' }),
+    payload: text('payload'),
+  },
+  (t) => ({
+    // /admin/events filters by type and pages newest-first; the unfiltered view
+    // needs created_at on its own. league_id backs the ON DELETE SET NULL scan.
+    typeCreatedIdx: index('idx_admin_events_type_created').on(t.eventType, t.createdAt),
+    createdIdx: index('idx_admin_events_created_at').on(t.createdAt),
+    leagueIdx: index('idx_admin_events_league_id').on(t.leagueId),
+  }),
+);
 
 export const profilesRelations = relations(profiles, ({ many }) => ({
   ownedLeagues: many(leagues),

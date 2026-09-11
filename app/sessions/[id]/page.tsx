@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Modal } from '@/components/ui/Modal';
+import { useDialogBehavior } from '@/components/ui/useDialogBehavior';
 import { displayPlayerName, displayPlayerNameShort } from '@/lib/formatters';
 import { ClientDateTime } from '@/components/ClientDateTime';
 import {
@@ -14,6 +15,24 @@ import {
   clearMatchResultAction,
   deleteSessionAction,
 } from '@/lib/actions/sessions';
+
+const FULL_VIEW_TITLE_ID = 'full-view-title';
+
+function FullViewDialog({ onClose, children }: { onClose: () => void; children: ReactNode }) {
+  const dialogRef = useDialogBehavior<HTMLDivElement>(onClose);
+  return (
+    <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={FULL_VIEW_TITLE_ID}
+      tabIndex={-1}
+      className="fixed inset-0 bg-white z-50 overflow-auto flex flex-col focus:outline-none"
+    >
+      {children}
+    </div>
+  );
+}
 
 type SessionPlayer = {
   id: string;
@@ -282,21 +301,13 @@ export default function SessionDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [canManage, setCanManage] = useState(false);
 
   const userId = user?.id ?? null;
 
   const toggleFullscreen = useCallback(() => {
     setIsFullscreen((prev) => !prev);
   }, []);
-
-  useEffect(() => {
-    if (!isFullscreen) return;
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') setIsFullscreen(false);
-    }
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isFullscreen]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -316,6 +327,7 @@ export default function SessionDetailPage() {
           setError('Session not found.');
           setSession(null);
           setMatches([]);
+          setCanManage(false);
           return;
         }
 
@@ -328,6 +340,7 @@ export default function SessionDetailPage() {
           scheduled_for: detail.session.scheduledFor ?? null,
           player_count: detail.session.playerCount,
         });
+        setCanManage(detail.canManage);
 
         const profilesById = new Map(detail.profiles.map((p) => [p.id, p]));
         const guestsById = new Map(detail.guests.map((g) => [g.id, g]));
@@ -453,7 +466,8 @@ export default function SessionDetailPage() {
     };
   }, [sessionId, isLoaded, userId, router]);
 
-  const canEdit = !!session && !!userId && session.created_by === userId;
+  // Server-computed: the session creator or the league owner.
+  const canEdit = !!session && canManage;
 
   const teamStats = useMemo<{ team1: TeamStats; team2: TeamStats }>(() => {
     const team1Roster = new Map<
@@ -669,8 +683,8 @@ export default function SessionDetailPage() {
       {error && <p className="text-app-danger text-sm mb-4">{error}</p>}
       {!canEdit && (
         <p className="text-app-muted text-xs mb-4">
-          Only the session creator can update match results. You can still view the current
-          standings.
+          Only the session creator or the league owner can update match results. You can still
+          view the current standings.
         </p>
       )}
 
@@ -709,10 +723,12 @@ export default function SessionDetailPage() {
       </div>
 
       {isFullscreen && matches.length > 0 && (
-        <div className="fixed inset-0 bg-white z-50 overflow-auto flex flex-col">
+        <FullViewDialog onClose={() => setIsFullscreen(false)}>
           <div className="border-b border-app-border bg-app-bg-subtle px-6 py-3 flex items-center justify-between flex-shrink-0">
             <div>
-              <h2 className="font-display text-lg font-bold">Matchups</h2>
+              <h2 id={FULL_VIEW_TITLE_ID} className="font-display text-lg font-bold">
+                Matchups
+              </h2>
               <p className="text-sm text-app-muted mt-0.5">
                 {session.league_name || 'Session'} &middot; {session.player_count} players &middot;{' '}
                 <ClientDateTime value={session.scheduled_for ?? session.created_at} />
@@ -746,7 +762,7 @@ export default function SessionDetailPage() {
               />
             </div>
           </div>
-        </div>
+        </FullViewDialog>
       )}
 
       {canEdit && deleteOpen && (

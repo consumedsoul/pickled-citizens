@@ -1,22 +1,11 @@
 'use server';
 
 import { requireAdmin } from '@/lib/db/auth-helpers';
-import { listAdminEvents } from '@/lib/db/queries/admin';
 import { listAllProfiles } from '@/lib/db/queries/profiles';
 import { getDbAsync } from '@/lib/db/client';
 import { chunkedInArray } from '@/lib/db/chunk';
 import { leagueMembers, leagues } from '@/lib/db/schema';
 import { inArray } from 'drizzle-orm';
-
-export async function listAdminEventsAction(input: { limit?: number; offset?: number } = {}) {
-  await requireAdmin();
-  return listAdminEvents(input);
-}
-
-export async function listAllProfilesAction() {
-  await requireAdmin();
-  return listAllProfiles();
-}
 
 export type AdminUserView = {
   id: string;

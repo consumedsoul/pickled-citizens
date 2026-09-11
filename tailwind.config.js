@@ -16,7 +16,7 @@ module.exports = {
         'app-accent': '#1a1a1a',
         'app-accent-hover': '#404040',
         'app-dark': '#1a1a1a',
-        'app-light-gray': 'rgba(26, 26, 26, 0.35)',
+        'app-light-gray': 'rgba(26, 26, 26, 0.62)', // ≈#717171, 4.88:1 on white (placeholders)
         'app-link': '#1a1a1a',
         'app-danger': '#dc2626',
         'app-success': '#15803d',

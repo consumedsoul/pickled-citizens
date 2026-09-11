@@ -1,9 +1,10 @@
 'use server';
 
-import { and, eq, inArray } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { requireUserId } from '@/lib/db/auth-helpers';
 import { getDbAsync } from '@/lib/db/client';
 import { chunkedInArray } from '@/lib/db/chunk';
+import { countMembersByLeague } from '@/lib/db/queries/leagues';
 import {
   leagueMembers,
   leagues as leaguesTable,
@@ -62,16 +63,7 @@ export async function getHomeData(): Promise<{
     db.select().from(leaguesTable).where(inArray(leaguesTable.id, chunk)),
   );
 
-  const memberCountRows = await chunkedInArray(leagueIds, (chunk) =>
-    db
-      .select({ leagueId: leagueMembers.leagueId })
-      .from(leagueMembers)
-      .where(inArray(leagueMembers.leagueId, chunk)),
-  );
-  const counts = new Map<string, number>();
-  for (const row of memberCountRows) {
-    counts.set(row.leagueId, (counts.get(row.leagueId) ?? 0) + 1);
-  }
+  const counts = await countMembersByLeague(leagueIds);
 
   const leagues: HomeLeague[] = leagueRows.map((l) => {
     const m = memberships.find((mm) => mm.leagueId === l.id);
@@ -217,6 +209,3 @@ export async function getHomeData(): Promise<{
     stats: { individualWins, individualLosses, teamWins, teamLosses, teamTies },
   };
 }
-
-// Suppress unused import warnings if any
-void and;

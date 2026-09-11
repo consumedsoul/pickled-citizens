@@ -4,6 +4,10 @@
 **Owner:** Hun Kim  
 **Status:** Draft v0.2
 
+> **Stack superseded.** This PRD was written for Supabase (Auth + Postgres + RLS). The app
+> now runs on Cloudflare D1 + Clerk — see [`README.md`](../README.md) for the current
+> architecture. The product requirements below still apply; the stack references do not.
+
 ---
 
 ## 1. Problem Statement

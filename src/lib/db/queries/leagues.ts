@@ -39,6 +39,22 @@ export async function listMembersOfLeague(leagueId: string): Promise<LeagueMembe
   return db.select().from(leagueMembers).where(eq(leagueMembers.leagueId, leagueId));
 }
 
+/** Member count per league — one grouped query per chunk, not one query per league. */
+export async function countMembersByLeague(leagueIds: string[]): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (leagueIds.length === 0) return counts;
+  const db = await getDbAsync();
+  const rows = await chunkedInArray(leagueIds, (chunk) =>
+    db
+      .select({ leagueId: leagueMembers.leagueId, n: count() })
+      .from(leagueMembers)
+      .where(inArray(leagueMembers.leagueId, chunk))
+      .groupBy(leagueMembers.leagueId),
+  );
+  for (const row of rows) counts.set(row.leagueId, row.n);
+  return counts;
+}
+
 export async function isLeagueAdmin(leagueId: string, userId: string): Promise<boolean> {
   const db = await getDbAsync();
   const league = await getLeagueById(leagueId);
