@@ -186,6 +186,7 @@ D1 is server-only. Client components must NOT import from `@/lib/db`; they call 
 - **CSP**: nonce-based CSP is set per-request in `middleware.ts` (includes Clerk + Turnstile + Cloudflare Insights). The layout reads the nonce via `headers().get('x-nonce')`.
 - **`robots.txt` references `/sitemap.xml`** — generated dynamically by `app/sitemap.ts`.
 - **Build version injected at build time**: `next.config.mjs` sets `env: { NEXT_PUBLIC_BUILD_VERSION }`, read in `BuildVersion.tsx` via `process.env.NEXT_PUBLIC_BUILD_VERSION`. No generated source file — the old `src/lib/buildVersion.ts` is git-ignored.
+- **`public/` files are served by the generated `_worker.js`, not by Next**: Pages sends *every* request to `_worker.js` (there is no `_routes.json`), so a path the worker does not hand to the `ASSETS` binding falls through to OpenNext and returns Next's 404 page. `scripts/write-pages-worker.mjs` enumerates `public/` at build time, so new files are picked up automatically — but only via `npm run pages:build`. Covered by `__tests__/pages-worker.test.ts`.
 - **D1 access in OpenNext**: use `getDbAsync()` (`getCloudflareContext({ async: true })`) inside Server Components and server actions.
 - **`next dev` does NOT expose the D1 binding** — use `npm run preview` for DB work.
 - **`admin_events.payload` is TEXT, not JSONB** — use `encodeJson/decodeJson`.
