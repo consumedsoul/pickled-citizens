@@ -79,10 +79,19 @@ export async function renameLeagueAction(input: { leagueId: string; name: string
   if (name.length < 1 || name.length > 255) {
     throw new Error('League name must be 1-255 characters');
   }
-  await updateLeague(userId, input.leagueId, { name });
+  try {
+    await updateLeague(userId, input.leagueId, { name });
+  } catch (err) {
+    // Returned rather than thrown: production builds replace thrown server
+    // action messages with a generic one, and this one the user can act on.
+    if (err instanceof AuthorizationError && err.statusCode === 409) {
+      return { ok: false as const, error: err.message };
+    }
+    throw err;
+  }
   revalidatePath(`/leagues/${input.leagueId}`);
   revalidatePath('/leagues');
-  return { ok: true };
+  return { ok: true as const };
 }
 
 export async function deleteLeagueAction(input: { leagueId: string }) {

@@ -11,6 +11,7 @@ type Props = {
   pageSize: number;
   hasMore: boolean;
   eventTypes: string[];
+  failedCount: number;
   selectedFilter: string;
 };
 
@@ -20,6 +21,7 @@ export default function AdminEventsClient({
   pageSize,
   hasMore,
   eventTypes,
+  failedCount,
   selectedFilter,
 }: Props) {
   const router = useRouter();
@@ -47,11 +49,20 @@ export default function AdminEventsClient({
         Internal audit log of key system events. Showing newest first, up to {pageSize} per page.
       </p>
 
+      {failedCount > 0 && (
+        <div role="status" className="border border-app-text px-3 py-2 mb-6 text-sm text-app-text">
+          {failedCount} failure {failedCount === 1 ? 'event' : 'events'} on record (types ending in
+          {' '}<span className="font-mono">_failed</span>) — usually an account whose app data was
+          deleted but whose Clerk login survived. Filter by that type below to review.
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-2 items-center mb-6">
         <SectionLabel>Filter</SectionLabel>
         <button
           type="button"
           onClick={() => setFilter('all')}
+          aria-pressed={selectedFilter === 'all'}
           className={`font-mono text-[0.65rem] uppercase tracking-button px-2.5 py-1 border transition-colors cursor-pointer ${
             selectedFilter === 'all'
               ? 'border-app-text bg-app-text text-white font-medium'
@@ -67,6 +78,7 @@ export default function AdminEventsClient({
               key={eventType}
               type="button"
               onClick={() => setFilter(eventType)}
+              aria-pressed={isSelected}
               className={`font-mono text-[0.65rem] uppercase tracking-button px-2.5 py-1 border transition-colors cursor-pointer ${
                 isSelected
                   ? 'border-app-text bg-app-text text-white font-medium'

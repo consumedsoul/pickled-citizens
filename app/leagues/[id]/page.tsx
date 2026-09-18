@@ -129,7 +129,11 @@ export default function LeagueMembersPage() {
     setRenaming(true);
     setError(null);
     try {
-      await renameLeagueAction({ leagueId, name: trimmedName });
+      const result = await renameLeagueAction({ leagueId, name: trimmedName });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
       setLeague({ ...league, name: trimmedName });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to rename league.');

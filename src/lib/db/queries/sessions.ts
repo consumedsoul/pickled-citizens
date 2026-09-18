@@ -79,25 +79,37 @@ export async function listGuestsForSession(sessionId: string): Promise<SessionGu
   return db.select().from(sessionGuests).where(eq(sessionGuests.sessionId, sessionId));
 }
 
-export async function addGuest(
+/**
+ * Insert a session's guests in one batch. Authorizes once — the answer cannot
+ * change between rows — and generates IDs here so the caller gets them back in
+ * input order without reading the rows back.
+ */
+export async function addGuests(
   callerId: string,
-  input: { sessionId: string; displayName: string; dupr: number },
-): Promise<SessionGuest> {
-  const session = await getSessionById(input.sessionId);
+  sessionId: string,
+  guests: ReadonlyArray<{ displayName: string; dupr: number }>,
+): Promise<string[]> {
+  if (guests.length === 0) return [];
+  const session = await getSessionById(sessionId);
   if (!session) throw new AuthorizationError(404, 'Session not found');
   if (!(await canManageSession(callerId, session))) {
     throw new AuthorizationError(403, 'Cannot add guests to this session');
   }
   const db = await getDbAsync();
-  const id = crypto.randomUUID();
-  await db.insert(sessionGuests).values({
-    id,
-    sessionId: input.sessionId,
-    displayName: input.displayName.trim(),
-    dupr: input.dupr,
-    createdAt: new Date().toISOString(),
-  });
-  const rows = await db.select().from(sessionGuests).where(eq(sessionGuests.id, id)).limit(1);
-  if (!rows[0]) throw new Error('Failed to add guest');
-  return rows[0];
+  const now = new Date().toISOString();
+  const rows = guests.map((g) => ({
+    id: crypto.randomUUID(),
+    sessionId,
+    displayName: g.displayName.trim(),
+    dupr: g.dupr,
+    createdAt: now,
+  }));
+  // 5 bound columns per row; 15 rows keeps each statement under D1's 100-param cap.
+  const INSERT_CHUNK = 15;
+  const ops = [];
+  for (let i = 0; i < rows.length; i += INSERT_CHUNK) {
+    ops.push(db.insert(sessionGuests).values(rows.slice(i, i + INSERT_CHUNK)));
+  }
+  await db.batch(ops as [(typeof ops)[number], ...(typeof ops)[number][]]);
+  return rows.map((r) => r.id);
 }

@@ -24,6 +24,7 @@ function makeDb(selectResults: Row[][]) {
     const chain: Record<string, unknown> = {};
     const self = () => chain;
     chain.from = self;
+    chain.innerJoin = self;
     chain.where = self;
     chain.limit = self;
     chain.orderBy = self;
@@ -33,8 +34,24 @@ function makeDb(selectResults: Row[][]) {
     return chain;
   };
 
+  const batches: unknown[][] = [];
+  const updates: number[] = [];
+
   const db = {
     select: () => chainFor(selectResults[cursor++] ?? []),
+    insert: () => ({ values: (v: unknown) => ({ insert: v }) }),
+    update: () => ({
+      set: () => ({
+        where: () => {
+          updates.push(1);
+          return Promise.resolve(undefined);
+        },
+      }),
+    }),
+    batch: (ops: unknown[]) => {
+      batches.push(ops);
+      return Promise.resolve([]);
+    },
     delete: () => ({
       where: () => {
         deleteCalls.push(1);
@@ -43,7 +60,7 @@ function makeDb(selectResults: Row[][]) {
     }),
   };
 
-  return { db, deleteCalls, selectsUsed: () => cursor };
+  return { db, deleteCalls, batches, updates, selectsUsed: () => cursor };
 }
 
 const dbMock = vi.hoisted(() => ({ getDbAsync: vi.fn() }));
@@ -296,5 +313,91 @@ describe('clearMatchResult', () => {
     ]);
     await clearMatchResult('owner', 'M1');
     expect(h.deleteCalls).toHaveLength(1);
+  });
+});
+
+describe('createLeague (league cap + unique name)', () => {
+  const adminRow = (id: string, name: string) => ({ league: { id, name, ownerId: 'u1' } });
+
+  it('refuses a fourth league even though the page would also have blocked it', async () => {
+    const { createLeague } = await import('@/lib/db/queries/leagues');
+    const h = useDb([[adminRow('a', 'A'), adminRow('b', 'B'), adminRow('c', 'C')]]);
+    await expect(createLeague('u1', { name: 'D' })).rejects.toMatchObject({ statusCode: 403 });
+    expect(h.batches).toHaveLength(0);
+  });
+
+  it('refuses a name the caller already administers, ignoring case and spaces', async () => {
+    const { createLeague } = await import('@/lib/db/queries/leagues');
+    const h = useDb([[adminRow('a', 'Tuesday Crew')]]);
+    await expect(createLeague('u1', { name: '  tuesday crew ' })).rejects.toMatchObject({
+      statusCode: 409,
+    });
+    expect(h.batches).toHaveLength(0);
+  });
+
+  it('creates when under the cap with a new name', async () => {
+    const { createLeague } = await import('@/lib/db/queries/leagues');
+    const h = useDb([
+      [adminRow('a', 'A'), adminRow('b', 'B')],
+      [{ id: 'new', name: 'C', ownerId: 'u1' }],
+    ]);
+    await expect(createLeague('u1', { name: 'C' })).resolves.toMatchObject({ name: 'C' });
+    expect(h.batches).toHaveLength(1);
+  });
+});
+
+describe('updateLeague (rename)', () => {
+  it('refuses renaming onto another league the caller administers', async () => {
+    const { updateLeague } = await import('@/lib/db/queries/leagues');
+    const h = useDb([
+      [{ id: 'a', ownerId: 'u1' }],
+      [{ league: { id: 'a', name: 'A' } }, { league: { id: 'b', name: 'Beta' } }],
+    ]);
+    await expect(updateLeague('u1', 'a', { name: 'BETA' })).rejects.toMatchObject({
+      statusCode: 409,
+    });
+    expect(h.updates).toHaveLength(0);
+  });
+
+  it('allows a case-only rename of the same league', async () => {
+    const { updateLeague } = await import('@/lib/db/queries/leagues');
+    const h = useDb([[{ id: 'a', ownerId: 'u1' }], [{ league: { id: 'a', name: 'alpha' } }]]);
+    await updateLeague('u1', 'a', { name: 'Alpha' });
+    expect(h.updates).toHaveLength(1);
+  });
+});
+
+describe('addGuests', () => {
+  const guests = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ displayName: `G${i}`, dupr: 3 }));
+
+  it('authorizes once and writes every guest in one batch, chunked under the param cap', async () => {
+    const { addGuests } = await import('@/lib/db/queries/sessions');
+    const h = useDb([[{ id: 's1', createdBy: 'u1', leagueId: 'L1' }]]);
+    const ids = await addGuests('u1', 's1', guests(16));
+    expect(ids).toHaveLength(16);
+    expect(new Set(ids).size).toBe(16);
+    expect(h.selectsUsed()).toBe(1);
+    expect(h.batches).toHaveLength(1);
+    expect(h.batches[0]).toHaveLength(2); // 15 + 1
+  });
+
+  it('refuses a caller who cannot manage the session', async () => {
+    const { addGuests } = await import('@/lib/db/queries/sessions');
+    const h = useDb([
+      [{ id: 's1', createdBy: 'owner', leagueId: 'L1' }],
+      [{ id: 'L1', ownerId: 'owner' }],
+    ]);
+    await expect(addGuests('stranger', 's1', guests(1))).rejects.toMatchObject({
+      statusCode: 403,
+    });
+    expect(h.batches).toHaveLength(0);
+  });
+
+  it('does nothing for an empty guest list', async () => {
+    const { addGuests } = await import('@/lib/db/queries/sessions');
+    const h = useDb([]);
+    expect(await addGuests('u1', 's1', [])).toEqual([]);
+    expect(h.selectsUsed()).toBe(0);
   });
 });

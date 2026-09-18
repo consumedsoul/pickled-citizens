@@ -8,7 +8,7 @@
 - /leagues/[id]: League detail — member management, role assignment, add players by email
 - /sessions/[id]: Session detail — team matchups, match scores, player stats
 - /profile: User profile — name and self-reported DUPR rating
-- /auth/signup: Create a new account (Clerk)
+- /auth: Create a new account (Clerk)
 - /auth/signin: Sign in (Clerk — password or magic link)
 
 ## Features

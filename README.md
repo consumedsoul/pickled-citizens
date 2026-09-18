@@ -21,7 +21,7 @@ match results with lifetime statistics.
   records and lifetime statistics.
 - **Admin tools** — a single super-admin sees `/admin/events` (audit log),
   `/admin/users`, and `/admin/leagues`.
-- **Social sharing** — Open Graph metadata + dynamic OG image generation per session.
+- **Social sharing** — Open Graph and Twitter card metadata per session, with a static social image.
 
 ---
 
@@ -52,8 +52,6 @@ app/                       Next.js App Router pages + API routes
     clerkwebhook/          Clerk user lifecycle webhook (svix-verified)
     dupr-score/            DUPR score stub (deferred until mydupr.com API)
     leagues/leave/         POST — leave a league
-    og/                    Open Graph image generation
-    session/[id]/metadata/ Public session metadata for social previews
   admin/                   Super-admin pages (events, users, leagues)
   auth/                    Clerk SignIn/SignUp + /auth/complete profile finisher
   leagues/, sessions/      League + session pages

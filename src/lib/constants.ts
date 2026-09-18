@@ -11,3 +11,10 @@ export const ADMIN_EMAIL = 'hun@ghkim.com';
  */
 export const GENDER_OPTIONS = ['male', 'female'] as const;
 export type Gender = (typeof GENDER_OPTIONS)[number];
+
+/**
+ * Most leagues one user may administer. Enforced in createLeague
+ * (src/lib/db/queries/leagues.ts); the /leagues page reads it only to explain
+ * the limit before the server refuses.
+ */
+export const MAX_LEAGUES = 3;

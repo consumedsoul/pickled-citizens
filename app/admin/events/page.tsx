@@ -1,17 +1,13 @@
 import { Suspense } from 'react';
 import { requireAdmin } from '@/lib/db/auth-helpers';
-import { listAdminEvents } from '@/lib/db/queries/admin';
+import {
+  countFailedAdminEvents,
+  listAdminEvents,
+  listAdminEventTypes,
+} from '@/lib/db/queries/admin';
 import AdminEventsClient from './AdminEventsClient';
 
 const PAGE_SIZE = 100;
-
-const EVENT_TYPES = [
-  'user.signup',
-  'league.created',
-  'league.member_added',
-  'session.created',
-  'session.deleted',
-] as const;
 
 type Search = { filter?: string; page?: string };
 
@@ -24,11 +20,11 @@ export default async function AdminEventsPage({
   // takes no caller ID, so the page authorizes for itself.
   await requireAdmin();
   const filter = searchParams?.filter ?? 'all';
-  const selectedFilter =
-    filter === 'all' ||
-    !EVENT_TYPES.includes(filter as (typeof EVENT_TYPES)[number])
-      ? 'all'
-      : filter;
+  const [eventTypes, failedCount] = await Promise.all([
+    listAdminEventTypes(),
+    countFailedAdminEvents(),
+  ]);
+  const selectedFilter = eventTypes.includes(filter) ? filter : 'all';
   const page = Math.max(0, Number(searchParams?.page ?? 0) || 0);
 
   // Fetch one extra row so `hasMore` is known without a second count query.
@@ -56,7 +52,8 @@ export default async function AdminEventsPage({
         page={page}
         pageSize={PAGE_SIZE}
         hasMore={hasMore}
-        eventTypes={EVENT_TYPES as unknown as string[]}
+        eventTypes={eventTypes}
+        failedCount={failedCount}
         selectedFilter={selectedFilter}
       />
     </Suspense>

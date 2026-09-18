@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
+import { count, desc, eq, like } from 'drizzle-orm';
 import { getDbAsync } from '../client';
 import { adminEvents, leagueMembers, leagues, profiles, type AdminEvent } from '../schema';
 import { encodeJson, decodeJson, type Json } from '../json';
@@ -21,6 +21,33 @@ export async function listAdminEvents(
   return rows.map((r) => ({ ...r, payload: decodeJson(r.payload) }));
 }
 
+/**
+ * Every event type that has actually been logged, for the /admin/events filter.
+ * Derived rather than hardcoded: a literal list drifted to 5 of 13 types and
+ * hid both `*_failed` events, the ones that need manual cleanup.
+ */
+export async function listAdminEventTypes(): Promise<string[]> {
+  const db = await getDbAsync();
+  const rows = await db
+    .selectDistinct({ eventType: adminEvents.eventType })
+    .from(adminEvents)
+    .orderBy(adminEvents.eventType);
+  return rows.map((r) => r.eventType);
+}
+
+/**
+ * Count of `*_failed` events (e.g. a user whose app data was deleted but whose
+ * Clerk account survived). Each one needs a manual look.
+ */
+export async function countFailedAdminEvents(): Promise<number> {
+  const db = await getDbAsync();
+  const rows = await db
+    .select({ n: count() })
+    .from(adminEvents)
+    .where(like(adminEvents.eventType, '%failed'));
+  return rows[0]?.n ?? 0;
+}
+
 export async function logAdminEvent(input: {
   eventType: string;
   userId?: string | null;
@@ -41,12 +68,14 @@ export async function logAdminEvent(input: {
 }
 
 /**
- * Cascade-delete a user across the schema. Replaces the Postgres
- * `delete_user_cascade()` / `admin_delete_user()` RPCs.
+ * Delete a user's app data: their league memberships, the leagues they own
+ * (sessions in those leagues keep existing with league_id set to NULL), and
+ * their profile row.
  *
- * D1 cascades handle most child rows (league_members, match_players via
- * auth.users FK in the old schema) — but Clerk owns user identity now, so
- * we can't rely on FK cascades from auth.users. Delete app rows explicitly.
+ * Deliberately NOT deleted: game_sessions.created_by and match_players.user_id
+ * still hold the user's ID so other players keep their match history. Those
+ * columns are plain text (Clerk IDs, no FK), and the UI renders the missing
+ * profile as "Deleted player".
  *
  * Caller is responsible for deleting the Clerk user via Clerk Backend API.
  *

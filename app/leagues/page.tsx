@@ -7,6 +7,7 @@ import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { listMyLeagues, createLeagueAction } from '@/lib/actions/leagues';
+import { MAX_LEAGUES } from '@/lib/constants';
 
 type LeagueRow = {
   id: string;
@@ -16,8 +17,6 @@ type LeagueRow = {
   role: string;
   memberCount: number;
 };
-
-const MAX_LEAGUES = 3;
 
 export default function LeaguesPage() {
   const router = useRouter();

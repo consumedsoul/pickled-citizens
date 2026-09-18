@@ -9,6 +9,7 @@ import {
   type LeagueMember,
 } from '../schema';
 import { AuthorizationError } from '../auth-helpers';
+import { MAX_LEAGUES } from '@/lib/constants';
 
 export async function listLeagues(): Promise<League[]> {
   const db = await getDbAsync();
@@ -84,10 +85,38 @@ export async function isLeagueMember(leagueId: string, userId: string): Promise<
   return rows.length > 0;
 }
 
+/** Leagues the user holds the admin role in — the set the league cap and name rule apply to. */
+async function listAdminLeaguesForUser(userId: string): Promise<League[]> {
+  const db = await getDbAsync();
+  const rows = await db
+    .select({ league: leagues })
+    .from(leagueMembers)
+    .innerJoin(leagues, eq(leagueMembers.leagueId, leagues.id))
+    .where(and(eq(leagueMembers.userId, userId), eq(leagueMembers.role, 'admin')));
+  return rows.map((r) => r.league);
+}
+
+function nameTaken(existing: League[], name: string, exceptId?: string): boolean {
+  const wanted = name.trim().toLowerCase();
+  return existing.some((l) => l.id !== exceptId && l.name.trim().toLowerCase() === wanted);
+}
+
+/**
+ * The league cap and unique-name rule live here, not only in the /leagues
+ * click handler: server actions are POST-reachable, so a rule the browser
+ * enforces alone is not enforced.
+ */
 export async function createLeague(
   callerId: string,
   input: Pick<NewLeague, 'name'> & { id?: string },
 ): Promise<League> {
+  const adminLeagues = await listAdminLeaguesForUser(callerId);
+  if (adminLeagues.length >= MAX_LEAGUES) {
+    throw new AuthorizationError(403, `You have reached the maximum of ${MAX_LEAGUES} leagues.`);
+  }
+  if (nameTaken(adminLeagues, input.name)) {
+    throw new AuthorizationError(409, 'A league with that name already exists.');
+  }
   const db = await getDbAsync();
   const id = input.id ?? crypto.randomUUID();
   const now = new Date().toISOString();
@@ -117,6 +146,9 @@ export async function updateLeague(
 ): Promise<void> {
   if (!(await isLeagueOwner(leagueId, callerId))) {
     throw new AuthorizationError(403, 'Only the league owner can update the league');
+  }
+  if (patch.name !== undefined && nameTaken(await listAdminLeaguesForUser(callerId), patch.name, leagueId)) {
+    throw new AuthorizationError(409, 'A league with that name already exists.');
   }
   const db = await getDbAsync();
   if (patch.name !== undefined) {

@@ -226,6 +226,8 @@ function MatchupsPanel({
                 }`}
                 onClick={canEdit ? () => onToggleWinner(match.id, 1) : undefined}
                 disabled={!canEdit || updatingMatchId === match.id}
+                aria-label={`Round ${roundIndex + 1}, match ${index + 1}: Team Green wins`}
+                aria-pressed={match.winner === 1}
               >
                 Win
               </button>
@@ -275,6 +277,8 @@ function MatchupsPanel({
                 }`}
                 onClick={canEdit ? () => onToggleWinner(match.id, 2) : undefined}
                 disabled={!canEdit || updatingMatchId === match.id}
+                aria-label={`Round ${roundIndex + 1}, match ${index + 1}: Team Blue wins`}
+                aria-pressed={match.winner === 2}
               >
                 Win
               </button>

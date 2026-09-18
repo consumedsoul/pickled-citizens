@@ -7,7 +7,7 @@ import {
   deleteSession,
   getSessionById,
   listGuestsForSession,
-  addGuest,
+  addGuests,
   canManageSession,
   canViewSession,
 } from '@/lib/db/queries/sessions';
@@ -143,6 +143,20 @@ export async function createSessionWithTeamsAction(input: {
   if (!(await isLeagueMember(input.leagueId, userId))) {
     throw new Error('Not a member of this league');
   }
+  // The client picks players from the roster, but this action is POST-reachable:
+  // an arbitrary user ID here would put a stranger into the session and expose
+  // their name and DUPR on the session page. Only league members may be placed.
+  const memberIds = new Set((await listMembersOfLeague(input.leagueId)).map((m) => m.userId));
+  // isLeagueMember counts the owner even without a league_members row; match it.
+  const [league] = await getLeaguesByIds([input.leagueId]);
+  if (league) memberIds.add(league.ownerId);
+  for (const m of input.matches) {
+    for (const p of m.players) {
+      if (p.userId && !memberIds.has(p.userId)) {
+        throw new Error('Every player must be a member of this league');
+      }
+    }
+  }
   const callerEmail = await getCurrentEmail();
 
   const session = await createSession(userId, {
@@ -153,15 +167,10 @@ export async function createSessionWithTeamsAction(input: {
   });
 
   // Create guests, mapping syntheticId -> real DB id
-  const syntheticToGuestId = new Map<string, string>();
-  for (const g of input.guests) {
-    const created = await addGuest(userId, {
-      sessionId: session.id,
-      displayName: g.displayName,
-      dupr: g.dupr,
-    });
-    syntheticToGuestId.set(g.syntheticId, created.id);
-  }
+  const guestIds = await addGuests(userId, session.id, input.guests);
+  const syntheticToGuestId = new Map(
+    input.guests.map((g, i) => [g.syntheticId, guestIds[i]] as const),
+  );
 
   // Build matches + players plan for replaceSessionMatches
   const newMatches = input.matches.map((m) => ({

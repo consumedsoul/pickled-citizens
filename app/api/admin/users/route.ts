@@ -17,6 +17,22 @@ function handleAuthError(err: unknown): NextResponse | null {
   return null;
 }
 
+/**
+ * The body is only *typed* as number — at runtime it is whatever JSON arrived.
+ * `"abc" < 1.0` and `"abc" > 8.5` are both false, so a plain range check lets
+ * strings through, and profiles.self_reported_dupr has no CHECK to stop them.
+ * Returns the validated value, or undefined when it is invalid.
+ */
+function parseDupr(value: unknown): number | null | undefined {
+  if (value === null) return null;
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 1.0 || value > 8.5) {
+    return undefined;
+  }
+  return value;
+}
+
+const DUPR_ERROR = 'DUPR must be between 1.0 and 8.5.';
+
 /** POST /api/admin/users — Create a new user (admin only). */
 export async function POST(request: NextRequest) {
   try {
@@ -34,14 +50,9 @@ export async function POST(request: NextRequest) {
     }
     const email = body.email.trim().toLowerCase();
 
-    if (body.self_reported_dupr != null) {
-      const dupr = body.self_reported_dupr;
-      if (dupr < 1.0 || dupr > 8.5) {
-        return NextResponse.json(
-          { error: 'DUPR must be between 1.0 and 8.5.' },
-          { status: 400 },
-        );
-      }
+    const dupr = parseDupr(body.self_reported_dupr ?? null);
+    if (dupr === undefined) {
+      return NextResponse.json({ error: DUPR_ERROR }, { status: 400 });
     }
 
     // Create the Clerk user (skipping verification so admin can pre-create accounts).
@@ -56,7 +67,7 @@ export async function POST(request: NextRequest) {
       email,
       firstName: body.first_name?.trim() || null,
       lastName: body.last_name?.trim() || null,
-      selfReportedDupr: body.self_reported_dupr ?? null,
+      selfReportedDupr: dupr,
     });
 
     await logAdminEvent({
@@ -94,12 +105,9 @@ export async function PATCH(request: NextRequest) {
     if (body.first_name !== undefined) patch.firstName = body.first_name;
     if (body.last_name !== undefined) patch.lastName = body.last_name;
     if (body.self_reported_dupr !== undefined) {
-      const dupr = body.self_reported_dupr;
-      if (dupr !== null && (dupr < 1.0 || dupr > 8.5)) {
-        return NextResponse.json(
-          { error: 'DUPR must be between 1.0 and 8.5.' },
-          { status: 400 },
-        );
+      const dupr = parseDupr(body.self_reported_dupr);
+      if (dupr === undefined) {
+        return NextResponse.json({ error: DUPR_ERROR }, { status: 400 });
       }
       patch.selfReportedDupr = dupr;
     }
