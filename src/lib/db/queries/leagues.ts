@@ -85,15 +85,31 @@ export async function isLeagueMember(leagueId: string, userId: string): Promise<
   return rows.length > 0;
 }
 
-/** Leagues the user holds the admin role in — the set the league cap and name rule apply to. */
-async function listAdminLeaguesForUser(userId: string): Promise<League[]> {
+/**
+ * Leagues the user owns — the set the league cap and name rule apply to.
+ * Ownership, not the admin role row: a role row can be shed (demotion, leaving)
+ * while `owner_id` keeps every owner power, so counting roles let an owner run
+ * unlimited leagues.
+ */
+async function listOwnedLeagues(userId: string): Promise<League[]> {
   const db = await getDbAsync();
+  return db.select().from(leagues).where(eq(leagues.ownerId, userId));
+}
+
+/**
+ * Every user ID allowed to be placed in a league's session: the member rows
+ * plus the owner, who counts as a member even without a row (see isLeagueMember).
+ */
+export async function listLeagueMemberIds(leagueId: string): Promise<Set<string>> {
+  const db = await getDbAsync();
+  const league = await getLeagueById(leagueId);
   const rows = await db
-    .select({ league: leagues })
+    .select({ userId: leagueMembers.userId })
     .from(leagueMembers)
-    .innerJoin(leagues, eq(leagueMembers.leagueId, leagues.id))
-    .where(and(eq(leagueMembers.userId, userId), eq(leagueMembers.role, 'admin')));
-  return rows.map((r) => r.league);
+    .where(eq(leagueMembers.leagueId, leagueId));
+  const ids = new Set(rows.map((r) => r.userId));
+  if (league) ids.add(league.ownerId);
+  return ids;
 }
 
 function nameTaken(existing: League[], name: string, exceptId?: string): boolean {
@@ -110,11 +126,11 @@ export async function createLeague(
   callerId: string,
   input: Pick<NewLeague, 'name'> & { id?: string },
 ): Promise<League> {
-  const adminLeagues = await listAdminLeaguesForUser(callerId);
-  if (adminLeagues.length >= MAX_LEAGUES) {
+  const owned = await listOwnedLeagues(callerId);
+  if (owned.length >= MAX_LEAGUES) {
     throw new AuthorizationError(403, `You have reached the maximum of ${MAX_LEAGUES} leagues.`);
   }
-  if (nameTaken(adminLeagues, input.name)) {
+  if (nameTaken(owned, input.name)) {
     throw new AuthorizationError(409, 'A league with that name already exists.');
   }
   const db = await getDbAsync();
@@ -147,7 +163,7 @@ export async function updateLeague(
   if (!(await isLeagueOwner(leagueId, callerId))) {
     throw new AuthorizationError(403, 'Only the league owner can update the league');
   }
-  if (patch.name !== undefined && nameTaken(await listAdminLeaguesForUser(callerId), patch.name, leagueId)) {
+  if (patch.name !== undefined && nameTaken(await listOwnedLeagues(callerId), patch.name, leagueId)) {
     throw new AuthorizationError(409, 'A league with that name already exists.');
   }
   const db = await getDbAsync();
@@ -185,6 +201,27 @@ export async function addMember(
     .onConflictDoNothing();
 }
 
+/** Admin rows in a league other than `exceptUserId`. */
+async function countOtherAdmins(leagueId: string, exceptUserId: string): Promise<number> {
+  const db = await getDbAsync();
+  const rows = await db
+    .select({ count: count() })
+    .from(leagueMembers)
+    .where(
+      and(
+        eq(leagueMembers.leagueId, leagueId),
+        eq(leagueMembers.role, 'admin'),
+        ne(leagueMembers.userId, exceptUserId),
+      ),
+    );
+  return rows[0]?.count ?? 0;
+}
+
+/**
+ * Change a member's role. The owner's role cannot change and the last admin
+ * cannot be demoted — both rules live here, not only in the page's click
+ * handler, because server actions are POST-reachable.
+ */
 export async function updateMemberRole(
   callerId: string,
   leagueId: string,
@@ -193,6 +230,15 @@ export async function updateMemberRole(
 ): Promise<void> {
   if (!(await isLeagueAdmin(leagueId, callerId))) {
     throw new AuthorizationError(403, 'Only league admins can change member roles');
+  }
+  if (await isLeagueOwner(leagueId, userId)) {
+    throw new AuthorizationError(409, 'The league owner is always an admin.');
+  }
+  if (role === 'player' && (await countOtherAdmins(leagueId, userId)) === 0) {
+    throw new AuthorizationError(
+      409,
+      'Cannot demote the last admin. Promote another member first.',
+    );
   }
   const db = await getDbAsync();
   await db
@@ -204,6 +250,8 @@ export async function updateMemberRole(
 /**
  * Remove a user from a league.
  * Self-removal is allowed; otherwise caller must be a league admin.
+ * The owner cannot leave or be removed (ownership has no transfer path, and an
+ * owner without a row keeps every power while vanishing from the roster).
  * Sole-admin protection: the last admin cannot leave/be removed.
  */
 export async function removeMember(
@@ -219,6 +267,13 @@ export async function removeMember(
     }
   }
 
+  if (await isLeagueOwner(leagueId, userId)) {
+    throw new AuthorizationError(
+      409,
+      'The league owner cannot leave the league. Delete the league instead.',
+    );
+  }
+
   const membership = await db
     .select({ role: leagueMembers.role })
     .from(leagueMembers)
@@ -230,17 +285,7 @@ export async function removeMember(
   }
 
   if (membership[0].role === 'admin') {
-    const otherAdmins = await db
-      .select({ count: count() })
-      .from(leagueMembers)
-      .where(
-        and(
-          eq(leagueMembers.leagueId, leagueId),
-          eq(leagueMembers.role, 'admin'),
-          ne(leagueMembers.userId, userId),
-        ),
-      );
-    if ((otherAdmins[0]?.count ?? 0) === 0) {
+    if ((await countOtherAdmins(leagueId, userId)) === 0) {
       throw new AuthorizationError(
         409,
         'You are the only admin. Promote another member to admin before leaving.',

@@ -1,76 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { useDb } from './helpers/fake-db';
 
 /**
  * Authorization tests.
  *
  * D1 has no RLS, so every one of these rules is the only thing standing between
- * a caller and someone else's data. The query modules depend on nothing but
- * `getDbAsync`, so stubbing that is enough to drive them without a database.
+ * a caller and someone else's data. See helpers/fake-db.ts for the harness.
  */
 
-type Row = Record<string, unknown>;
-
-/**
- * Minimal stand-in for the Drizzle query builder. `select()` pops the next
- * queued result set, so a test declares results in the order the code under
- * test asks for them. The chain is thenable at every step because callers await
- * it after `.where()` in some paths and after `.limit(1)` in others.
- */
-function makeDb(selectResults: Row[][]) {
-  let cursor = 0;
-  const deleteCalls: number[] = [];
-
-  const chainFor = (rows: Row[]) => {
-    const chain: Record<string, unknown> = {};
-    const self = () => chain;
-    chain.from = self;
-    chain.innerJoin = self;
-    chain.where = self;
-    chain.limit = self;
-    chain.orderBy = self;
-    chain.offset = self;
-    chain.then = (resolve: (v: Row[]) => unknown, reject: (e: unknown) => unknown) =>
-      Promise.resolve(rows).then(resolve, reject);
-    return chain;
-  };
-
-  const batches: unknown[][] = [];
-  const updates: number[] = [];
-
-  const db = {
-    select: () => chainFor(selectResults[cursor++] ?? []),
-    insert: () => ({ values: (v: unknown) => ({ insert: v }) }),
-    update: () => ({
-      set: () => ({
-        where: () => {
-          updates.push(1);
-          return Promise.resolve(undefined);
-        },
-      }),
-    }),
-    batch: (ops: unknown[]) => {
-      batches.push(ops);
-      return Promise.resolve([]);
-    },
-    delete: () => ({
-      where: () => {
-        deleteCalls.push(1);
-        return Promise.resolve(undefined);
-      },
-    }),
-  };
-
-  return { db, deleteCalls, batches, updates, selectsUsed: () => cursor };
-}
-
-const dbMock = vi.hoisted(() => ({ getDbAsync: vi.fn() }));
-vi.mock('@/lib/db/client', () => dbMock);
-
-function useDb(selectResults: Row[][]) {
-  const harness = makeDb(selectResults);
-  dbMock.getDbAsync.mockResolvedValue(harness.db);
-  return harness;
-}
+vi.mock('@/lib/db/client', async () => (await import('./helpers/fake-db')).dbMock);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -239,6 +177,7 @@ describe('removeMember', () => {
   it('refuses to remove the last admin', async () => {
     const { removeMember } = await import('@/lib/db/queries/leagues');
     const h = useDb([
+      [{ id: 'L1', ownerId: 'owner' }], // the target is not the owner
       [{ role: 'admin' }], // the target's membership
       [{ count: 0 }], // no other admins remain
     ]);
@@ -250,14 +189,14 @@ describe('removeMember', () => {
 
   it('removes an admin when another admin remains', async () => {
     const { removeMember } = await import('@/lib/db/queries/leagues');
-    const h = useDb([[{ role: 'admin' }], [{ count: 1 }]]);
+    const h = useDb([[{ id: 'L1', ownerId: 'owner' }], [{ role: 'admin' }], [{ count: 1 }]]);
     expect(await removeMember('admin1', 'L1', 'admin1')).toEqual({ removed: true });
     expect(h.deleteCalls).toHaveLength(1);
   });
 
   it('lets a player remove themselves', async () => {
     const { removeMember } = await import('@/lib/db/queries/leagues');
-    const h = useDb([[{ role: 'player' }]]);
+    const h = useDb([[{ id: 'L1', ownerId: 'owner' }], [{ role: 'player' }]]);
     expect(await removeMember('p1', 'L1', 'p1')).toEqual({ removed: true });
     expect(h.deleteCalls).toHaveLength(1);
   });
@@ -274,9 +213,99 @@ describe('removeMember', () => {
 
   it('reports removed: false for a user who is not a member', async () => {
     const { removeMember } = await import('@/lib/db/queries/leagues');
-    const h = useDb([[]]);
+    const h = useDb([[{ id: 'L1', ownerId: 'owner' }], []]);
     expect(await removeMember('p1', 'L1', 'p1')).toEqual({ removed: false });
     expect(h.deleteCalls).toHaveLength(0);
+  });
+
+  it('refuses to let the owner leave, even with another admin in place', async () => {
+    const { removeMember } = await import('@/lib/db/queries/leagues');
+    const h = useDb([[{ id: 'L1', ownerId: 'owner' }]]);
+    await expect(removeMember('owner', 'L1', 'owner')).rejects.toMatchObject({
+      statusCode: 409,
+    });
+    expect(h.deleteCalls).toHaveLength(0);
+  });
+
+  it('refuses a co-admin removing the owner', async () => {
+    const { removeMember } = await import('@/lib/db/queries/leagues');
+    const h = useDb([
+      [{ id: 'L1', ownerId: 'owner' }], // isLeagueAdmin: league lookup
+      [{ role: 'admin' }], // isLeagueAdmin: the co-admin's role row
+      [{ id: 'L1', ownerId: 'owner' }], // isLeagueOwner: the target is the owner
+    ]);
+    await expect(removeMember('coadmin', 'L1', 'owner')).rejects.toMatchObject({
+      statusCode: 409,
+    });
+    expect(h.deleteCalls).toHaveLength(0);
+  });
+});
+
+describe('updateMemberRole', () => {
+  const league = { id: 'L1', ownerId: 'owner' };
+
+  it('refuses to change the owner\'s role, whoever asks', async () => {
+    const { updateMemberRole } = await import('@/lib/db/queries/leagues');
+    const h = useDb([
+      [league], // isLeagueAdmin: caller is a co-admin
+      [{ role: 'admin' }],
+      [league], // isLeagueOwner: target is the owner
+    ]);
+    await expect(updateMemberRole('coadmin', 'L1', 'owner', 'player')).rejects.toMatchObject({
+      statusCode: 409,
+    });
+    expect(h.updates).toHaveLength(0);
+  });
+
+  it('refuses to demote the last admin server-side, not only in the click handler', async () => {
+    const { updateMemberRole } = await import('@/lib/db/queries/leagues');
+    const h = useDb([
+      [league], // isLeagueAdmin: caller is the owner
+      [league], // isLeagueOwner: target is not
+      [{ count: 0 }], // no other admin rows remain
+    ]);
+    await expect(updateMemberRole('owner', 'L1', 'admin2', 'player')).rejects.toMatchObject({
+      statusCode: 409,
+    });
+    expect(h.updates).toHaveLength(0);
+  });
+
+  it('demotes an admin when another admin row remains', async () => {
+    const { updateMemberRole } = await import('@/lib/db/queries/leagues');
+    const h = useDb([[league], [league], [{ count: 1 }]]);
+    await updateMemberRole('owner', 'L1', 'admin2', 'player');
+    expect(h.updates).toHaveLength(1);
+  });
+
+  it('promotes without counting admins', async () => {
+    const { updateMemberRole } = await import('@/lib/db/queries/leagues');
+    const h = useDb([[league], [league]]);
+    await updateMemberRole('owner', 'L1', 'p1', 'admin');
+    expect(h.updates).toHaveLength(1);
+    expect(h.selectsUsed()).toBe(2);
+  });
+
+  it('rejects a plain member changing roles', async () => {
+    const { updateMemberRole } = await import('@/lib/db/queries/leagues');
+    const h = useDb([[league], [{ role: 'player' }]]);
+    await expect(updateMemberRole('p1', 'L1', 'p2', 'admin')).rejects.toMatchObject({
+      statusCode: 403,
+    });
+    expect(h.updates).toHaveLength(0);
+  });
+});
+
+describe('listLeagueMemberIds', () => {
+  it('includes the owner even without a league_members row', async () => {
+    const { listLeagueMemberIds } = await import('@/lib/db/queries/leagues');
+    useDb([[{ id: 'L1', ownerId: 'owner' }], [{ userId: 'a' }, { userId: 'b' }]]);
+    expect(await listLeagueMemberIds('L1')).toEqual(new Set(['a', 'b', 'owner']));
+  });
+
+  it('is empty for a league that does not exist', async () => {
+    const { listLeagueMemberIds } = await import('@/lib/db/queries/leagues');
+    useDb([[], []]);
+    expect(await listLeagueMemberIds('nope')).toEqual(new Set());
   });
 });
 
@@ -317,18 +346,18 @@ describe('clearMatchResult', () => {
 });
 
 describe('createLeague (league cap + unique name)', () => {
-  const adminRow = (id: string, name: string) => ({ league: { id, name, ownerId: 'u1' } });
+  const owned = (id: string, name: string) => ({ id, name, ownerId: 'u1' });
 
   it('refuses a fourth league even though the page would also have blocked it', async () => {
     const { createLeague } = await import('@/lib/db/queries/leagues');
-    const h = useDb([[adminRow('a', 'A'), adminRow('b', 'B'), adminRow('c', 'C')]]);
+    const h = useDb([[owned('a', 'A'), owned('b', 'B'), owned('c', 'C')]]);
     await expect(createLeague('u1', { name: 'D' })).rejects.toMatchObject({ statusCode: 403 });
     expect(h.batches).toHaveLength(0);
   });
 
-  it('refuses a name the caller already administers, ignoring case and spaces', async () => {
+  it('refuses a name the caller already owns, ignoring case and spaces', async () => {
     const { createLeague } = await import('@/lib/db/queries/leagues');
-    const h = useDb([[adminRow('a', 'Tuesday Crew')]]);
+    const h = useDb([[owned('a', 'Tuesday Crew')]]);
     await expect(createLeague('u1', { name: '  tuesday crew ' })).rejects.toMatchObject({
       statusCode: 409,
     });
@@ -338,7 +367,7 @@ describe('createLeague (league cap + unique name)', () => {
   it('creates when under the cap with a new name', async () => {
     const { createLeague } = await import('@/lib/db/queries/leagues');
     const h = useDb([
-      [adminRow('a', 'A'), adminRow('b', 'B')],
+      [owned('a', 'A'), owned('b', 'B')],
       [{ id: 'new', name: 'C', ownerId: 'u1' }],
     ]);
     await expect(createLeague('u1', { name: 'C' })).resolves.toMatchObject({ name: 'C' });
@@ -347,11 +376,11 @@ describe('createLeague (league cap + unique name)', () => {
 });
 
 describe('updateLeague (rename)', () => {
-  it('refuses renaming onto another league the caller administers', async () => {
+  it('refuses renaming onto another league the caller owns', async () => {
     const { updateLeague } = await import('@/lib/db/queries/leagues');
     const h = useDb([
       [{ id: 'a', ownerId: 'u1' }],
-      [{ league: { id: 'a', name: 'A' } }, { league: { id: 'b', name: 'Beta' } }],
+      [{ id: 'a', name: 'A', ownerId: 'u1' }, { id: 'b', name: 'Beta', ownerId: 'u1' }],
     ]);
     await expect(updateLeague('u1', 'a', { name: 'BETA' })).rejects.toMatchObject({
       statusCode: 409,
@@ -361,7 +390,7 @@ describe('updateLeague (rename)', () => {
 
   it('allows a case-only rename of the same league', async () => {
     const { updateLeague } = await import('@/lib/db/queries/leagues');
-    const h = useDb([[{ id: 'a', ownerId: 'u1' }], [{ league: { id: 'a', name: 'alpha' } }]]);
+    const h = useDb([[{ id: 'a', ownerId: 'u1' }], [{ id: 'a', name: 'alpha', ownerId: 'u1' }]]);
     await updateLeague('u1', 'a', { name: 'Alpha' });
     expect(h.updates).toHaveLength(1);
   });

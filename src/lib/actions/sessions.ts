@@ -23,10 +23,17 @@ import {
 import {
   getLeaguesByIds,
   listMembersOfLeague,
+  listLeagueMemberIds,
   isLeagueMember,
 } from '@/lib/db/queries/leagues';
 import { getProfilesByIds } from '@/lib/db/queries/profiles';
 import { logAdminEvent } from '@/lib/db/queries/admin';
+import {
+  listSessionsForUser,
+  aggregateSessionWins,
+  type UserSession,
+  type SessionWins,
+} from '@/lib/db/queries/user-sessions';
 
 export async function getSessionDetail(sessionId: string) {
   const userId = await requireUserId();
@@ -146,10 +153,7 @@ export async function createSessionWithTeamsAction(input: {
   // The client picks players from the roster, but this action is POST-reachable:
   // an arbitrary user ID here would put a stranger into the session and expose
   // their name and DUPR on the session page. Only league members may be placed.
-  const memberIds = new Set((await listMembersOfLeague(input.leagueId)).map((m) => m.userId));
-  // isLeagueMember counts the owner even without a league_members row; match it.
-  const [league] = await getLeaguesByIds([input.leagueId]);
-  if (league) memberIds.add(league.ownerId);
+  const memberIds = await listLeagueMemberIds(input.leagueId);
   for (const m of input.matches) {
     for (const p of m.players) {
       if (p.userId && !memberIds.has(p.userId)) {
@@ -218,29 +222,20 @@ export async function createSessionWithTeamsAction(input: {
   return { sessionId: session.id };
 }
 
-export type SessionListItem = {
-  id: string;
-  leagueId: string | null;
-  leagueName: string | null;
-  createdBy: string;
-  createdAt: string | null;
-  scheduledFor: string | null;
-  playerCount: number;
-};
+export type SessionListItem = UserSession;
 
 export type SessionsListData = {
   ownedLeagues: Array<{ id: string; name: string; createdAt: string | null }>;
   sessions: SessionListItem[];
-  results: Record<string, { teamGreenWins: number; teamBlueWins: number }>;
+  results: Record<string, SessionWins>;
 };
 
 /** Page-level loader for /sessions. */
 export async function getSessionsListData(): Promise<SessionsListData> {
   const userId = await requireUserId();
   const { getDbAsync } = await import('@/lib/db/client');
-  const { leagues, gameSessions, matches, matchResults, matchPlayers } =
-    await import('@/lib/db/schema');
-  const { eq, inArray } = await import('drizzle-orm');
+  const { leagues } = await import('@/lib/db/schema');
+  const { eq } = await import('drizzle-orm');
   const db = await getDbAsync();
 
   const ownedLeagues = await db
@@ -248,78 +243,10 @@ export async function getSessionsListData(): Promise<SessionsListData> {
     .from(leagues)
     .where(eq(leagues.ownerId, userId));
 
-  const ownedSessions = await db
-    .select()
-    .from(gameSessions)
-    .where(eq(gameSessions.createdBy, userId));
+  const { sessions } = await listSessionsForUser(userId);
+  const results = await aggregateSessionWins(sessions.map((s) => s.id));
 
-  const { chunkedInArray } = await import('@/lib/db/chunk');
-  const playerRows = await db
-    .select({ matchId: matchPlayers.matchId })
-    .from(matchPlayers)
-    .where(eq(matchPlayers.userId, userId));
-  const matchIds = Array.from(new Set(playerRows.map((p) => p.matchId)));
-  const participantMatches = await chunkedInArray(matchIds, (chunk) =>
-    db.select().from(matches).where(inArray(matches.id, chunk)),
-  );
-  const participantSessionIds = Array.from(
-    new Set(participantMatches.map((m) => m.sessionId)),
-  );
-  const participantSessions = await chunkedInArray(participantSessionIds, (chunk) =>
-    db.select().from(gameSessions).where(inArray(gameSessions.id, chunk)),
-  );
-
-  const allSessions = new Map<string, (typeof gameSessions.$inferSelect)>();
-  for (const s of [...ownedSessions, ...participantSessions]) {
-    allSessions.set(s.id, s);
-  }
-  const sessionLeagueIds = Array.from(
-    new Set(
-      Array.from(allSessions.values())
-        .map((s) => s.leagueId)
-        .filter((id): id is string => Boolean(id)),
-    ),
-  );
-  const leagueNameRows = await chunkedInArray(sessionLeagueIds, (chunk) =>
-    db
-      .select({ id: leagues.id, name: leagues.name })
-      .from(leagues)
-      .where(inArray(leagues.id, chunk)),
-  );
-  const leagueNameMap = new Map(leagueNameRows.map((l) => [l.id, l.name]));
-
-  const sessionList: SessionListItem[] = Array.from(allSessions.values()).map((s) => ({
-    id: s.id,
-    leagueId: s.leagueId,
-    leagueName: s.leagueId ? leagueNameMap.get(s.leagueId) ?? null : null,
-    createdBy: s.createdBy,
-    createdAt: s.createdAt ?? null,
-    scheduledFor: s.scheduledFor,
-    playerCount: s.playerCount,
-  }));
-
-  // Aggregate match results per session
-  const sessionIds = sessionList.map((s) => s.id);
-  const allMatches = await chunkedInArray(sessionIds, (chunk) =>
-    db.select().from(matches).where(inArray(matches.sessionId, chunk)),
-  );
-  const allMatchIds = allMatches.map((m) => m.id);
-  const allResults = await chunkedInArray(allMatchIds, (chunk) =>
-    db.select().from(matchResults).where(inArray(matchResults.matchId, chunk)),
-  );
-  const matchToSession = new Map(allMatches.map((m) => [m.id, m.sessionId]));
-  const results: Record<string, { teamGreenWins: number; teamBlueWins: number }> = {};
-  for (const r of allResults) {
-    if (r.team1Score == null || r.team2Score == null) continue;
-    const sessionId = matchToSession.get(r.matchId);
-    if (!sessionId) continue;
-    const cur = results[sessionId] ?? { teamGreenWins: 0, teamBlueWins: 0 };
-    if (r.team1Score > r.team2Score) cur.teamGreenWins += 1;
-    else if (r.team2Score > r.team1Score) cur.teamBlueWins += 1;
-    results[sessionId] = cur;
-  }
-
-  return { ownedLeagues, sessions: sessionList, results };
+  return { ownedLeagues, sessions, results };
 }
 
 export async function listLeagueRosterAction(leagueId: string) {

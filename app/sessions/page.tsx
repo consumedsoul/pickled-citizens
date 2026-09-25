@@ -41,15 +41,8 @@ export default function SessionsPage() {
         const data = await getSessionsListData();
         if (!active) return;
         setLeagues(data.ownedLeagues.map((l) => ({ id: l.id, name: l.name })));
-        const sorted = [...data.sessions].sort((a, b) => {
-          const aTime = a.scheduledFor ?? a.createdAt;
-          const bTime = b.scheduledFor ?? b.createdAt;
-          if (!aTime && !bTime) return 0;
-          if (!aTime) return 1;
-          if (!bTime) return -1;
-          return new Date(bTime).getTime() - new Date(aTime).getTime();
-        });
-        setSessions(sorted);
+        // Already sorted newest-first by listSessionsForUser.
+        setSessions(data.sessions);
         setSessionResults(data.results);
       } catch (err) {
         if (active) setError(err instanceof Error ? err.message : 'Failed to load sessions.');

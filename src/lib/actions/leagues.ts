@@ -31,7 +31,8 @@ export async function listMyLeagues() {
     const m = memberships.find((mm) => mm.leagueId === l.id);
     return {
       ...l,
-      role: m?.role ?? 'player',
+      // The owner is an admin whatever their role row says (see isLeagueAdmin).
+      role: l.ownerId === userId ? 'admin' : m?.role ?? 'player',
       memberCount: memberCountMap.get(l.id) ?? 0,
     };
   });
@@ -61,7 +62,18 @@ export async function createLeagueAction(input: { name: string }) {
   if (name.length < 1 || name.length > 255) {
     throw new Error('League name must be 1-255 characters');
   }
-  const league = await createLeague(userId, { name });
+  let league;
+  try {
+    league = await createLeague(userId, { name });
+  } catch (err) {
+    // Returned rather than thrown, like renameLeagueAction: production builds
+    // replace thrown server-action messages with a generic one, and the cap
+    // and duplicate-name messages are ones the user can act on.
+    if (err instanceof AuthorizationError && (err.statusCode === 403 || err.statusCode === 409)) {
+      return { ok: false as const, error: err.message };
+    }
+    throw err;
+  }
   await logAdminEvent({
     eventType: 'league.created',
     userId,
@@ -70,7 +82,7 @@ export async function createLeagueAction(input: { name: string }) {
     payload: { name: league.name },
   });
   revalidatePath('/leagues');
-  return league;
+  return { ok: true as const, league };
 }
 
 export async function renameLeagueAction(input: { leagueId: string; name: string }) {

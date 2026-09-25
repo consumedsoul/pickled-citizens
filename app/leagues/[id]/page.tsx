@@ -3,7 +3,6 @@
 import { useEffect, useState, FormEvent } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
-import { ADMIN_EMAIL } from '@/lib/constants';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Modal } from '@/components/ui/Modal';
@@ -56,8 +55,6 @@ export default function LeagueMembersPage() {
 
   const [roleUpdating, setRoleUpdating] = useState(false);
   const currentUserId = user?.id ?? null;
-  const userEmailLower = user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? '';
-  const isSuperAdmin = userEmailLower === ADMIN_EMAIL;
 
   const [removeMemberTarget, setRemoveMemberTarget] = useState<Member | null>(null);
   const [promoteMemberTarget, setPromoteMemberTarget] = useState<Member | null>(null);
@@ -82,7 +79,9 @@ export default function LeagueMembersPage() {
           ownerId: detail.league.ownerId,
         });
         setRenameInput(detail.league.name);
-        setCanManage(detail.isAdmin || detail.isOwner || isSuperAdmin);
+        // No super-admin flag here: isLeagueAdmin has no super-admin path, so
+        // the buttons it would unlock all fail with a generic 403.
+        setCanManage(detail.isAdmin || detail.isOwner);
 
         const membersWithProfiles: Member[] = detail.members.map((m) => {
           const profile = detail.profiles.find((p) => p.id === m.userId);
@@ -107,7 +106,7 @@ export default function LeagueMembersPage() {
     return () => {
       active = false;
     };
-  }, [leagueId, isLoaded, currentUserId, router, isSuperAdmin]);
+  }, [leagueId, isLoaded, currentUserId, router]);
 
   function memberSort(a: Member, b: Member) {
     const an = `${a.firstName ?? ''} ${a.lastName ?? ''}`.trim().toLowerCase();
@@ -367,7 +366,9 @@ export default function LeagueMembersPage() {
                       Admin
                     </span>
                   </div>
-                  {canManage && admin.userId !== currentUserId && (
+                  {canManage &&
+                    admin.userId !== currentUserId &&
+                    admin.userId !== league?.ownerId && (
                     <Button
                       variant="sm"
                       onClick={() => handleDemoteToMember(admin)}

@@ -45,7 +45,6 @@
     "scripts",
     "_delete",
     ".claude",
-    ".next",
     ".open-next",
     ".wrangler"
   ]

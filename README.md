@@ -6,14 +6,14 @@ match results with lifetime statistics.
 
 **Live site:** [pickledcitizens.com](https://pickledcitizens.com)
 
-> _Last updated: 2026-09-11_
+> _Last updated: 2026-09-25_
 
 ---
 
 ## What it does
 
 - **Leagues** — create leagues, add existing players by email, assign per-league admin roles.
-  Sole-admin protection prevents a league from being orphaned.
+  Sole-admin protection prevents a league from being orphaned; the owner can only leave by deleting the league.
 - **Game sessions** — schedule sessions for 6, 8, 10, or 12 players. The app sorts
   players by self-reported DUPR and generates balanced doubles teams with a snaking
   algorithm. Guest (non-member) players can be added to a single session.

@@ -88,7 +88,12 @@ export default function LeaguesPage() {
 
     setCreating(true);
     try {
-      const created = await createLeagueAction({ name: trimmedName });
+      const result = await createLeagueAction({ name: trimmedName });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      const created = result.league;
       setAdminLeagues((prev) => [
         {
           id: created.id,

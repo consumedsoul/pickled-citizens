@@ -6,13 +6,11 @@ import { getDbAsync } from '@/lib/db/client';
 import { chunkedInArray } from '@/lib/db/chunk';
 import { countMembersByLeague } from '@/lib/db/queries/leagues';
 import {
-  leagueMembers,
-  leagues as leaguesTable,
-  gameSessions,
-  matches,
-  matchPlayers,
-  matchResults,
-} from '@/lib/db/schema';
+  listSessionsForUser,
+  listResultsBySession,
+  type UserSession,
+} from '@/lib/db/queries/user-sessions';
+import { leagueMembers, leagues as leaguesTable } from '@/lib/db/schema';
 
 export type HomeLeague = {
   id: string;
@@ -23,15 +21,7 @@ export type HomeLeague = {
   role: string;
 };
 
-export type HomeSession = {
-  id: string;
-  leagueId: string | null;
-  leagueName: string | null;
-  createdBy: string;
-  createdAt: string | null;
-  scheduledFor: string | null;
-  playerCount: number;
-};
+export type HomeSession = UserSession;
 
 export type LifetimeStats = {
   individualWins: number;
@@ -73,81 +63,23 @@ export async function getHomeData(): Promise<{
       ownerId: l.ownerId,
       createdAt: l.createdAt ?? null,
       memberCount: counts.get(l.id) ?? 0,
-      role: m?.role ?? 'player',
+      // The owner is an admin whatever their role row says (see isLeagueAdmin).
+      role: l.ownerId === userId ? 'admin' : m?.role ?? 'player',
     };
   });
 
   // Sessions: owned OR participating
-  const ownedSessions = await db
-    .select()
-    .from(gameSessions)
-    .where(eq(gameSessions.createdBy, userId));
-
-  const playerRows = await db
-    .select({ matchId: matchPlayers.matchId, team: matchPlayers.team })
-    .from(matchPlayers)
-    .where(eq(matchPlayers.userId, userId));
-
-  const matchIds = Array.from(new Set(playerRows.map((p) => p.matchId)));
-  const matchRows = await chunkedInArray(matchIds, (chunk) =>
-    db.select().from(matches).where(inArray(matches.id, chunk)),
-  );
-  const sessionIdsFromMatches = Array.from(new Set(matchRows.map((m) => m.sessionId)));
-  const participantSessions = await chunkedInArray(sessionIdsFromMatches, (chunk) =>
-    db.select().from(gameSessions).where(inArray(gameSessions.id, chunk)),
-  );
-
-  const allSessions = new Map<string, (typeof gameSessions.$inferSelect)>();
-  for (const s of [...ownedSessions, ...participantSessions]) {
-    allSessions.set(s.id, s);
-  }
-  const sessionLeagueIds = Array.from(
-    new Set(
-      Array.from(allSessions.values())
-        .map((s) => s.leagueId)
-        .filter((id): id is string => Boolean(id)),
-    ),
-  );
-  const leagueNameRows = await chunkedInArray(sessionLeagueIds, (chunk) =>
-    db
-      .select({ id: leaguesTable.id, name: leaguesTable.name })
-      .from(leaguesTable)
-      .where(inArray(leaguesTable.id, chunk)),
-  );
-  const leagueNameMap = new Map(leagueNameRows.map((r) => [r.id, r.name]));
-
-  const sessions: HomeSession[] = Array.from(allSessions.values())
-    .map((s) => ({
-      id: s.id,
-      leagueId: s.leagueId,
-      leagueName: s.leagueId ? leagueNameMap.get(s.leagueId) ?? null : null,
-      createdBy: s.createdBy,
-      createdAt: s.createdAt ?? null,
-      scheduledFor: s.scheduledFor,
-      playerCount: s.playerCount,
-    }))
-    .sort((a, b) => {
-      const aTime = a.scheduledFor ?? a.createdAt;
-      const bTime = b.scheduledFor ?? b.createdAt;
-      if (!aTime && !bTime) return 0;
-      if (!aTime) return 1;
-      if (!bTime) return -1;
-      return new Date(bTime).getTime() - new Date(aTime).getTime();
-    });
+  const { sessions, participation } = await listSessionsForUser(userId);
 
   // Lifetime stats
-  const userTeamMap = new Map<string, number>();
-  for (const p of playerRows) userTeamMap.set(p.matchId, p.team);
-
-  const userMatchResults = await chunkedInArray(matchIds, (chunk) =>
-    db.select().from(matchResults).where(inArray(matchResults.matchId, chunk)),
-  );
+  const userTeamByMatch = new Map(participation.map((p) => [p.matchId, p.team]));
+  const userTeamBySession = new Map(participation.map((p) => [p.sessionId, p.team]));
+  const resultRows = await listResultsBySession(Array.from(userTeamBySession.keys()));
 
   let individualWins = 0;
   let individualLosses = 0;
-  for (const r of userMatchResults) {
-    if (r.team1Score == null || r.team2Score == null) continue;
-    const team = userTeamMap.get(r.matchId);
+  for (const r of resultRows) {
+    const team = userTeamByMatch.get(r.matchId);
     if (!team) continue;
     if (team === 1) {
       if (r.team1Score > r.team2Score) individualWins++;
@@ -158,34 +90,15 @@ export async function getHomeData(): Promise<{
     }
   }
 
-  // Team session totals: aggregate all match results within sessions where user participated
-  const userSessionIds = sessionIdsFromMatches;
-  const userSessionTeams = new Map<string, number>();
-  for (const m of matchRows) {
-    const team = userTeamMap.get(m.id);
-    if (team) userSessionTeams.set(m.sessionId, team);
-  }
-
-  const allMatchesInSessions = await chunkedInArray(userSessionIds, (chunk) =>
-    db.select().from(matches).where(inArray(matches.sessionId, chunk)),
-  );
-  const allMatchIdsInSessions = allMatchesInSessions.map((m) => m.id);
-  const allResultsInSessions = await chunkedInArray(allMatchIdsInSessions, (chunk) =>
-    db.select().from(matchResults).where(inArray(matchResults.matchId, chunk)),
-  );
-  const matchToSession = new Map(allMatchesInSessions.map((m) => [m.id, m.sessionId]));
-
+  // Team session totals: every match result in each session the user played in
   const sessionScores = new Map<string, { t1: number; t2: number; userTeam: number }>();
-  for (const r of allResultsInSessions) {
-    if (r.team1Score == null || r.team2Score == null) continue;
-    const sessionId = matchToSession.get(r.matchId);
-    if (!sessionId) continue;
-    const userTeam = userSessionTeams.get(sessionId);
+  for (const r of resultRows) {
+    const userTeam = userTeamBySession.get(r.sessionId);
     if (!userTeam) continue;
-    const cur = sessionScores.get(sessionId) ?? { t1: 0, t2: 0, userTeam };
+    const cur = sessionScores.get(r.sessionId) ?? { t1: 0, t2: 0, userTeam };
     cur.t1 += r.team1Score;
     cur.t2 += r.team2Score;
-    sessionScores.set(sessionId, cur);
+    sessionScores.set(r.sessionId, cur);
   }
 
   let teamWins = 0;

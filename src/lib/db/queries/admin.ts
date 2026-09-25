@@ -55,16 +55,22 @@ export async function logAdminEvent(input: {
   leagueId?: string | null;
   payload?: Json | null;
 }): Promise<void> {
-  const db = await getDbAsync();
-  await db.insert(adminEvents).values({
-    id: crypto.randomUUID(),
-    createdAt: new Date().toISOString(),
-    eventType: input.eventType,
-    userId: input.userId ?? null,
-    userEmail: input.userEmail ?? null,
-    leagueId: input.leagueId ?? null,
-    payload: encodeJson(input.payload ?? null),
-  });
+  // Never throws: callers log after their primary write has landed, and a
+  // failed audit row must not turn a successful create/delete into an error.
+  try {
+    const db = await getDbAsync();
+    await db.insert(adminEvents).values({
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      eventType: input.eventType,
+      userId: input.userId ?? null,
+      userEmail: input.userEmail ?? null,
+      leagueId: input.leagueId ?? null,
+      payload: encodeJson(input.payload ?? null),
+    });
+  } catch (err) {
+    console.error(`logAdminEvent(${input.eventType}) failed:`, err);
+  }
 }
 
 /**
