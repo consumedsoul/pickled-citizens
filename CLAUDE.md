@@ -90,7 +90,6 @@ app/                    # Next.js App Router pages & API routes
     admin/users/        # POST/PATCH/DELETE — admin user mgmt (Clerk + D1)
     clerkwebhook/       # Clerk lifecycle webhook (svix-verified)
     dupr-score/         # DUPR score stub
-    leagues/leave/      # POST — leave a league
   admin/                # Super-admin pages (events, users, leagues)
   auth/                 # Clerk SignIn/SignUp + /auth/complete profile finisher
   leagues/[id]/         # League detail page
@@ -120,7 +119,7 @@ src/
 middleware.ts           # clerkMiddleware — CSP nonce + admin gating
 drizzle/                # Drizzle-generated D1 migrations (apply via wrangler)
 scripts/                # write-pages-worker.mjs
-__tests__/              # Vitest: team generation + authorization rules
+__tests__/              # Vitest: team generation, authorization, user sessions/leagues, actions, pages worker
 docs/                   # prd.md + AUDITS.md (pointer to the external audit trail)
 ```
 
@@ -173,14 +172,14 @@ D1 is server-only. Client components must NOT import from `@/lib/db`; they call 
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/api/dupr-score` | Stub — returns `{ score: null }`. Awaits mydupr.com integration |
-| POST | `/api/leagues/leave` | Clerk-authed. Calls `removeMember`. |
 | POST/PATCH/DELETE | `/api/admin/users` | Admin-only Clerk user + profile management. |
 | POST | `/api/clerkwebhook` | Svix-verified. user.created/updated/deleted lifecycle hooks. |
 
 Session OG/Twitter tags are built in `app/sessions/[id]/layout.tsx` `generateMetadata`,
 not by an API route. There is deliberately no public session-data endpoint — the old
 `/api/session/[id]/metadata` and `/api/og` routes were unauthenticated, uncalled, and
-retired to `_delete/2026-09-18/`.
+retired to `_delete/2026-09-18/`; the uncalled `/api/leagues/leave` route
+followed on 2026-10-02 (leaving goes through `leaveLeagueAction`).
 
 ## Known Gotchas
 

@@ -1,16 +1,12 @@
 'use server';
 
-import { eq, inArray } from 'drizzle-orm';
 import { requireUserId } from '@/lib/db/auth-helpers';
-import { getDbAsync } from '@/lib/db/client';
-import { chunkedInArray } from '@/lib/db/chunk';
-import { countMembersByLeague } from '@/lib/db/queries/leagues';
+import { listLeaguesForUser } from '@/lib/db/queries/leagues';
 import {
   listSessionsForUser,
   listResultsBySession,
   type UserSession,
 } from '@/lib/db/queries/user-sessions';
-import { leagueMembers, leagues as leaguesTable } from '@/lib/db/schema';
 
 export type HomeLeague = {
   id: string;
@@ -37,36 +33,16 @@ export async function getHomeData(): Promise<{
   stats: LifetimeStats;
 }> {
   const userId = await requireUserId();
-  const db = await getDbAsync();
 
-  // Leagues
-  const memberships = await db
-    .select({
-      leagueId: leagueMembers.leagueId,
-      role: leagueMembers.role,
-    })
-    .from(leagueMembers)
-    .where(eq(leagueMembers.userId, userId));
-
-  const leagueIds = memberships.map((m) => m.leagueId);
-  const leagueRows = await chunkedInArray(leagueIds, (chunk) =>
-    db.select().from(leaguesTable).where(inArray(leaguesTable.id, chunk)),
-  );
-
-  const counts = await countMembersByLeague(leagueIds);
-
-  const leagues: HomeLeague[] = leagueRows.map((l) => {
-    const m = memberships.find((mm) => mm.leagueId === l.id);
-    return {
-      id: l.id,
-      name: l.name,
-      ownerId: l.ownerId,
-      createdAt: l.createdAt ?? null,
-      memberCount: counts.get(l.id) ?? 0,
-      // The owner is an admin whatever their role row says (see isLeagueAdmin).
-      role: l.ownerId === userId ? 'admin' : m?.role ?? 'player',
-    };
-  });
+  // Leagues: same rule as /leagues and the profile page (listLeaguesForUser).
+  const leagues: HomeLeague[] = (await listLeaguesForUser(userId)).map((l) => ({
+    id: l.id,
+    name: l.name,
+    ownerId: l.ownerId,
+    createdAt: l.createdAt ?? null,
+    memberCount: l.memberCount,
+    role: l.role,
+  }));
 
   // Sessions: owned OR participating
   const { sessions, participation } = await listSessionsForUser(userId);

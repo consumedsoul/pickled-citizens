@@ -26,6 +26,7 @@ export function makeDb(selectResults: Row[][]) {
     chain.where = self;
     chain.limit = self;
     chain.orderBy = self;
+    chain.groupBy = self;
     chain.offset = self;
     chain.then = (resolve: (v: Row[]) => unknown, reject: (e: unknown) => unknown) =>
       Promise.resolve(rows).then(resolve, reject);

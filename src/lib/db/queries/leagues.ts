@@ -91,9 +91,35 @@ export async function isLeagueMember(leagueId: string, userId: string): Promise<
  * while `owner_id` keeps every owner power, so counting roles let an owner run
  * unlimited leagues.
  */
-async function listOwnedLeagues(userId: string): Promise<League[]> {
+export async function listOwnedLeagues(userId: string): Promise<League[]> {
   const db = await getDbAsync();
   return db.select().from(leagues).where(eq(leagues.ownerId, userId));
+}
+
+export type UserLeague = League & { role: 'admin' | 'player'; memberCount: number };
+
+/**
+ * The leagues a user belongs to, for /leagues, home and the profile page. One
+ * copy of the rule, not three: owned leagues are listed by `owner_id` and the
+ * rest by membership row, because an owner keeps every power without a row
+ * (see isLeagueMember) and must never see fewer leagues than count toward the
+ * cap. The owner is reported as admin whatever their role row says.
+ */
+export async function listLeaguesForUser(userId: string): Promise<UserLeague[]> {
+  const memberships = await listMembershipsForUser(userId);
+  const owned = await listOwnedLeagues(userId);
+  const ownedIds = new Set(owned.map((l) => l.id));
+  const joined = await getLeaguesByIds(
+    memberships.map((m) => m.leagueId).filter((id) => !ownedIds.has(id)),
+  );
+  const all = [...owned, ...joined];
+  const counts = await countMembersByLeague(all.map((l) => l.id));
+  const roleByLeague = new Map(memberships.map((m) => [m.leagueId, m.role]));
+  return all.map((l) => ({
+    ...l,
+    role: l.ownerId === userId || roleByLeague.get(l.id) === 'admin' ? 'admin' : 'player',
+    memberCount: counts.get(l.id) ?? 0,
+  }));
 }
 
 /**

@@ -38,7 +38,6 @@ type SessionPlayer = {
   id: string;
   first_name: string | null;
   last_name: string | null;
-  email: string | null;
   self_reported_dupr: number | null;
 };
 
@@ -376,7 +375,6 @@ export default function SessionDetailPage() {
                 first_name: firstSpace === -1 ? name : name.slice(0, firstSpace),
                 last_name:
                   firstSpace === -1 ? null : name.slice(firstSpace + 1).trim() || null,
-                email: null,
                 self_reported_dupr: guest.dupr ?? null,
               };
             }
@@ -384,7 +382,6 @@ export default function SessionDetailPage() {
               id: mp.guestId,
               first_name: null,
               last_name: null,
-              email: null,
               self_reported_dupr: null,
             };
           }
@@ -395,7 +392,6 @@ export default function SessionDetailPage() {
                 id: profile.id,
                 first_name: profile.firstName,
                 last_name: profile.lastName,
-                email: profile.email,
                 self_reported_dupr:
                   profile.selfReportedDupr != null ? Number(profile.selfReportedDupr) : null,
               };
@@ -404,7 +400,6 @@ export default function SessionDetailPage() {
               id: mp.userId,
               first_name: null,
               last_name: null,
-              email: null,
               self_reported_dupr: null,
             };
           }
@@ -412,7 +407,6 @@ export default function SessionDetailPage() {
             id: 'unknown',
             first_name: null,
             last_name: null,
-            email: null,
             self_reported_dupr: null,
           };
         }

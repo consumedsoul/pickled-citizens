@@ -22,7 +22,6 @@ import {
 } from '@/lib/db/queries/matches';
 import {
   getLeaguesByIds,
-  listMembersOfLeague,
   listLeagueMemberIds,
   isLeagueMember,
 } from '@/lib/db/queries/leagues';
@@ -42,17 +41,19 @@ export async function getSessionDetail(sessionId: string) {
 
   const matches = await listMatchesForSession(sessionId);
   const matchIds = matches.map((m) => m.id);
-  const [players, results, guests] = await Promise.all([
-    listPlayersForMatches(matchIds),
-    listResultsForMatches(matchIds),
-    listGuestsForSession(sessionId),
-  ]);
+  const players = await listPlayersForMatches(matchIds);
 
   // Server actions are POST-reachable RPC endpoints, so "the page only renders
-  // for members" is not a gate — this action must authorize for itself.
+  // for members" is not a gate — this action must authorize for itself, and
+  // before it loads anything the viewer has no claim to.
   if (!(await canViewSession(userId, session, players.map((p) => p.userId)))) {
     return null;
   }
+
+  const [results, guests] = await Promise.all([
+    listResultsForMatches(matchIds),
+    listGuestsForSession(sessionId),
+  ]);
 
   const userIds = Array.from(
     new Set(
@@ -62,14 +63,20 @@ export async function getSessionDetail(sessionId: string) {
         .concat([session.createdBy]),
     ),
   );
-  const profiles = await getProfilesByIds(userIds);
+  // Only what the page renders. canViewSession is wider than league
+  // membership (a removed player keeps their history), so the response must
+  // carry nothing a non-member should not see: no emails, and no league roster.
+  const profiles = (await getProfilesByIds(userIds)).map((p) => ({
+    id: p.id,
+    firstName: p.firstName,
+    lastName: p.lastName,
+    selfReportedDupr: p.selfReportedDupr,
+  }));
 
   let leagueName: string | null = null;
-  let leagueMembers: Awaited<ReturnType<typeof listMembersOfLeague>> = [];
   if (session.leagueId) {
     const leagues = await getLeaguesByIds([session.leagueId]);
     leagueName = leagues[0]?.name ?? null;
-    leagueMembers = await listMembersOfLeague(session.leagueId);
   }
 
   return {
@@ -80,7 +87,6 @@ export async function getSessionDetail(sessionId: string) {
     guests,
     profiles,
     leagueName,
-    leagueMembers,
     viewerId: userId,
     // The page's edit controls must follow the same rule the write paths
     // enforce (creator or league owner), not a narrower copy of it.

@@ -12,9 +12,7 @@ import {
   getLeagueById,
   isLeagueMember,
   listMembersOfLeague,
-  countMembersByLeague,
-  listMembershipsForUser,
-  getLeaguesByIds,
+  listLeaguesForUser,
   isLeagueAdmin,
   isLeagueOwner,
 } from '@/lib/db/queries/leagues';
@@ -23,19 +21,7 @@ import { getProfilesByIds } from '@/lib/db/queries/profiles';
 
 export async function listMyLeagues() {
   const userId = await requireUserId();
-  const memberships = await listMembershipsForUser(userId);
-  const ids = memberships.map((m) => m.leagueId);
-  const leagues = await getLeaguesByIds(ids);
-  const memberCountMap = await countMembersByLeague(ids);
-  return leagues.map((l) => {
-    const m = memberships.find((mm) => mm.leagueId === l.id);
-    return {
-      ...l,
-      // The owner is an admin whatever their role row says (see isLeagueAdmin).
-      role: l.ownerId === userId ? 'admin' : m?.role ?? 'player',
-      memberCount: memberCountMap.get(l.id) ?? 0,
-    };
-  });
+  return listLeaguesForUser(userId);
 }
 
 export async function getLeagueDetail(leagueId: string) {

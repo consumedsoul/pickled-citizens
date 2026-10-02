@@ -6,7 +6,7 @@ match results with lifetime statistics.
 
 **Live site:** [pickledcitizens.com](https://pickledcitizens.com)
 
-> _Last updated: 2026-09-25_
+> _Last updated: 2026-10-02_
 
 ---
 
@@ -51,7 +51,6 @@ app/                       Next.js App Router pages + API routes
     admin/users/           POST/PATCH/DELETE — admin user mgmt (Clerk + D1)
     clerkwebhook/          Clerk user lifecycle webhook (svix-verified)
     dupr-score/            DUPR score stub (deferred until mydupr.com API)
-    leagues/leave/         POST — leave a league
   admin/                   Super-admin pages (events, users, leagues)
   auth/                    Clerk SignIn/SignUp + /auth/complete profile finisher
   leagues/, sessions/      League + session pages
@@ -67,7 +66,7 @@ src/
     teamGeneration.ts      Snaking team-balance algorithm (unit-tested)
 middleware.ts              Clerk middleware — CSP nonce + /admin gating
 drizzle/                   Drizzle-generated D1 migrations
-__tests__/                 Vitest tests (team generation, authorization)
+__tests__/                 Vitest tests (team generation, authorization, actions)
 ```
 
 Path alias: `@/*` maps to `./src/*`.
