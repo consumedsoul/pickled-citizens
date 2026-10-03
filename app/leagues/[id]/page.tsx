@@ -8,12 +8,15 @@ import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Modal } from '@/components/ui/Modal';
 import {
   getLeagueDetail,
+  getLeagueStandingsAction,
   renameLeagueAction,
   deleteLeagueAction,
   setMemberRoleAction,
   removeMemberAction,
   addMemberByEmailAction,
+  type StandingRow,
 } from '@/lib/actions/leagues';
+import { LeagueStandings } from '@/components/leagues/LeagueStandings';
 
 type Member = {
   userId: string;
@@ -58,6 +61,39 @@ export default function LeagueMembersPage() {
 
   const [removeMemberTarget, setRemoveMemberTarget] = useState<Member | null>(null);
   const [promoteMemberTarget, setPromoteMemberTarget] = useState<Member | null>(null);
+
+  const [standings, setStandings] = useState<StandingRow[]>([]);
+  const [gamesCounted, setGamesCounted] = useState(0);
+  const [hasRecentSession, setHasRecentSession] = useState(false);
+  const [standingsLoading, setStandingsLoading] = useState(true);
+  const [standingsError, setStandingsError] = useState<string | null>(null);
+
+  // The board is derived from match history on every load, so it is always
+  // current with the scores entered — no stored rating, no weekly job.
+  useEffect(() => {
+    if (!leagueId || !isLoaded || !currentUserId) return;
+    let active = true;
+    (async () => {
+      setStandingsLoading(true);
+      setStandingsError(null);
+      try {
+        const result = await getLeagueStandingsAction(leagueId);
+        if (!active) return;
+        setStandings(result.standings);
+        setGamesCounted(result.gamesCounted);
+        setHasRecentSession(result.hasRecentSession);
+      } catch (err) {
+        if (active) {
+          setStandingsError(err instanceof Error ? err.message : 'Failed to load rankings.');
+        }
+      } finally {
+        if (active) setStandingsLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [leagueId, isLoaded, currentUserId]);
 
   useEffect(() => {
     if (!leagueId) return;
@@ -300,6 +336,15 @@ export default function LeagueMembersPage() {
       <h1 className="font-display text-2xl font-bold tracking-tight mb-2">{league.name}</h1>
 
       {error && <p className="text-app-danger text-sm mt-2">{error}</p>}
+
+      <LeagueStandings
+        standings={standings}
+        gamesCounted={gamesCounted}
+        hasRecentSession={hasRecentSession}
+        loading={standingsLoading}
+        error={standingsError}
+        viewerId={currentUserId}
+      />
 
       {canManage && (
         <>

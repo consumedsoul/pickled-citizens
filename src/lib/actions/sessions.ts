@@ -274,8 +274,14 @@ export async function listLeagueRosterAction(leagueId: string) {
     members.map((m) => m.userId),
     (chunk) => db.select().from(profiles).where(inArray(profiles.id, chunk)),
   );
+  // League rating rides along so the team generator can order by results
+  // rather than self-reported DUPR. Unplayed members have no rating yet.
+  const { getLeagueStandings } = await import('@/lib/db/queries/league-rating');
+  const standings = await getLeagueStandings(leagueId);
+  const standingById = new Map(standings.players.map((p) => [p.userId, p]));
   return members.map((m) => {
     const profile = profileRows.find((p) => p.id === m.userId);
+    const standing = standingById.get(m.userId);
     return {
       userId: m.userId,
       email: m.email ?? profile?.email ?? null,
@@ -283,6 +289,8 @@ export async function listLeagueRosterAction(leagueId: string) {
       lastName: profile?.lastName ?? null,
       selfReportedDupr:
         profile?.selfReportedDupr != null ? Number(profile.selfReportedDupr) : null,
+      leagueRating: standing?.rating ?? null,
+      ratedGames: standing?.games ?? 0,
     };
   });
 }

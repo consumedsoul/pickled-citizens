@@ -101,6 +101,7 @@ src/
   components/
     ui/                 # Reusable UI components (Button, Input, Modal, SectionLabel)
     sessions/           # CreateSessionForm, SessionsList, GuestModal (extracted from app/sessions/page.tsx)
+    leagues/            # LeagueStandings — the ranking board on the league page
     AuthStatus.tsx, Navigation.tsx, AdminFooterLinks.tsx, BuildVersion.tsx
   lib/
     db/
@@ -113,6 +114,7 @@ src/
     actions/            # 'use server' actions called from client components
     constants.ts        # Shared constants (ADMIN_EMAIL, MAX_LEAGUES, GENDER_OPTIONS)
     formatters.ts       # Shared formatting utilities
+    rating.ts           # League rating engine (doubles Elo, no DUPR seed) — pure, derived from results
     teamGeneration.ts   # Snaking team-balance algorithm (extracted for testability)
     hooks/useAuthUser.ts
 
@@ -150,6 +152,7 @@ D1 is SQLite. The schema is defined in TypeScript via Drizzle at `src/lib/db/sch
 - **D1 has no RLS.** Authorization is enforced in TypeScript, but **not uniformly at the query layer**. *Mutations* in `src/lib/db/queries/` take the caller's ID and check ownership/membership themselves. *Reads* (`getSessionById`, `listLeagues`, `listMembersOfLeague`, `listAllProfiles`, `listAdminEvents`, `listGuestsForSession`, `listMatchesForSession`, `listPlayersForMatches`) take **no caller ID and perform no check** — the calling server action or page owns the gate. Server actions are POST-reachable RPC endpoints; "the page only renders for members" is not a defense.
 - **All user-id columns are `text`** — Clerk user IDs are not UUIDs. No FKs to an `auth.users` table.
 - `player_count` on `game_sessions` is constrained to 6, 8, 10, or 12; `match_players.team` to 1 or 2.
+- **League rankings are derived, not stored.** `src/lib/rating.ts` replays every scored game in a league (via `queries/league-rating.ts`) each time the board or the session form loads. Everyone starts at 1000; self-reported DUPR is deliberately not a seed. Guests count as a fixed 1000 and are never ranked. Fixing a score fixes the board; there is no weekly job. `__tests__/rating.test.ts` pins the math.
 - **D1 `batch()` is not transactional** — statements run sequentially; partial failure is not rolled back. Multi-table mutations rely on idempotent re-runs.
 
 ### Super-Admin

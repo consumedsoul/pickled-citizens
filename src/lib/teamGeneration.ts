@@ -16,6 +16,10 @@ export type Player = {
   last_name: string | null;
   email: string | null;
   self_reported_dupr: number | null;
+  /** League rating from recorded results (see src/lib/rating.ts); null until they have played. */
+  league_rating?: number | null;
+  /** Scored games behind that rating. */
+  rated_games?: number;
 };
 
 export type Pair<T extends Player = Player> = [T, T];
@@ -47,6 +51,30 @@ export function sortPlayersByDupr<T extends Player>(players: T[]): T[] {
     if (da == null) return 1;
     if (db == null) return -1;
     if (db !== da) return db - da;
+    const an = `${a.first_name ?? ""} ${a.last_name ?? ""}`.trim();
+    const bn = `${b.first_name ?? ""} ${b.last_name ?? ""}`.trim();
+    return an.localeCompare(bn);
+  });
+  return sorted;
+}
+
+/**
+ * Sort players by league rating descending. Players who have not played a
+ * scored game yet (no rating) are assumed average and slot in at the base
+ * rating; ties fall back to DUPR, then name. Guests never carry a rating, so
+ * they land in the middle too and can be nudged by hand.
+ */
+export function sortPlayersByRating<T extends Player>(players: T[], baseRating = 1000): T[] {
+  const sorted = [...players];
+  sorted.sort((a, b) => {
+    const ra = a.league_rating ?? baseRating;
+    const rb = b.league_rating ?? baseRating;
+    if (rb !== ra) return rb - ra;
+    const da = a.self_reported_dupr;
+    const db = b.self_reported_dupr;
+    if (da != null && db != null && db !== da) return db - da;
+    if (da == null && db != null) return 1;
+    if (db == null && da != null) return -1;
     const an = `${a.first_name ?? ""} ${a.last_name ?? ""}`.trim();
     const bn = `${b.first_name ?? ""} ${b.last_name ?? ""}`.trim();
     return an.localeCompare(bn);

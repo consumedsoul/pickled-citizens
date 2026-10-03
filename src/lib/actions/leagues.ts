@@ -18,6 +18,46 @@ import {
 } from '@/lib/db/queries/leagues';
 import { logAdminEvent } from '@/lib/db/queries/admin';
 import { getProfilesByIds } from '@/lib/db/queries/profiles';
+import { getLeagueStandings } from '@/lib/db/queries/league-rating';
+import type { PlayerStanding } from '@/lib/rating';
+
+export type StandingRow = PlayerStanding & {
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+};
+
+/**
+ * The ranking board for a league: every member who has played at least one
+ * scored game, best first, with their name attached. Members only — the board
+ * is derived from match history, so this is also a read of who played whom.
+ */
+export async function getLeagueStandingsAction(leagueId: string): Promise<{
+  standings: StandingRow[];
+  gamesCounted: number;
+  hasRecentSession: boolean;
+}> {
+  const userId = await requireUserId();
+  if (!(await isLeagueMember(leagueId, userId))) {
+    throw new AuthorizationError(404, 'League not found');
+  }
+  const result = await getLeagueStandings(leagueId);
+  const profiles = await getProfilesByIds(result.players.map((p) => p.userId));
+  const byId = new Map(profiles.map((p) => [p.id, p]));
+  return {
+    standings: result.players.map((p) => {
+      const profile = byId.get(p.userId);
+      return {
+        ...p,
+        firstName: profile?.firstName ?? null,
+        lastName: profile?.lastName ?? null,
+        email: profile?.email ?? null,
+      };
+    }),
+    gamesCounted: result.gamesCounted,
+    hasRecentSession: result.recentSessionId != null,
+  };
+}
 
 export async function listMyLeagues() {
   const userId = await requireUserId();
