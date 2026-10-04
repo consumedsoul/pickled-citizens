@@ -1,14 +1,14 @@
 'use client';
 
 import { SectionLabel } from '@/components/ui/SectionLabel';
-import { displayPlayerName } from '@/lib/formatters';
+import { displayPlayerName, displayPlayerNameShort } from '@/lib/formatters';
 import {
-  formatDelta,
-  formatRating,
+  formatWinPct,
   rankedPlayers,
   unrankedPlayers,
   RANKED_MIN_GAMES,
-} from '@/lib/rating';
+  RIVALS_SHOWN,
+} from '@/lib/standings';
 import type { StandingRow } from '@/lib/actions/leagues';
 
 type Props = {
@@ -21,11 +21,10 @@ type Props = {
 };
 
 /**
- * The league ranking board. Two tables from one standings list:
- *   - Rankings: players with RANKED_MIN_GAMES or more, best rating first
- *     (the engine's order).
- *   - Not yet ranked: everyone else, most games first so the closest to
- *     qualifying are on top, then first name.
+ * The league board. Two tables from one standings list:
+ *   - Rankings: players with RANKED_MIN_GAMES or more, best win % first.
+ *   - Not yet ranked: everyone else, most games first, then first name.
+ * Each row carries the player's closest rivals (counterparts across the net).
  */
 export function LeagueStandings({
   standings,
@@ -35,16 +34,16 @@ export function LeagueStandings({
   error,
   viewerId,
 }: Props) {
-  const ranked = rankedPlayers(standings) as StandingRow[];
+  const ranked = rankedPlayers(standings);
   const unranked = unrankedPlayers(standings, (p) => p.firstName);
 
   return (
     <div className="border-t border-app-border mt-6 pt-6">
       <SectionLabel>Rankings</SectionLabel>
       <p className="text-sm text-app-muted mt-2">
-        Everyone starts at 1000. Points move after every recorded game based on who you beat
-        and who you lost to, so beating a stronger pair is worth more than beating a weaker
-        one. Players join the ranked board after {RANKED_MIN_GAMES} games.
+        Ranked by win percentage. Players join the board after {RANKED_MIN_GAMES} games. Under
+        each name are their top {RIVALS_SHOWN} rivals: the player across the net from them in
+        every game of a session, with the head-to-head record, closest to even first.
       </p>
 
       {loading && <p className="text-app-muted text-sm mt-4">Calculating rankings...</p>}
@@ -90,8 +89,8 @@ export function LeagueStandings({
           )}
 
           <p className="text-xs text-app-muted mt-3">
-            {gamesCounted} scored {gamesCounted === 1 ? 'game' : 'games'} counted. Guests play
-            as a fixed 1000 and are not ranked.
+            {gamesCounted} scored {gamesCounted === 1 ? 'game' : 'games'} counted. Guests are
+            not ranked and do not count as rivals.
           </p>
         </>
       )}
@@ -119,17 +118,14 @@ function StandingsTable({
           <tr className="font-mono text-[0.65rem] uppercase tracking-button text-app-muted text-left">
             <th className="py-2 pr-2 font-medium w-8">{ranked ? '#' : ''}</th>
             <th className="py-2 pr-2 font-medium">Player</th>
-            <th className="py-2 pr-2 font-medium text-right">Rating</th>
+            <th className="py-2 pr-2 font-medium text-right">Win %</th>
+            <th className="py-2 pr-2 font-medium text-right">W–L</th>
+            {!ranked && <th className="py-2 pr-2 font-medium text-right">Games</th>}
             <th
-              className="py-2 pr-2 font-medium text-right"
-              title="Change over the most recent session"
+              className="py-2 font-medium text-right"
+              title="Record in the most recent session"
             >
               Last
-            </th>
-            <th className="py-2 pr-2 font-medium text-right">{ranked ? 'W–L' : 'Games'}</th>
-            <th className="py-2 pr-2 font-medium text-right">{ranked ? 'Win %' : 'W–L'}</th>
-            <th className="py-2 font-medium text-right hidden sm:table-cell">
-              {ranked ? 'Pts +/−' : 'Win %'}
             </th>
           </tr>
         </thead>
@@ -141,59 +137,56 @@ function StandingsTable({
               last_name: row.lastName,
               email: row.email,
             });
-            const winPct = row.games > 0 ? Math.round((row.wins / row.games) * 100) : 0;
-            const diff = row.pointsFor - row.pointsAgainst;
-            const delta = Math.round(row.recentDelta);
-            const deltaClass =
-              !hasRecentSession || delta === 0
-                ? 'text-app-muted'
-                : delta > 0
-                  ? 'text-green-700'
-                  : 'text-app-danger';
+            const playedLast = row.lastWins + row.lastLosses > 0;
             return (
               <tr key={row.userId} className={isViewer ? 'bg-app-border/20' : undefined}>
-                <td className="py-2.5 pr-2 font-mono text-app-muted">
+                <td className="py-2.5 pr-2 font-mono text-app-muted align-top">
                   {ranked ? index + 1 : '–'}
                 </td>
-                <td className="py-2.5 pr-2">
-                  <span className={`font-medium text-app-text ${isViewer ? 'underline' : ''}`}>
+                <td className="py-2.5 pr-2 align-top">
+                  <div className={`font-medium text-app-text ${isViewer ? 'underline' : ''}`}>
                     {name}
-                  </span>
+                  </div>
+                  {row.rivals.length > 0 && (
+                    <div className="mt-0.5 text-xs text-app-muted">
+                      <span className="font-mono uppercase tracking-button text-[0.6rem] mr-1.5">
+                        Rivals
+                      </span>
+                      {row.rivals.map((r, i) => (
+                        <span key={r.userId} className="whitespace-nowrap">
+                          {i > 0 && <span className="mx-1.5">·</span>}
+                          {displayPlayerNameShort({
+                            first_name: r.firstName,
+                            last_name: r.lastName,
+                            email: r.email,
+                          })}{' '}
+                          <span className="font-mono text-app-text">
+                            {r.wins}–{r.losses}
+                          </span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </td>
                 <td
-                  className={`py-2.5 pr-2 text-right font-mono ${
+                  className={`py-2.5 pr-2 text-right font-mono align-top ${
                     ranked ? 'font-semibold text-app-text' : 'text-app-muted'
                   }`}
                 >
-                  {formatRating(row.rating)}
+                  {formatWinPct(row.winPct)}
                 </td>
-                <td className={`py-2.5 pr-2 text-right font-mono ${deltaClass}`}>
-                  {hasRecentSession ? formatDelta(row.recentDelta) : '–'}
+                <td className="py-2.5 pr-2 text-right font-mono align-top">
+                  {row.wins}–{row.losses}
                 </td>
-                {ranked ? (
-                  <>
-                    <td className="py-2.5 pr-2 text-right font-mono">
-                      {row.wins}–{row.losses}
-                    </td>
-                    <td className="py-2.5 pr-2 text-right font-mono">{winPct}%</td>
-                    <td className="py-2.5 text-right font-mono text-app-muted hidden sm:table-cell">
-                      {diff > 0 ? `+${diff}` : diff}
-                    </td>
-                  </>
-                ) : (
-                  <>
-                    <td className="py-2.5 pr-2 text-right font-mono">
-                      {row.games}
-                      <span className="text-app-muted"> / {RANKED_MIN_GAMES}</span>
-                    </td>
-                    <td className="py-2.5 pr-2 text-right font-mono">
-                      {row.wins}–{row.losses}
-                    </td>
-                    <td className="py-2.5 text-right font-mono text-app-muted hidden sm:table-cell">
-                      {winPct}%
-                    </td>
-                  </>
+                {!ranked && (
+                  <td className="py-2.5 pr-2 text-right font-mono align-top">
+                    {row.games}
+                    <span className="text-app-muted"> / {RANKED_MIN_GAMES}</span>
+                  </td>
                 )}
+                <td className="py-2.5 text-right font-mono text-app-muted align-top">
+                  {hasRecentSession && playedLast ? `${row.lastWins}–${row.lastLosses}` : '–'}
+                </td>
               </tr>
             );
           })}

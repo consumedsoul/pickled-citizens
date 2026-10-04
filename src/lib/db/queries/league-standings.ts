@@ -2,17 +2,17 @@ import { eq, inArray } from 'drizzle-orm';
 import { getDbAsync } from '../client';
 import { chunkedInArray } from '../chunk';
 import { gameSessions, matches, matchPlayers, matchResults } from '../schema';
-import { computeStandings, type RatedGame, type Standings } from '@/lib/rating';
+import { computeStandings, type SessionGame, type Standings } from '@/lib/standings';
 
 /**
- * Read path for the league ranking board. `leagueId` is the subject, not a
- * gate: the calling server action must have checked membership first.
+ * Read path for the league board. `leagueId` is the subject, not a gate: the
+ * calling server action must have checked membership first.
  *
- * Every fully scored game in the league's sessions, shaped for the rating
+ * Every fully scored game in the league's sessions, shaped for the standings
  * engine. Guests are counted per side but never identified, since a guest row
  * belongs to a single session.
  */
-export async function listRatedGamesForLeague(leagueId: string): Promise<RatedGame[]> {
+export async function listSessionGamesForLeague(leagueId: string): Promise<SessionGame[]> {
   const db = await getDbAsync();
 
   const sessions = await db
@@ -64,7 +64,7 @@ export async function listRatedGamesForLeague(leagueId: string): Promise<RatedGa
     playersByMatch.set(p.matchId, list);
   }
 
-  const games: RatedGame[] = [];
+  const games: SessionGame[] = [];
   for (const m of matchRows) {
     const r = resultByMatch.get(m.id);
     if (!r || r.team1Score == null || r.team2Score == null) continue;
@@ -92,5 +92,5 @@ export async function listRatedGamesForLeague(leagueId: string): Promise<RatedGa
 }
 
 export async function getLeagueStandings(leagueId: string): Promise<Standings> {
-  return computeStandings(await listRatedGamesForLeague(leagueId));
+  return computeStandings(await listSessionGamesForLeague(leagueId));
 }

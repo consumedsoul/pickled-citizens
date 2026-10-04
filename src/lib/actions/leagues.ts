@@ -18,19 +18,23 @@ import {
 } from '@/lib/db/queries/leagues';
 import { logAdminEvent } from '@/lib/db/queries/admin';
 import { getProfilesByIds } from '@/lib/db/queries/profiles';
-import { getLeagueStandings } from '@/lib/db/queries/league-rating';
-import type { PlayerStanding } from '@/lib/rating';
+import { getLeagueStandings } from '@/lib/db/queries/league-standings';
+import type { PlayerStanding, RivalRecord } from '@/lib/standings';
 
-export type StandingRow = PlayerStanding & {
+type Named = {
   firstName: string | null;
   lastName: string | null;
   email: string | null;
 };
 
+export type RivalRow = RivalRecord & Named;
+export type StandingRow = Omit<PlayerStanding, 'rivals'> & Named & { rivals: RivalRow[] };
+
 /**
- * The ranking board for a league: every member who has played at least one
- * scored game, best first, with their name attached. Members only — the board
- * is derived from match history, so this is also a read of who played whom.
+ * The league board: every member who has played at least one scored game,
+ * best win percentage first, with names attached to them and their rivals.
+ * Members only — the board is derived from match history, so this is also a
+ * read of who played whom.
  */
 export async function getLeagueStandingsAction(leagueId: string): Promise<{
   standings: StandingRow[];
@@ -42,18 +46,29 @@ export async function getLeagueStandingsAction(leagueId: string): Promise<{
     throw new AuthorizationError(404, 'League not found');
   }
   const result = await getLeagueStandings(leagueId);
-  const profiles = await getProfilesByIds(result.players.map((p) => p.userId));
+  // Rivals are players too, but one may have left the league since, so look
+  // up the union rather than assuming every rival has a standings row.
+  const ids = new Set<string>();
+  for (const p of result.players) {
+    ids.add(p.userId);
+    for (const r of p.rivals) ids.add(r.userId);
+  }
+  const profiles = await getProfilesByIds(Array.from(ids));
   const byId = new Map(profiles.map((p) => [p.id, p]));
+  const named = (id: string): Named => {
+    const profile = byId.get(id);
+    return {
+      firstName: profile?.firstName ?? null,
+      lastName: profile?.lastName ?? null,
+      email: profile?.email ?? null,
+    };
+  };
   return {
-    standings: result.players.map((p) => {
-      const profile = byId.get(p.userId);
-      return {
-        ...p,
-        firstName: profile?.firstName ?? null,
-        lastName: profile?.lastName ?? null,
-        email: profile?.email ?? null,
-      };
-    }),
+    standings: result.players.map((p) => ({
+      ...p,
+      ...named(p.userId),
+      rivals: p.rivals.map((r) => ({ ...r, ...named(r.userId) })),
+    })),
     gamesCounted: result.gamesCounted,
     hasRecentSession: result.recentSessionId != null,
   };

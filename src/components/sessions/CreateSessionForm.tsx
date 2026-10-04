@@ -14,10 +14,9 @@ import {
 import {
   PLAYER_COUNTS,
   generateMatchups,
-  sortPlayersByRating,
+  sortPlayersByDupr,
   type Player,
 } from '@/lib/teamGeneration';
-import { formatRating } from '@/lib/rating';
 
 type Member = Player & {
   is_guest?: boolean;
@@ -122,8 +121,6 @@ export function CreateSessionForm({ leagues, userId }: CreateSessionFormProps) {
           last_name: m.lastName,
           email: m.email,
           self_reported_dupr: m.selfReportedDupr,
-          league_rating: m.leagueRating,
-          rated_games: m.ratedGames,
         }));
         setMembers(mapped);
         const restore = pendingRestoreRef.current;
@@ -172,7 +169,7 @@ export function CreateSessionForm({ leagues, userId }: CreateSessionFormProps) {
       seen.add(g.user_id);
       chosen.push(g);
     });
-    setOrderedPlayers(sortPlayersByRating(chosen));
+    setOrderedPlayers(sortPlayersByDupr(chosen));
   }, [selectedPlayerIds, members, guests]);
 
   // Restore an in-progress draft after an accidental reload. Player selections
@@ -284,20 +281,14 @@ export function CreateSessionForm({ leagues, userId }: CreateSessionFormProps) {
     });
   }
 
-  // Label shows the league rating (earned from results) when the player has
-  // one; guests and unplayed members show DUPR so there is still something to
-  // eyeball when placing them by hand.
   function displayPlayerWithDupr(member: Member) {
     const base = displayPlayerName(member) === 'Deleted player' ? member.user_id : displayPlayerName(member);
     const suffix = member.is_guest ? ' (guest)' : '';
-    if (member.league_rating != null && (member.rated_games ?? 0) > 0) {
-      return `${base} (${formatRating(member.league_rating)} · ${member.rated_games}g)${suffix}`;
-    }
     if (member.self_reported_dupr != null) {
       const dupr = Number(member.self_reported_dupr);
-      if (!Number.isNaN(dupr)) return `${base} (DUPR ${dupr.toFixed(2)}, unrated)${suffix}`;
+      if (!Number.isNaN(dupr)) return `${base} (${dupr.toFixed(2)})${suffix}`;
     }
-    return `${base} (unrated)${suffix}`;
+    return `${base}${suffix}`;
   }
 
   function openGuestModal() {
@@ -591,9 +582,8 @@ export function CreateSessionForm({ leagues, userId }: CreateSessionFormProps) {
         <SectionLabel>PLAYERS (SNAKING ORDER)</SectionLabel>
         {!orderedPlayers.length ? (
           <p className="text-app-muted text-sm mt-3">
-            After selecting players, they will appear here sorted by league rating (earned
-            from recorded results; new players and guests start in the middle). Use the
-            arrows to adjust the order; teams and matchups will be based on this list.
+            After selecting players, they will appear here sorted by DUPR. Use the arrows
+            to adjust the order; teams and matchups will be based on this list.
           </p>
         ) : (
           <div className="mt-3 divide-y divide-app-border border-t border-b border-app-border">

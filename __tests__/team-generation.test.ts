@@ -6,7 +6,6 @@ import {
   buildPairs,
   generateMatchups,
   sortPlayersByDupr,
-  sortPlayersByRating,
   getCourtsPerRound,
   groupIntoRounds,
   MAX_GAMES_BY_TOTAL_PLAYERS,
@@ -584,37 +583,5 @@ describe("edge cases", () => {
       const players = makePlayers(count);
       expect(generateMatchups(players)).toHaveLength(0);
     });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// sortPlayersByRating
-// ---------------------------------------------------------------------------
-
-describe("sortPlayersByRating", () => {
-  it("orders by league rating, slots unrated players at the base, and tie-breaks by DUPR then name", () => {
-    const [p1, p2, p3, p4, p5] = makePlayers(5, [3.0, 4.5, 4.0, null, 4.0]);
-    const players: Player[] = [
-      { ...p1, league_rating: 1080, rated_games: 6 }, // low DUPR, best record
-      { ...p2, league_rating: 940, rated_games: 6 }, // high DUPR, losing record
-      { ...p3 }, // unrated → 1000
-      { ...p4 }, // unrated, no DUPR → 1000, after p3/p5
-      { ...p5 }, // unrated, same DUPR as p3 → by name after p3
-    ];
-    const sorted = sortPlayersByRating(players);
-    expect(sorted.map((p) => p.user_id)).toEqual([
-      "player-1",
-      "player-3",
-      "player-5",
-      "player-4",
-      "player-2",
-    ]);
-  });
-
-  it("does not mutate the input", () => {
-    const players = makePlayers(3);
-    const copy = [...players];
-    sortPlayersByRating(players);
-    expect(players).toEqual(copy);
   });
 });
