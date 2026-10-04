@@ -26,8 +26,12 @@ export const BASE_RATING = 1000;
 export const K_FACTOR = 32;
 /** Winning margin beyond which the multiplier stops growing. */
 export const MARGIN_CAP = 11;
-/** Players with fewer games than this are shown as provisional. */
-export const PROVISIONAL_GAMES = 5;
+/**
+ * Games needed to appear on the ranked board. With 4-5 games a session this is
+ * about two sessions: one night with one set of partners can only move a
+ * player ~25 points, which is not enough to place them against regulars.
+ */
+export const RANKED_MIN_GAMES = 10;
 
 export type RatedSide = {
   /** Clerk user IDs of league members on this side. */
@@ -59,6 +63,7 @@ export type PlayerStanding = {
   pointsAgainst: number;
   /** Rating change over the league's most recent session; 0 if they sat out. */
   recentDelta: number;
+  /** Fewer than RANKED_MIN_GAMES played: listed below the board, unranked. */
   provisional: boolean;
 };
 
@@ -171,7 +176,7 @@ export function computeStandings(games: RatedGame[]): Standings {
   const players = Array.from(stats.values()).map((s) => ({
     ...s,
     recentDelta: recent?.get(s.userId) ?? 0,
-    provisional: s.games < PROVISIONAL_GAMES,
+    provisional: s.games < RANKED_MIN_GAMES,
   }));
   players.sort((a, b) => {
     if (b.rating !== a.rating) return b.rating - a.rating;
@@ -183,6 +188,31 @@ export function computeStandings(games: RatedGame[]): Standings {
 }
 
 /** Whole-number rating for display; the raw value keeps its decimals. */
+/** Ranked board: enough games, best rating first. */
+export function rankedPlayers(players: PlayerStanding[]): PlayerStanding[] {
+  return players.filter((p) => !p.provisional);
+}
+
+/**
+ * The list under the board: not enough games yet, most games first so the
+ * closest to qualifying are on top, ties by first name. The caller supplies
+ * the name because the engine only knows user IDs.
+ */
+export function unrankedPlayers<T extends PlayerStanding>(
+  players: T[],
+  firstNameOf: (p: T) => string | null | undefined,
+): T[] {
+  return players
+    .filter((p) => p.provisional)
+    .sort((a, b) => {
+      if (b.games !== a.games) return b.games - a.games;
+      const an = (firstNameOf(a) ?? '').trim().toLowerCase();
+      const bn = (firstNameOf(b) ?? '').trim().toLowerCase();
+      if (an !== bn) return an.localeCompare(bn);
+      return a.userId < b.userId ? -1 : a.userId > b.userId ? 1 : 0;
+    });
+}
+
 export function formatRating(rating: number): string {
   return String(Math.round(rating));
 }

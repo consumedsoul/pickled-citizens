@@ -2,8 +2,10 @@ import { describe, it, expect } from 'vitest';
 import {
   BASE_RATING,
   K_FACTOR,
-  PROVISIONAL_GAMES,
+  RANKED_MIN_GAMES,
   computeStandings,
+  rankedPlayers,
+  unrankedPlayers,
   expectedScore,
   marginMultiplier,
   formatDelta,
@@ -159,9 +161,9 @@ describe('computeStandings', () => {
     );
   });
 
-  it('sorts best first and flags provisional players', () => {
+  it('sorts best first and flags players short of the ranked minimum', () => {
     const games: RatedGame[] = [];
-    for (let i = 0; i < PROVISIONAL_GAMES; i += 1) {
+    for (let i = 0; i < RANKED_MIN_GAMES; i += 1) {
       games.push(game(['a', 'b'], ['c', 'd'], 11, 5));
     }
     games.push(game(['e', 'c'], ['d', 'b'], 11, 9));
@@ -171,6 +173,46 @@ describe('computeStandings', () => {
     expect(ratings).toEqual([...ratings].sort((x, y) => y - x));
     expect(rating(s, 'a').provisional).toBe(false);
     expect(rating(s, 'e').provisional).toBe(true);
+  });
+});
+
+describe('ranked / unranked split', () => {
+  const standing = (userId: string, games: number, rating: number, firstName: string | null) => ({
+    userId,
+    rating,
+    games,
+    wins: 0,
+    losses: games,
+    pointsFor: 0,
+    pointsAgainst: 0,
+    recentDelta: 0,
+    provisional: games < RANKED_MIN_GAMES,
+    firstName,
+  });
+
+  it('keeps the ranked board in rating order and only for players at the minimum', () => {
+    const players = [
+      standing('a', RANKED_MIN_GAMES, 1050, 'Ann'),
+      standing('b', RANKED_MIN_GAMES - 1, 1100, 'Bob'), // one short, however high
+      standing('c', RANKED_MIN_GAMES + 20, 990, 'Cy'),
+    ];
+    expect(rankedPlayers(players).map((p) => p.userId)).toEqual(['a', 'c']);
+  });
+
+  it('lists the unranked by games played, then first name, case-insensitively', () => {
+    const players = [
+      standing('z', 4, 1010, 'zoe'),
+      standing('r', RANKED_MIN_GAMES, 1000, 'Ranked'),
+      standing('b', 4, 960, 'Bob'),
+      standing('n', 8, 900, null),
+      standing('a', 4, 1030, 'ann'),
+    ];
+    expect(unrankedPlayers(players, (p) => p.firstName).map((p) => p.userId)).toEqual([
+      'n',
+      'a',
+      'b',
+      'z',
+    ]);
   });
 });
 
