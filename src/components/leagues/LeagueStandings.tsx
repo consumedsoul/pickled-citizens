@@ -111,18 +111,28 @@ function StandingsTable({
   viewerId: string | null;
   testId: string;
 }) {
+  // table-fixed so the Player column wraps instead of pushing the numbers
+  // off a phone screen; the narrow columns get explicit widths.
   return (
-    <div className="mt-4 overflow-x-auto">
-      <table className="w-full text-sm border-collapse" data-testid={testId}>
+    <div className="mt-4">
+      <table className="w-full table-fixed text-sm border-collapse" data-testid={testId}>
+        <colgroup>
+          <col className="w-7" />
+          <col />
+          <col className="w-16 sm:w-20" />
+          {!ranked && <col className="hidden sm:table-column sm:w-20" />}
+          <col className="hidden sm:table-column sm:w-14" />
+        </colgroup>
         <thead>
           <tr className="font-mono text-[0.65rem] uppercase tracking-button text-app-muted text-left">
-            <th className="py-2 pr-2 font-medium w-8">{ranked ? '#' : ''}</th>
+            <th className="py-2 pr-1 font-medium">{ranked ? '#' : ''}</th>
             <th className="py-2 pr-2 font-medium">Player</th>
-            <th className="py-2 pr-2 font-medium text-right">Win %</th>
-            <th className="py-2 pr-2 font-medium text-right">W–L</th>
-            {!ranked && <th className="py-2 pr-2 font-medium text-right">Games</th>}
+            <th className="py-2 font-medium text-right">Record</th>
+            {!ranked && (
+              <th className="py-2 pl-2 font-medium text-right hidden sm:table-cell">Games</th>
+            )}
             <th
-              className="py-2 font-medium text-right"
+              className="py-2 pl-2 font-medium text-right hidden sm:table-cell"
               title="Record in the most recent session"
             >
               Last
@@ -140,21 +150,24 @@ function StandingsTable({
             const playedLast = row.lastWins + row.lastLosses > 0;
             return (
               <tr key={row.userId} className={isViewer ? 'bg-app-border/20' : undefined}>
-                <td className="py-2.5 pr-2 font-mono text-app-muted align-top">
+                <td className="py-2.5 pr-1 font-mono text-app-muted align-top">
                   {ranked ? index + 1 : '–'}
                 </td>
-                <td className="py-2.5 pr-2 align-top">
-                  <div className={`font-medium text-app-text ${isViewer ? 'underline' : ''}`}>
+                <td className="py-2.5 pr-2 align-top min-w-0">
+                  <div
+                    className={`font-medium text-app-text break-words ${
+                      isViewer ? 'underline' : ''
+                    }`}
+                  >
                     {name}
                   </div>
                   {row.rivals.length > 0 && (
-                    <div className="mt-0.5 text-xs text-app-muted">
-                      <span className="font-mono uppercase tracking-button text-[0.6rem] mr-1.5">
+                    <div className="mt-1 text-xs text-app-muted leading-5">
+                      <span className="font-mono uppercase tracking-button text-[0.6rem] mr-2">
                         Rivals
                       </span>
-                      {row.rivals.map((r, i) => (
-                        <span key={r.userId} className="whitespace-nowrap">
-                          {i > 0 && <span className="mx-1.5">·</span>}
+                      {row.rivals.map((r) => (
+                        <span key={r.userId} className="inline-block whitespace-nowrap mr-3">
                           {displayPlayerNameShort({
                             first_name: r.firstName,
                             last_name: r.lastName,
@@ -167,24 +180,31 @@ function StandingsTable({
                       ))}
                     </div>
                   )}
+                  {!ranked && (
+                    <div className="mt-0.5 text-xs text-app-muted font-mono sm:hidden">
+                      {row.games} / {RANKED_MIN_GAMES} games
+                    </div>
+                  )}
                 </td>
-                <td
-                  className={`py-2.5 pr-2 text-right font-mono align-top ${
-                    ranked ? 'font-semibold text-app-text' : 'text-app-muted'
-                  }`}
-                >
-                  {formatWinPct(row.winPct)}
-                </td>
-                <td className="py-2.5 pr-2 text-right font-mono align-top">
-                  {row.wins}–{row.losses}
+                <td className="py-2.5 text-right align-top">
+                  <div
+                    className={`font-mono ${
+                      ranked ? 'font-semibold text-app-text' : 'text-app-muted'
+                    }`}
+                  >
+                    {formatWinPct(row.winPct)}
+                  </div>
+                  <div className="font-mono text-xs text-app-muted">
+                    {row.wins}–{row.losses}
+                  </div>
                 </td>
                 {!ranked && (
-                  <td className="py-2.5 pr-2 text-right font-mono align-top">
+                  <td className="py-2.5 pl-2 text-right font-mono align-top hidden sm:table-cell">
                     {row.games}
                     <span className="text-app-muted"> / {RANKED_MIN_GAMES}</span>
                   </td>
                 )}
-                <td className="py-2.5 text-right font-mono text-app-muted align-top">
+                <td className="py-2.5 pl-2 text-right font-mono text-app-muted align-top hidden sm:table-cell">
                   {hasRecentSession && playedLast ? `${row.lastWins}–${row.lastLosses}` : '–'}
                 </td>
               </tr>
