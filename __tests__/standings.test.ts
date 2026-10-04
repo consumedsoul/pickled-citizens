@@ -6,6 +6,7 @@ import {
   rankedPlayers,
   unrankedPlayers,
   rivalCloseness,
+  rivalScore,
   formatWinPct,
   type SessionGame,
 } from '../src/lib/standings';
@@ -143,7 +144,33 @@ describe('rivals', () => {
     });
   });
 
-  it('orders rivals closest to .500 first, more games breaking ties, and caps the list', () => {
+  it('ranks an even record over many games above an even record over few', () => {
+    // Hun's row: Jason 12-12, Jackson 2-2, Sharon 12-11. Plain closeness would
+    // put Jackson second; the margin of error puts him last.
+    const jason = { userId: 'jason', wins: 12, losses: 12, games: 24 };
+    const jackson = { userId: 'jackson', wins: 2, losses: 2, games: 4 };
+    const sharon = { userId: 'sharon', wins: 12, losses: 11, games: 23 };
+    expect(rivalScore(jason)).toBeCloseTo(0.204, 3);
+    expect(rivalScore(sharon)).toBeCloseTo(0.252, 3);
+    expect(rivalScore(jackson)).toBeCloseTo(0.5, 3);
+    const games: SessionGame[] = [];
+    // Alternate the rival's partner so no filler is across the net every game.
+    const pushSession = (rival: string, sessionId: string, wins: number, losses: number) => {
+      for (let i = 0; i < wins; i += 1) {
+        games.push(game(['a', 'x'], [rival, i % 2 ? 'y' : 'z'], 1, sessionId));
+      }
+      for (let i = 0; i < losses; i += 1) {
+        games.push(game(['a', 'x'], [rival, i % 2 ? 'y' : 'z'], 2, sessionId));
+      }
+    };
+    pushSession('jason', 'S1', 12, 12);
+    pushSession('jackson', 'S2', 2, 2);
+    pushSession('sharon', 'S3', 12, 11);
+    const s = computeStandings(games);
+    expect(row(s, 'a').rivals.map((r) => r.userId)).toEqual(['jason', 'sharon', 'jackson']);
+  });
+
+  it('orders rivals by closeness plus margin of error and caps the list', () => {
     const games: SessionGame[] = [
       // vs c: 2-2 (even)
       game(['a', 'x'], ['c', 'y'], 1, 'S1'),
@@ -168,6 +195,7 @@ describe('rivals', () => {
     const s = computeStandings(games);
     const rivals = row(s, 'a').rivals;
     expect(rivals).toHaveLength(RIVALS_SHOWN);
+    // c 2-2 → 0 + 0.50; f 3-2 → 0.20 + 0.45; e 2-1 → 0.33 + 0.58; d 3-0 → 1 + 0.58.
     expect(rivals.map((r) => r.userId)).toEqual(['c', 'f', 'e']);
     expect(rivalCloseness({ wins: 2, losses: 2, games: 4 })).toBe(0);
     expect(rivalCloseness({ wins: 3, losses: 0, games: 3 })).toBe(1);

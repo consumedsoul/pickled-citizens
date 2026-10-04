@@ -14,8 +14,9 @@
  *     the other team, so in a normal session you face the same opponent in
  *     every game you play. That opponent is your rival for the week. A rival
  *     record is the head-to-head across every session where the two of you
- *     were counterparts, and the closest records (nearest .500) are the most
- *     useful when forming teams, so they are listed first.
+ *     were counterparts, and the closest records (nearest .500, with more
+ *     games counting as stronger evidence) are the most useful when forming
+ *     teams, so they are listed first.
  *
  * An earlier Elo-style rating was retired on 2026-10-03 (see _delete/) because
  * sessions are skill-tiered and the pools never play each other, which left
@@ -94,9 +95,20 @@ export function rivalCloseness(r: { wins: number; losses: number; games: number 
   return Math.abs(r.wins - r.losses) / r.games;
 }
 
+/**
+ * Rival ordering score — lower lists first. Closeness to .500 plus a margin
+ * of error (1/√games, the usual margin for a win rate near 50%), so an even
+ * record over few games cannot claim to be as even as one over many:
+ * 2-2 scores 0.50, 12-12 scores 0.20, 12-11 scores 0.25.
+ */
+export function rivalScore(r: { wins: number; losses: number; games: number }): number {
+  if (r.games === 0) return Number.POSITIVE_INFINITY;
+  return rivalCloseness(r) + 1 / Math.sqrt(r.games);
+}
+
 export function compareRivals(a: RivalRecord, b: RivalRecord): number {
-  const ca = rivalCloseness(a);
-  const cb = rivalCloseness(b);
+  const ca = rivalScore(a);
+  const cb = rivalScore(b);
   if (ca !== cb) return ca - cb;
   if (b.games !== a.games) return b.games - a.games;
   return a.userId < b.userId ? -1 : a.userId > b.userId ? 1 : 0;

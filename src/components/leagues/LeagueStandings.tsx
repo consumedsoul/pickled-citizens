@@ -43,7 +43,8 @@ export function LeagueStandings({
       <p className="text-sm text-app-muted mt-2">
         Ranked by win percentage. Players join the board after {RANKED_MIN_GAMES} games. Under
         each name are their top {RIVALS_SHOWN} rivals: the player across the net from them in
-        every game of a session, with the head-to-head record, closest to even first.
+        every game of a session, with the head-to-head record. Closest to even lists first,
+        and more games count as stronger evidence, so a 12–12 beats a 2–2.
       </p>
 
       {loading && <p className="text-app-muted text-sm mt-4">Calculating rankings...</p>}
