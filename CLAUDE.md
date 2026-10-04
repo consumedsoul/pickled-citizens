@@ -114,7 +114,7 @@ src/
     actions/            # 'use server' actions called from client components
     constants.ts        # Shared constants (ADMIN_EMAIL, MAX_LEAGUES, GENDER_OPTIONS)
     formatters.ts       # Shared formatting utilities
-    standings.ts        # League board: win% at 10+ games, counterpart rivals — pure, derived from results
+    standings.ts        # League board: win% at 15+ games, counterpart rivals — pure, derived from results
     teamGeneration.ts   # Snaking team-balance algorithm (extracted for testability)
     hooks/useAuthUser.ts
 
@@ -152,7 +152,7 @@ D1 is SQLite. The schema is defined in TypeScript via Drizzle at `src/lib/db/sch
 - **D1 has no RLS.** Authorization is enforced in TypeScript, but **not uniformly at the query layer**. *Mutations* in `src/lib/db/queries/` take the caller's ID and check ownership/membership themselves. *Reads* (`getSessionById`, `listLeagues`, `listMembersOfLeague`, `listAllProfiles`, `listAdminEvents`, `listGuestsForSession`, `listMatchesForSession`, `listPlayersForMatches`) take **no caller ID and perform no check** — the calling server action or page owns the gate. Server actions are POST-reachable RPC endpoints; "the page only renders for members" is not a defense.
 - **All user-id columns are `text`** — Clerk user IDs are not UUIDs. No FKs to an `auth.users` table.
 - `player_count` on `game_sessions` is constrained to 6, 8, 10, or 12; `match_players.team` to 1 or 2.
-- **League standings are derived, not stored.** `src/lib/standings.ts` replays every scored game in a league (via `queries/league-standings.ts`) each time the league page loads. Players reach the ranked board at 10 games; the board is win percentage. A "rival" is the opponent you faced in every game of a session (the matchup generator's counterpart on the other team); rival records are head-to-head across sessions where you were counterparts, closest to .500 first. Fixing a score or deleting a session fixes the board; there is no weekly job. An Elo rating was tried and retired 2026-10-03 (`_delete/2026-10-03/`) because skill-tiered sessions never cross-play. `__tests__/standings.test.ts` pins the rules.
+- **League standings are derived, not stored.** `src/lib/standings.ts` replays every scored game in a league (via `queries/league-standings.ts`) each time the league page loads. Players reach the ranked board at 15 games; the board is win percentage. A "rival" is the opponent you faced in every game of a session (the matchup generator's counterpart on the other team); rival records are head-to-head across sessions where you were counterparts, closest to .500 first. Fixing a score or deleting a session fixes the board; there is no weekly job. An Elo rating was tried and retired 2026-10-03 (`_delete/2026-10-03/`) because skill-tiered sessions never cross-play. `__tests__/standings.test.ts` pins the rules.
 - **D1 `batch()` is not transactional** — statements run sequentially; partial failure is not rolled back. Multi-table mutations rely on idempotent re-runs.
 
 ### Super-Admin

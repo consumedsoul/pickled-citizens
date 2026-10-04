@@ -22,8 +22,8 @@
  * the rating unable to compare tiers.
  */
 
-/** Games needed to appear on the ranked board — about two sessions. */
-export const RANKED_MIN_GAMES = 10;
+/** Games needed to appear on the ranked board — about three sessions. */
+export const RANKED_MIN_GAMES = 15;
 /** How many rivals to show under each player. */
 export const RIVALS_SHOWN = 3;
 
