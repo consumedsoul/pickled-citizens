@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { ReleaseNotes } from '@/components/ReleaseNotes';
 import Image from 'next/image';
 import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/Button';
@@ -235,49 +236,7 @@ export default function HomePage() {
         </>
       )}
 
-      <div className="border-t border-app-border pt-8 pb-8">
-        <SectionLabel>v1.1.0 Release</SectionLabel>
-        <div className="mt-4">
-          <p className="text-sm font-medium text-app-text mb-2">Release highlights</p>
-          <ul className="pl-4 text-sm text-app-muted leading-relaxed space-y-1">
-            <li>
-              League rankings board on every league page, ranked by win percentage once a
-              player has 15 games; everyone else is listed below with their progress
-            </li>
-            <li>
-              Top 3 rivals under each player: the opponent across the net in every game of a
-              session, with the head-to-head record, closest matchups first
-            </li>
-            <li>Add one-off guest players to a session without a full account</li>
-            <li>Rankings read cleanly on a phone</li>
-          </ul>
-        </div>
-      </div>
-
-      <div className="border-t border-app-border pt-8 pb-8">
-        <SectionLabel>v1.0.0 Release</SectionLabel>
-        <div className="mt-4">
-          <p className="text-sm font-medium text-app-text mb-2">Release highlights</p>
-          <ul className="pl-4 text-sm text-app-muted leading-relaxed space-y-1">
-            <li>
-              Email signup using magic link or password, plus player name and self-assessed DUPR
-              rating
-            </li>
-            <li>Create and manage leagues, with a central view of all member details</li>
-            <li>
-              Schedule sessions for 6, 8, 10, or 12 players and auto-generate balanced doubles
-              matchups
-            </li>
-            <li>Record results and track both team and individual win-loss records over time</li>
-          </ul>
-          <p className="text-sm font-medium text-app-text mb-2 mt-6">Coming soon</p>
-          <ul className="pl-4 text-sm text-app-muted leading-relaxed space-y-1">
-            <li>Email notifications for players and league admins</li>
-            <li>League email invitation flow</li>
-            <li>Session-specific invitation flow</li>
-          </ul>
-        </div>
-      </div>
+      <ReleaseNotes />
 
       <div className="border-t border-app-border pt-8 pb-4 text-center">
         <a
