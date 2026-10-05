@@ -14,6 +14,7 @@ const RELEASES: Array<{ version: string; highlights: string[] }> = [
     highlights: [
       'Optional DUPR profile link on your profile and at signup, so your official rating can be checked against the self-reported one',
       'Ratings now show three decimals (3.750) to match dupr.com',
+      'Official DUPR ratings are read from linked dupr.com pages weekly and used for team balancing instead of the self-reported number',
     ],
   },
   {

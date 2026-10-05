@@ -14,6 +14,8 @@ export type AdminUserView = {
   lastName: string | null;
   selfReportedDupr: number | null;
   duprUrl: string | null;
+  duprRating: number | null;
+  duprSyncedAt: string | null;
   updatedAt: string | null;
   leagues: Array<{ id: string; name: string }>;
 };
@@ -56,6 +58,8 @@ export async function listAdminUsersAction(): Promise<AdminUserView[]> {
     lastName: p.lastName,
     selfReportedDupr: p.selfReportedDupr,
     duprUrl: p.duprUrl ?? null,
+    duprRating: p.duprRating ?? null,
+    duprSyncedAt: p.duprSyncedAt ?? null,
     updatedAt: p.updatedAt,
     leagues: userLeagues.get(p.id) ?? [],
   }));

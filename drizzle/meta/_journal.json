@@ -29,6 +29,13 @@
       "when": 1791219044691,
       "tag": "0003_add_profile_dupr_url",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1791221451764,
+      "tag": "0004_add_profile_dupr_rating",
+      "breakpoints": true
     }
   ]
 }

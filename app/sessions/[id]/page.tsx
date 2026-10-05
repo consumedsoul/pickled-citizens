@@ -6,7 +6,7 @@ import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Modal } from '@/components/ui/Modal';
-import { formatDupr } from '@/lib/dupr';
+import { effectiveDupr, formatDupr } from '@/lib/dupr';
 import { useDialogBehavior } from '@/components/ui/useDialogBehavior';
 import { displayPlayerName, displayPlayerNameShort } from '@/lib/formatters';
 import { ClientDateTime } from '@/components/ClientDateTime';
@@ -393,8 +393,7 @@ export default function SessionDetailPage() {
                 id: profile.id,
                 first_name: profile.firstName,
                 last_name: profile.lastName,
-                self_reported_dupr:
-                  profile.selfReportedDupr != null ? Number(profile.selfReportedDupr) : null,
+                self_reported_dupr: effectiveDupr(profile),
               };
             }
             return {

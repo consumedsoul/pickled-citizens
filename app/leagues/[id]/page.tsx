@@ -6,7 +6,7 @@ import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Modal } from '@/components/ui/Modal';
-import { formatDupr } from '@/lib/dupr';
+import { effectiveDupr, formatDupr } from '@/lib/dupr';
 import {
   getLeagueDetail,
   getLeagueStandingsAction,
@@ -127,8 +127,7 @@ export default function LeagueMembersPage() {
             email: m.email ?? profile?.email ?? null,
             firstName: profile?.firstName ?? null,
             lastName: profile?.lastName ?? null,
-            selfReportedDupr:
-              profile?.selfReportedDupr != null ? Number(profile.selfReportedDupr) : null,
+            selfReportedDupr: profile ? effectiveDupr(profile) : null,
             role: m.role,
           };
         });

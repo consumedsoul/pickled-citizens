@@ -22,6 +22,11 @@ export const profiles = sqliteTable('profiles', {
   gender: text('gender'),
   duprId: text('dupr_id'),
   duprUrl: text('dupr_url'),
+  // Official doubles rating read from the player's dupr.com page by the
+  // weekly DUPR sync, plus when it was last read. Balancing prefers this
+  // over self_reported_dupr when present. Self-reported is never overwritten.
+  duprRating: real('dupr_rating'),
+  duprSyncedAt: text('dupr_synced_at'),
   selfReportedDupr: real('self_reported_dupr'),
   displayName: text('display_name'),
   avatarUrl: text('avatar_url'),

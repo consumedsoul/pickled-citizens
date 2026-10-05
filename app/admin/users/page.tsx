@@ -324,6 +324,14 @@ export default function AdminUsersPage() {
                   </div>
                   <div className="text-xs text-app-muted mt-0.5">
                     DUPR:{' '}
+                    {user.duprRating != null ? (
+                      <>
+                        <span className="text-app-text">{formatDupr(user.duprRating)}</span>
+                        {' official'}
+                        {user.duprSyncedAt && <> (synced {formatDate(user.duprSyncedAt)})</>}
+                        {' · self '}
+                      </>
+                    ) : null}
                     {user.selfReportedDupr != null ? formatDupr(user.selfReportedDupr) : '—'}
                     {user.duprUrl && (
                       <>

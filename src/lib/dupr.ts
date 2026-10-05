@@ -17,6 +17,21 @@ export const DUPR_FORMAT_ERROR = 'DUPR must be a number like 3.750.';
 export const DUPR_URL_ERROR =
   'DUPR profile link must be a dupr.com address, e.g. ' + DUPR_URL_EXAMPLE;
 
+/**
+ * The rating the app balances and ranks with: the official dupr.com rating
+ * when the weekly sync has read one, otherwise what the player typed in.
+ */
+export function effectiveDupr(p: {
+  duprRating?: number | null;
+  selfReportedDupr?: number | null;
+}): number | null {
+  if (p.duprRating != null && Number.isFinite(Number(p.duprRating))) return Number(p.duprRating);
+  if (p.selfReportedDupr != null && Number.isFinite(Number(p.selfReportedDupr))) {
+    return Number(p.selfReportedDupr);
+  }
+  return null;
+}
+
 /** 3.5 → "3.500". */
 export function formatDupr(value: number): string {
   return value.toFixed(3);

@@ -1,5 +1,7 @@
 'use server';
 
+import { effectiveDupr } from '@/lib/dupr';
+
 import { revalidatePath } from 'next/cache';
 import { requireUserId, getCurrentEmail, AuthorizationError } from '@/lib/db/auth-helpers';
 import {
@@ -221,7 +223,7 @@ export async function addMemberByEmailAction(input: {
       email: profile.email,
       firstName: profile.firstName,
       lastName: profile.lastName,
-      selfReportedDupr: profile.selfReportedDupr,
+      selfReportedDupr: effectiveDupr(profile),
       role: 'player',
     },
   };

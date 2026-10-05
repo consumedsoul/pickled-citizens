@@ -53,3 +53,13 @@ describe('normalizeDuprUrl', () => {
     expect(() => normalizeDuprUrl('7667170290')).toThrow(/dupr\.com/);
   });
 });
+
+describe('effectiveDupr', () => {
+  it('prefers the synced official rating and falls back to self-reported', async () => {
+    const { effectiveDupr } = await import('@/lib/dupr');
+    expect(effectiveDupr({ duprRating: 3.512, selfReportedDupr: 3.0 })).toBe(3.512);
+    expect(effectiveDupr({ duprRating: null, selfReportedDupr: 3.0 })).toBe(3);
+    expect(effectiveDupr({ selfReportedDupr: 3.0 })).toBe(3);
+    expect(effectiveDupr({ duprRating: null, selfReportedDupr: null })).toBeNull();
+  });
+});

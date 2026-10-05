@@ -136,7 +136,7 @@ D1 is SQLite. The schema is defined in TypeScript via Drizzle at `src/lib/db/sch
 
 | Table | Purpose |
 |---|---|
-| `profiles` | User profile. `id` is the Clerk user ID (text). `dupr_url` is an optional link to the player's dupr.com page, validated by `src/lib/dupr.ts` (dupr.com hosts only). |
+| `profiles` | User profile. `id` is the Clerk user ID (text). `dupr_url` is an optional link to the player's dupr.com page, validated by `src/lib/dupr.ts` (dupr.com hosts only). `dupr_rating`/`dupr_synced_at` hold the official doubles rating written by the weekly DUPR sync (see `docs/dupr-sync.md`); `effectiveDupr()` prefers it over `self_reported_dupr` for balancing and display. Self-reported is never overwritten. |
 | `leagues` | League container with `owner_id` (Clerk user ID). |
 | `league_members` | League membership with `role` (player/admin). |
 | `game_sessions` | Session metadata (league, creator, scheduled time, player count). |

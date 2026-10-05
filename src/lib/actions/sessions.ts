@@ -1,5 +1,7 @@
 'use server';
 
+import { effectiveDupr } from '@/lib/dupr';
+
 import { revalidatePath } from 'next/cache';
 import { requireUserId, getCurrentEmail } from '@/lib/db/auth-helpers';
 import {
@@ -70,7 +72,8 @@ export async function getSessionDetail(sessionId: string) {
     id: p.id,
     firstName: p.firstName,
     lastName: p.lastName,
-    selfReportedDupr: p.selfReportedDupr,
+    // Effective rating: official dupr.com value when synced, else self-reported.
+    selfReportedDupr: effectiveDupr(p),
   }));
 
   let leagueName: string | null = null;
@@ -281,8 +284,7 @@ export async function listLeagueRosterAction(leagueId: string) {
       email: m.email ?? profile?.email ?? null,
       firstName: profile?.firstName ?? null,
       lastName: profile?.lastName ?? null,
-      selfReportedDupr:
-        profile?.selfReportedDupr != null ? Number(profile.selfReportedDupr) : null,
+      selfReportedDupr: profile ? effectiveDupr(profile) : null,
     };
   });
 }

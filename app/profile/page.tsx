@@ -53,6 +53,9 @@ export default function ProfilePage() {
   const [gender, setGender] = useState('');
   const [selfDupr, setSelfDupr] = useState('');
   const [duprUrl, setDuprUrl] = useState('');
+  const [official, setOfficial] = useState<{ rating: number; syncedAt: string | null } | null>(
+    null,
+  );
 
   const [leagues, setLeagues] = useState<LeagueRow[]>([]);
   const [leaveLeagueId, setLeaveLeagueId] = useState<string | null>(null);
@@ -85,6 +88,11 @@ export default function ProfilePage() {
             profile.selfReportedDupr != null ? formatDupr(profile.selfReportedDupr) : '',
           );
           setDuprUrl(profile.duprUrl ?? '');
+          setOfficial(
+            profile.duprRating != null
+              ? { rating: profile.duprRating, syncedAt: profile.duprSyncedAt ?? null }
+              : null,
+          );
         } else {
           setFirstName(userFirstName);
           setLastName(userLastName);
@@ -278,9 +286,15 @@ export default function ProfilePage() {
             placeholder={DUPR_URL_EXAMPLE}
           />
           <p className="text-app-muted text-xs mt-1.5">
-            Paste the address of your player page on dupr.com so your rating can be
-            kept in sync.
+            Paste the address of your player page on dupr.com. Your official rating is
+            read from it weekly and used for team balancing.
           </p>
+          {official && (
+            <p className="text-app-muted text-xs mt-1.5">
+              Official DUPR: <span className="text-app-text">{formatDupr(official.rating)}</span>
+              {official.syncedAt && <> (synced {new Date(official.syncedAt).toLocaleDateString()})</>}
+            </p>
+          )}
         </div>
 
         <div>
