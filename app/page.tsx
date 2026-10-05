@@ -236,6 +236,25 @@ export default function HomePage() {
       )}
 
       <div className="border-t border-app-border pt-8 pb-8">
+        <SectionLabel>v1.1.0 Release</SectionLabel>
+        <div className="mt-4">
+          <p className="text-sm font-medium text-app-text mb-2">Release highlights</p>
+          <ul className="pl-4 text-sm text-app-muted leading-relaxed space-y-1">
+            <li>
+              League rankings board on every league page, ranked by win percentage once a
+              player has 15 games; everyone else is listed below with their progress
+            </li>
+            <li>
+              Top 3 rivals under each player: the opponent across the net in every game of a
+              session, with the head-to-head record, closest matchups first
+            </li>
+            <li>Add one-off guest players to a session without a full account</li>
+            <li>Rankings read cleanly on a phone</li>
+          </ul>
+        </div>
+      </div>
+
+      <div className="border-t border-app-border pt-8 pb-8">
         <SectionLabel>v1.0.0 Release</SectionLabel>
         <div className="mt-4">
           <p className="text-sm font-medium text-app-text mb-2">Release highlights</p>
