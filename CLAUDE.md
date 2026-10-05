@@ -114,6 +114,7 @@ src/
     actions/            # 'use server' actions called from client components
     constants.ts        # Shared constants (ADMIN_EMAIL, MAX_LEAGUES, GENDER_OPTIONS)
     formatters.ts       # Shared formatting utilities
+    dupr.ts             # DUPR rating format (3 decimals), range/parse, and profile-link validation
     standings.ts        # League board: win% at 15+ games, counterpart rivals — pure, derived from results
     teamGeneration.ts   # Snaking team-balance algorithm (extracted for testability)
     hooks/useAuthUser.ts
@@ -135,7 +136,7 @@ D1 is SQLite. The schema is defined in TypeScript via Drizzle at `src/lib/db/sch
 
 | Table | Purpose |
 |---|---|
-| `profiles` | User profile. `id` is the Clerk user ID (text). |
+| `profiles` | User profile. `id` is the Clerk user ID (text). `dupr_url` is an optional link to the player's dupr.com page, validated by `src/lib/dupr.ts` (dupr.com hosts only). |
 | `leagues` | League container with `owner_id` (Clerk user ID). |
 | `league_members` | League membership with `role` (player/admin). |
 | `game_sessions` | Session metadata (league, creator, scheduled time, player count). |

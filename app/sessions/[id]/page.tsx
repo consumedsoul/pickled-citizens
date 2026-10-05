@@ -6,6 +6,7 @@ import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Modal } from '@/components/ui/Modal';
+import { formatDupr } from '@/lib/dupr';
 import { useDialogBehavior } from '@/components/ui/useDialogBehavior';
 import { displayPlayerName, displayPlayerNameShort } from '@/lib/formatters';
 import { ClientDateTime } from '@/components/ClientDateTime';
@@ -170,7 +171,7 @@ function PlayersPanel({
               {displayPlayerName(ps.player)}
               {ps.player.self_reported_dupr != null &&
                 !Number.isNaN(ps.player.self_reported_dupr) && (
-                  <> ({ps.player.self_reported_dupr.toFixed(2)})</>
+                  <> ({formatDupr(ps.player.self_reported_dupr)})</>
                 )}
             </div>
             <div

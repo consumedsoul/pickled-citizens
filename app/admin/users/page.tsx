@@ -5,12 +5,22 @@ import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Modal } from '@/components/ui/Modal';
 import { listAdminUsersAction, type AdminUserView } from '@/lib/actions/admin';
+import {
+  DUPR_FORMAT_ERROR,
+  DUPR_RANGE_ERROR,
+  DUPR_URL_EXAMPLE,
+  formatDupr,
+  isDuprInRange,
+  normalizeDuprUrl,
+  parseDuprInput,
+} from '@/lib/dupr';
 
 type EditState = {
   id: string;
   first_name: string;
   last_name: string;
   self_reported_dupr: string;
+  dupr_url: string;
 };
 
 export default function AdminUsersPage() {
@@ -53,7 +63,8 @@ export default function AdminUsersPage() {
       first_name: user.firstName ?? '',
       last_name: user.lastName ?? '',
       self_reported_dupr:
-        user.selfReportedDupr != null ? user.selfReportedDupr.toFixed(2) : '',
+        user.selfReportedDupr != null ? formatDupr(user.selfReportedDupr) : '',
+      dupr_url: user.duprUrl ?? '',
     });
   }
 
@@ -70,12 +81,23 @@ export default function AdminUsersPage() {
 
     let dupr: number | null = null;
     if (duprStr) {
-      const n = Number(duprStr);
-      if (Number.isNaN(n) || n < 1.0 || n > 8.5) {
-        setError('DUPR must be between 1.0 and 8.5.');
+      const n = parseDuprInput(duprStr);
+      if (n == null) {
+        setError(DUPR_FORMAT_ERROR);
+        return;
+      }
+      if (!isDuprInRange(n)) {
+        setError(DUPR_RANGE_ERROR);
         return;
       }
       dupr = n;
+    }
+    let duprUrl: string | null;
+    try {
+      duprUrl = normalizeDuprUrl(editing.dupr_url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Invalid DUPR profile link.');
+      return;
     }
 
     setSaving(true);
@@ -89,6 +111,7 @@ export default function AdminUsersPage() {
           first_name: first || null,
           last_name: last || null,
           self_reported_dupr: dupr,
+          dupr_url: duprUrl,
         }),
       });
       const json = (await response.json().catch(() => null)) as
@@ -103,6 +126,7 @@ export default function AdminUsersPage() {
                 firstName: first || null,
                 lastName: last || null,
                 selfReportedDupr: dupr,
+                duprUrl,
                 updatedAt: new Date().toISOString(),
               }
             : u,
@@ -149,9 +173,13 @@ export default function AdminUsersPage() {
     }
     let dupr: number | null = null;
     if (createDupr.trim()) {
-      const n = Number(createDupr.trim());
-      if (Number.isNaN(n) || n < 1.0 || n > 8.5) {
-        setError('DUPR must be between 1.0 and 8.5.');
+      const n = parseDuprInput(createDupr);
+      if (n == null) {
+        setError(DUPR_FORMAT_ERROR);
+        return;
+      }
+      if (!isDuprInRange(n)) {
+        setError(DUPR_RANGE_ERROR);
         return;
       }
       dupr = n;
@@ -247,7 +275,7 @@ export default function AdminUsersPage() {
               />
               <input
                 type="text"
-                placeholder="DUPR (1.0 - 8.5)"
+                placeholder="DUPR (1.000 - 8.500)"
                 value={createDupr}
                 onChange={(e) => setCreateDupr(e.target.value)}
                 className="w-full px-3 py-2 border border-app-border bg-transparent text-app-text text-sm focus:outline-none focus:border-app-text transition-colors"
@@ -296,9 +324,20 @@ export default function AdminUsersPage() {
                   </div>
                   <div className="text-xs text-app-muted mt-0.5">
                     DUPR:{' '}
-                    {user.selfReportedDupr != null
-                      ? user.selfReportedDupr.toFixed(2)
-                      : '—'}
+                    {user.selfReportedDupr != null ? formatDupr(user.selfReportedDupr) : '—'}
+                    {user.duprUrl && (
+                      <>
+                        {' · '}
+                        <a
+                          href={user.duprUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-app-text underline"
+                        >
+                          Open DUPR page ↗
+                        </a>
+                      </>
+                    )}
                   </div>
                   <div className="text-xs text-app-muted mt-0.5">
                     Leagues: {leaguesLabel}
@@ -335,13 +374,24 @@ export default function AdminUsersPage() {
                       />
                       <input
                         type="text"
-                        placeholder="DUPR (x.xx)"
+                        placeholder="DUPR (x.xxx)"
                         value={editing.self_reported_dupr}
                         onChange={(e) =>
                           setEditing((prev) =>
                             prev
                               ? { ...prev, self_reported_dupr: e.target.value }
                               : prev,
+                          )
+                        }
+                        className="w-full px-2 py-1.5 border border-app-border bg-transparent text-app-text text-xs focus:outline-none focus:border-app-text transition-colors"
+                      />
+                      <input
+                        type="url"
+                        placeholder={DUPR_URL_EXAMPLE}
+                        value={editing.dupr_url}
+                        onChange={(e) =>
+                          setEditing((prev) =>
+                            prev ? { ...prev, dupr_url: e.target.value } : prev,
                           )
                         }
                         className="w-full px-2 py-1.5 border border-app-border bg-transparent text-app-text text-xs focus:outline-none focus:border-app-text transition-colors"

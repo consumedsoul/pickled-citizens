@@ -59,10 +59,10 @@ export function GuestModal({
           onChange={(e) => onLastNameChange(e.target.value)}
         />
         <Input
-          label="DUPR (1.0–8.5)"
+          label="DUPR (1.000–8.500)"
           type="number"
           inputMode="decimal"
-          step="0.01"
+          step="0.001"
           min="1.0"
           max="8.5"
           value={dupr}

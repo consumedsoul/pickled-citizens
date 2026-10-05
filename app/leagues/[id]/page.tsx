@@ -6,6 +6,7 @@ import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Modal } from '@/components/ui/Modal';
+import { formatDupr } from '@/lib/dupr';
 import {
   getLeagueDetail,
   getLeagueStandingsAction,
@@ -296,7 +297,7 @@ export default function LeagueMembersPage() {
     const base = fullName || member.userId;
     if (member.selfReportedDupr != null) {
       const dupr = Number(member.selfReportedDupr);
-      if (!Number.isNaN(dupr)) return `${base} (${dupr.toFixed(2)})`;
+      if (!Number.isNaN(dupr)) return `${base} (${formatDupr(dupr)})`;
     }
     return base;
   }

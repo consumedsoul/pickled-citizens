@@ -11,6 +11,15 @@ import { Modal } from '@/components/ui/Modal';
 import { formatLeagueName } from '@/lib/formatters';
 import { GENDER_OPTIONS } from '@/lib/constants';
 import { getMyProfile, updateMyProfile } from '@/lib/actions/profile';
+import {
+  DUPR_FORMAT_ERROR,
+  DUPR_RANGE_ERROR,
+  DUPR_URL_EXAMPLE,
+  formatDupr,
+  isDuprInRange,
+  normalizeDuprUrl,
+  parseDuprInput,
+} from '@/lib/dupr';
 import { listMyLeagues, leaveLeagueAction } from '@/lib/actions/leagues';
 import { deleteMyAccount } from '@/lib/actions/account';
 
@@ -43,6 +52,7 @@ export default function ProfilePage() {
   const [lastName, setLastName] = useState('');
   const [gender, setGender] = useState('');
   const [selfDupr, setSelfDupr] = useState('');
+  const [duprUrl, setDuprUrl] = useState('');
 
   const [leagues, setLeagues] = useState<LeagueRow[]>([]);
   const [leaveLeagueId, setLeaveLeagueId] = useState<string | null>(null);
@@ -72,8 +82,9 @@ export default function ProfilePage() {
           setLastName(profile.lastName ?? userLastName);
           setGender(profile.gender ?? '');
           setSelfDupr(
-            profile.selfReportedDupr != null ? profile.selfReportedDupr.toFixed(2) : '',
+            profile.selfReportedDupr != null ? formatDupr(profile.selfReportedDupr) : '',
           );
+          setDuprUrl(profile.duprUrl ?? '');
         } else {
           setFirstName(userFirstName);
           setLastName(userLastName);
@@ -101,13 +112,20 @@ export default function ProfilePage() {
       setError('First name, last name, and gender are required.');
       return;
     }
-    if (!selfDupr.trim() || !/^\d{1,2}(\.\d{1,2})?$/.test(selfDupr.trim())) {
-      setError('Self-reported DUPR must be a number like 3.75.');
+    const selfDuprParsed = parseDuprInput(selfDupr);
+    if (selfDuprParsed == null) {
+      setError(DUPR_FORMAT_ERROR);
       return;
     }
-    const selfDuprParsed = Number(selfDupr.trim());
-    if (selfDuprParsed < 1.0 || selfDuprParsed > 8.5) {
-      setError('DUPR must be between 1.0 and 8.5.');
+    if (!isDuprInRange(selfDuprParsed)) {
+      setError(DUPR_RANGE_ERROR);
+      return;
+    }
+    let duprUrlNormalized: string | null;
+    try {
+      duprUrlNormalized = normalizeDuprUrl(duprUrl);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Invalid DUPR profile link.');
       return;
     }
 
@@ -118,7 +136,10 @@ export default function ProfilePage() {
         lastName: lastName.trim(),
         gender,
         selfReportedDupr: selfDuprParsed,
+        duprUrl: duprUrlNormalized,
       });
+      setDuprUrl(duprUrlNormalized ?? '');
+      setSelfDupr(formatDupr(selfDuprParsed));
       // Sync first/last name to Clerk so they show up everywhere.
       await user?.update({ firstName: firstName.trim(), lastName: lastName.trim() });
       setSuccess('Profile saved.');
@@ -231,7 +252,7 @@ export default function ProfilePage() {
             type="text"
             value={selfDupr}
             onChange={(e) => setSelfDupr(e.target.value)}
-            placeholder="e.g. 3.75"
+            placeholder="e.g. 3.750"
           />
           <p className="text-app-muted text-xs mt-1.5">
             Need help estimating your rating? See{' '}
@@ -244,6 +265,21 @@ export default function ProfilePage() {
               this guide
             </a>
             .
+          </p>
+        </div>
+
+        <div>
+          <Input
+            label="DUPR profile link (optional)"
+            type="url"
+            inputMode="url"
+            value={duprUrl}
+            onChange={(e) => setDuprUrl(e.target.value)}
+            placeholder={DUPR_URL_EXAMPLE}
+          />
+          <p className="text-app-muted text-xs mt-1.5">
+            Paste the address of your player page on dupr.com so your rating can be
+            kept in sync.
           </p>
         </div>
 

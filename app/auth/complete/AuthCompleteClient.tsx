@@ -7,6 +7,15 @@ import { completeMyProfile, getMyProfile } from '@/lib/actions/profile';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { GENDER_OPTIONS } from '@/lib/constants';
+import {
+  DUPR_FORMAT_ERROR,
+  DUPR_RANGE_ERROR,
+  DUPR_URL_EXAMPLE,
+  formatDupr,
+  isDuprInRange,
+  normalizeDuprUrl,
+  parseDuprInput,
+} from '@/lib/dupr';
 
 type Status = 'loading' | 'needs-fields' | 'saving' | 'success' | 'error';
 
@@ -19,6 +28,7 @@ export default function AuthCompleteClient() {
   const [message, setMessage] = useState<string | null>(null);
   const [gender, setGender] = useState('');
   const [selfDupr, setSelfDupr] = useState('');
+  const [duprUrl, setDuprUrl] = useState('');
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -38,7 +48,8 @@ export default function AuthCompleteClient() {
           return;
         }
         if (profile?.gender) setGender(profile.gender);
-        if (profile?.selfReportedDupr != null) setSelfDupr(String(profile.selfReportedDupr));
+        if (profile?.selfReportedDupr != null) setSelfDupr(formatDupr(profile.selfReportedDupr));
+        if (profile?.duprUrl) setDuprUrl(profile.duprUrl);
         setStatus('needs-fields');
       } catch (err) {
         if (!active) return;
@@ -58,15 +69,23 @@ export default function AuthCompleteClient() {
       setMessage('Gender is required.');
       return;
     }
-    if (!selfDupr.trim() || !/^\d{1,2}(\.\d{1,2})?$/.test(selfDupr.trim())) {
+    const dupr = parseDuprInput(selfDupr);
+    if (dupr == null) {
       setStatus('needs-fields');
-      setMessage('DUPR must look like 3.75.');
+      setMessage(DUPR_FORMAT_ERROR);
       return;
     }
-    const dupr = Number(selfDupr.trim());
-    if (dupr < 1.0 || dupr > 8.5) {
+    if (!isDuprInRange(dupr)) {
       setStatus('needs-fields');
-      setMessage('DUPR must be between 1.0 and 8.5.');
+      setMessage(DUPR_RANGE_ERROR);
+      return;
+    }
+    let duprUrlNormalized: string | null;
+    try {
+      duprUrlNormalized = normalizeDuprUrl(duprUrl);
+    } catch (err) {
+      setStatus('needs-fields');
+      setMessage(err instanceof Error ? err.message : 'Invalid DUPR profile link.');
       return;
     }
     setStatus('saving');
@@ -78,6 +97,7 @@ export default function AuthCompleteClient() {
         email: user?.primaryEmailAddress?.emailAddress ?? undefined,
         gender,
         selfReportedDupr: dupr,
+        duprUrl: duprUrlNormalized,
       });
       setStatus('success');
       setMessage('Profile complete. Redirecting...');
@@ -139,7 +159,7 @@ export default function AuthCompleteClient() {
             type="text"
             value={selfDupr}
             onChange={(e) => setSelfDupr(e.target.value)}
-            placeholder="e.g. 3.75"
+            placeholder="e.g. 3.750"
           />
           <p className="text-app-muted text-xs mt-1.5">
             Need help estimating?{' '}
@@ -152,6 +172,20 @@ export default function AuthCompleteClient() {
               See this guide
             </a>
             .
+          </p>
+        </div>
+
+        <div>
+          <Input
+            label="DUPR profile link (optional)"
+            type="url"
+            inputMode="url"
+            value={duprUrl}
+            onChange={(e) => setDuprUrl(e.target.value)}
+            placeholder={DUPR_URL_EXAMPLE}
+          />
+          <p className="text-app-muted text-xs mt-1.5">
+            Have a DUPR account? Paste the address of your player page on dupr.com.
           </p>
         </div>
 

@@ -3,6 +3,7 @@ import { createClerkClient } from '@clerk/backend';
 import { requireAdmin, AuthorizationError } from '@/lib/db/auth-helpers';
 import { upsertProfile, updateProfile } from '@/lib/db/queries/profiles';
 import { deleteUserAppData, logAdminEvent } from '@/lib/db/queries/admin';
+import { isDuprInRange, normalizeDuprUrl, DUPR_RANGE_ERROR, DUPR_URL_ERROR } from '@/lib/dupr';
 
 function clerk() {
   const secret = process.env.CLERK_SECRET_KEY;
@@ -25,13 +26,24 @@ function handleAuthError(err: unknown): NextResponse | null {
  */
 function parseDupr(value: unknown): number | null | undefined {
   if (value === null) return null;
-  if (typeof value !== 'number' || !Number.isFinite(value) || value < 1.0 || value > 8.5) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || !isDuprInRange(value)) {
     return undefined;
   }
   return value;
 }
 
-const DUPR_ERROR = 'DUPR must be between 1.0 and 8.5.';
+const DUPR_ERROR = DUPR_RANGE_ERROR;
+
+/** Same idea for the profile link: undefined when the value cannot be stored. */
+function parseDuprUrl(value: unknown): string | null | undefined {
+  if (value === null) return null;
+  if (typeof value !== 'string') return undefined;
+  try {
+    return normalizeDuprUrl(value);
+  } catch {
+    return undefined;
+  }
+}
 
 /** POST /api/admin/users — Create a new user (admin only). */
 export async function POST(request: NextRequest) {
@@ -95,6 +107,7 @@ export async function PATCH(request: NextRequest) {
       first_name?: string | null;
       last_name?: string | null;
       self_reported_dupr?: number | null;
+      dupr_url?: string | null;
     } | null;
 
     if (!body?.userId) {
@@ -110,6 +123,13 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: DUPR_ERROR }, { status: 400 });
       }
       patch.selfReportedDupr = dupr;
+    }
+    if (body.dupr_url !== undefined) {
+      const url = parseDuprUrl(body.dupr_url);
+      if (url === undefined) {
+        return NextResponse.json({ error: DUPR_URL_ERROR }, { status: 400 });
+      }
+      patch.duprUrl = url;
     }
 
     await updateProfile(body.userId, patch);

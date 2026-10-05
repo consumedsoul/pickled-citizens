@@ -21,6 +21,7 @@ export const profiles = sqliteTable('profiles', {
   lastName: text('last_name'),
   gender: text('gender'),
   duprId: text('dupr_id'),
+  duprUrl: text('dupr_url'),
   selfReportedDupr: real('self_reported_dupr'),
   displayName: text('display_name'),
   avatarUrl: text('avatar_url'),

@@ -36,6 +36,7 @@ export async function upsertProfile(profile: NewProfile): Promise<void> {
         lastName: profile.lastName,
         gender: profile.gender,
         duprId: profile.duprId,
+        duprUrl: profile.duprUrl,
         selfReportedDupr: profile.selfReportedDupr,
         displayName: profile.displayName,
         avatarUrl: profile.avatarUrl,

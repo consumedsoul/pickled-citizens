@@ -10,6 +10,13 @@ import { SectionLabel } from '@/components/ui/SectionLabel';
  */
 const RELEASES: Array<{ version: string; highlights: string[] }> = [
   {
+    version: 'v1.2.0',
+    highlights: [
+      'Optional DUPR profile link on your profile and at signup, so your official rating can be checked against the self-reported one',
+      'Ratings now show three decimals (3.750) to match dupr.com',
+    ],
+  },
+  {
     version: 'v1.1.0',
     highlights: [
       'League rankings board on every league page, ranked by win percentage once a player has 15 games; everyone else is listed below with their progress',

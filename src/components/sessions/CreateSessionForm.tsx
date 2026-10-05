@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { displayPlayerName } from '@/lib/formatters';
+import { formatDupr } from '@/lib/dupr';
 import { GuestModal } from '@/components/sessions/GuestModal';
 import {
   listLeagueRosterAction,
@@ -286,7 +287,7 @@ export function CreateSessionForm({ leagues, userId }: CreateSessionFormProps) {
     const suffix = member.is_guest ? ' (guest)' : '';
     if (member.self_reported_dupr != null) {
       const dupr = Number(member.self_reported_dupr);
-      if (!Number.isNaN(dupr)) return `${base} (${dupr.toFixed(2)})${suffix}`;
+      if (!Number.isNaN(dupr)) return `${base} (${formatDupr(dupr)})${suffix}`;
     }
     return `${base}${suffix}`;
   }

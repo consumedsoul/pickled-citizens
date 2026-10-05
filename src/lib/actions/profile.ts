@@ -9,6 +9,7 @@ import {
 } from '@/lib/db/queries/profiles';
 import { logAdminEvent } from '@/lib/db/queries/admin';
 import type { Profile } from '@/lib/db/schema';
+import { normalizeDuprUrl, isDuprInRange, DUPR_RANGE_ERROR } from '@/lib/dupr';
 
 export type ProfileFields = {
   firstName?: string | null;
@@ -16,6 +17,7 @@ export type ProfileFields = {
   gender?: string | null;
   selfReportedDupr?: number | null;
   duprId?: string | null;
+  duprUrl?: string | null;
   displayName?: string | null;
 };
 
@@ -52,6 +54,10 @@ export async function completeMyProfile(input: ProfileFields & {
     selfReportedDupr:
       input.selfReportedDupr ?? existing?.selfReportedDupr ?? null,
     duprId: input.duprId ?? existing?.duprId ?? null,
+    duprUrl:
+      input.duprUrl !== undefined
+        ? normalizeDuprUrl(input.duprUrl)
+        : existing?.duprUrl ?? null,
     displayName: input.displayName ?? existing?.displayName ?? null,
   });
   if (isNew) {
@@ -76,13 +82,14 @@ function sanitize(input: ProfileFields): ProfileFields {
       out.selfReportedDupr = null;
     } else {
       const n = Number(input.selfReportedDupr);
-      if (!Number.isFinite(n) || n < 1.0 || n > 8.5) {
-        throw new Error('DUPR must be between 1.0 and 8.5');
+      if (!Number.isFinite(n) || !isDuprInRange(n)) {
+        throw new Error(DUPR_RANGE_ERROR);
       }
       out.selfReportedDupr = n;
     }
   }
   if (input.duprId !== undefined) out.duprId = input.duprId?.trim() || null;
+  if (input.duprUrl !== undefined) out.duprUrl = normalizeDuprUrl(input.duprUrl);
   if (input.displayName !== undefined) out.displayName = input.displayName?.trim() || null;
   return out;
 }
