@@ -23,10 +23,10 @@ import { getProfilesByIds } from '@/lib/db/queries/profiles';
 import { getLeagueStandings } from '@/lib/db/queries/league-standings';
 import type { PlayerStanding, RivalRecord } from '@/lib/standings';
 
+/** Names only: the board renders first/last and never needs an address. */
 type Named = {
   firstName: string | null;
   lastName: string | null;
-  email: string | null;
 };
 
 export type RivalRow = RivalRecord & Named;
@@ -62,7 +62,6 @@ export async function getLeagueStandingsAction(leagueId: string): Promise<{
     return {
       firstName: profile?.firstName ?? null,
       lastName: profile?.lastName ?? null,
-      email: profile?.email ?? null,
     };
   };
   return {

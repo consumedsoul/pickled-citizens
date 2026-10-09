@@ -35,14 +35,16 @@ describe('normalizeDuprUrl', () => {
     expect(normalizeDuprUrl(undefined)).toBeNull();
   });
 
-  it('keeps a dupr.com player page and forces https', () => {
+  it('keeps a dupr.com player page, forcing https and the canonical host', () => {
     expect(normalizeDuprUrl('https://dashboard.dupr.com/dashboard/player/7667170290')).toBe(
       'https://dashboard.dupr.com/dashboard/player/7667170290',
     );
     expect(normalizeDuprUrl(' http://dashboard.dupr.com/dashboard/player/1 ')).toBe(
       'https://dashboard.dupr.com/dashboard/player/1',
     );
-    expect(normalizeDuprUrl('https://dupr.com/player/1')).toBe('https://dupr.com/player/1');
+    expect(normalizeDuprUrl('https://dupr.com/dashboard/player/1/?utm=x#top')).toBe(
+      'https://dashboard.dupr.com/dashboard/player/1',
+    );
   });
 
   it('rejects anything that is not a dupr.com address', () => {
@@ -51,6 +53,17 @@ describe('normalizeDuprUrl', () => {
     expect(() => normalizeDuprUrl('https://evil-dupr.com/x')).toThrow(/dupr\.com/);
     expect(() => normalizeDuprUrl('javascript:alert(1)')).toThrow(/dupr\.com/);
     expect(() => normalizeDuprUrl('7667170290')).toThrow(/dupr\.com/);
+  });
+
+  it('rejects dupr.com pages that are not a player page, since the sync opens every stored link', () => {
+    expect(() => normalizeDuprUrl('https://dupr.com/player/1')).toThrow(/player page/);
+    expect(() => normalizeDuprUrl('https://dashboard.dupr.com/dashboard/settings')).toThrow(
+      /player page/,
+    );
+    expect(() => normalizeDuprUrl('https://dashboard.dupr.com/dashboard/player/abc')).toThrow(
+      /player page/,
+    );
+    expect(() => normalizeDuprUrl('https://dashboard.dupr.com/logout')).toThrow(/player page/);
   });
 });
 
@@ -61,5 +74,17 @@ describe('effectiveDupr', () => {
     expect(effectiveDupr({ duprRating: null, selfReportedDupr: 3.0 })).toBe(3);
     expect(effectiveDupr({ selfReportedDupr: 3.0 })).toBe(3);
     expect(effectiveDupr({ duprRating: null, selfReportedDupr: null })).toBeNull();
+  });
+
+  it('ignores an official rating outside the DUPR scale, as if the sync had not run', async () => {
+    const { effectiveDupr } = await import('@/lib/dupr');
+    // The sync reads a rendered page; a misread (a club id, a percentage,
+    // a singles figure of 0) must not drive balancing.
+    expect(effectiveDupr({ duprRating: 0, selfReportedDupr: 3.25 })).toBe(3.25);
+    expect(effectiveDupr({ duprRating: 7667170290, selfReportedDupr: 3.25 })).toBe(3.25);
+    expect(effectiveDupr({ duprRating: 98, selfReportedDupr: null })).toBeNull();
+    expect(effectiveDupr({ duprRating: 8.5, selfReportedDupr: 3.25 })).toBe(8.5);
+    // Self-reported gets the same check: it has been stored unchecked before.
+    expect(effectiveDupr({ duprRating: null, selfReportedDupr: 0.5 })).toBeNull();
   });
 });

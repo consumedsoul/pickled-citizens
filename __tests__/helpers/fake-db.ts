@@ -35,10 +35,26 @@ export function makeDb(selectResults: Row[][]) {
 
   const batches: unknown[][] = [];
   const updates: number[] = [];
+  const inserts: unknown[] = [];
+
+  // `insert().values()` is both a batch op (an inert object) and, when
+  // awaited or followed by `.onConflictDoUpdate()`, a write that is recorded.
+  const insertChain = (v: unknown) => {
+    const op: Record<string, unknown> = { insert: v };
+    op.onConflictDoUpdate = () => {
+      inserts.push(v);
+      return Promise.resolve(undefined);
+    };
+    op.then = (resolve: (x: undefined) => unknown, reject: (e: unknown) => unknown) => {
+      inserts.push(v);
+      return Promise.resolve(undefined).then(resolve, reject);
+    };
+    return op;
+  };
 
   const db = {
     select: () => chainFor(selectResults[cursor++] ?? []),
-    insert: () => ({ values: (v: unknown) => ({ insert: v }) }),
+    insert: () => ({ values: insertChain }),
     update: () => ({
       set: () => ({
         where: () => {
@@ -59,7 +75,7 @@ export function makeDb(selectResults: Row[][]) {
     }),
   };
 
-  return { db, deleteCalls, batches, updates, selectsUsed: () => cursor };
+  return { db, deleteCalls, batches, updates, inserts, selectsUsed: () => cursor };
 }
 
 /** The stubbed `@/lib/db/client` module. `useDb` points its `getDbAsync` at a fresh harness. */

@@ -6,7 +6,7 @@ match results with lifetime statistics.
 
 **Live site:** [pickledcitizens.com](https://pickledcitizens.com)
 
-> _Last updated: 2026-10-02_
+> _Last updated: 2026-10-08_
 
 ---
 
@@ -15,8 +15,15 @@ match results with lifetime statistics.
 - **Leagues** — create leagues, add existing players by email, assign per-league admin roles.
   Sole-admin protection prevents a league from being orphaned; the owner can only leave by deleting the league.
 - **Game sessions** — schedule sessions for 6, 8, 10, or 12 players. The app sorts
-  players by self-reported DUPR and generates balanced doubles teams with a snaking
-  algorithm. Guest (non-member) players can be added to a single session.
+  players by DUPR (the official dupr.com rating when synced, otherwise self-reported)
+  and generates balanced doubles teams with a snaking algorithm. Guest (non-member)
+  players can be added to a single session.
+- **League rankings** — a per-league board derived from every scored game: win
+  percentage once a player has 15 games, plus "rivals", the counterpart across the
+  net in every game of a session, with the head-to-head record.
+- **Official DUPR** — a player links their dupr.com page; a weekly browser sync
+  reads the official doubles rating into the profile without overwriting the
+  self-reported one. See [`docs/dupr-sync.md`](docs/dupr-sync.md).
 - **Match tracking** — record per-match scores, view team and per-player win/loss
   records and lifetime statistics.
 - **Admin tools** — a single super-admin sees `/admin/events` (audit log),
@@ -50,7 +57,6 @@ app/                       Next.js App Router pages + API routes
   api/
     admin/users/           POST/PATCH/DELETE — admin user mgmt (Clerk + D1)
     clerkwebhook/          Clerk user lifecycle webhook (svix-verified)
-    dupr-score/            DUPR score stub (deferred until mydupr.com API)
   admin/                   Super-admin pages (events, users, leagues)
   auth/                    Clerk SignIn/SignUp + /auth/complete profile finisher
   leagues/, sessions/      League + session pages
@@ -64,9 +70,12 @@ src/
     db/queries/            Per-domain queries with explicit auth checks
     actions/               'use server' actions called from client components
     teamGeneration.ts      Snaking team-balance algorithm (unit-tested)
+    standings.ts           League board: win % + rivals, derived from results
+    dupr.ts                DUPR formatting, range and profile-link validation
 middleware.ts              Clerk middleware — CSP nonce + /admin gating
 drizzle/                   Drizzle-generated D1 migrations
-__tests__/                 Vitest tests (team generation, authorization, actions)
+__tests__/                 Vitest tests (team generation, authorization, standings, DUPR, actions, webhook)
+docs/dupr-sync.md          How the weekly official-DUPR sync runs
 ```
 
 Path alias: `@/*` maps to `./src/*`.

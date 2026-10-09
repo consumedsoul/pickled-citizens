@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Modal } from '@/components/ui/Modal';
-import { formatLeagueName } from '@/lib/formatters';
+import { formatLeagueName, parseDbTimestamp } from '@/lib/formatters';
 import { GENDER_OPTIONS } from '@/lib/constants';
 import { getMyProfile, updateMyProfile } from '@/lib/actions/profile';
 import {
@@ -292,7 +292,9 @@ export default function ProfilePage() {
           {official && (
             <p className="text-app-muted text-xs mt-1.5">
               Official DUPR: <span className="text-app-text">{formatDupr(official.rating)}</span>
-              {official.syncedAt && <> (synced {new Date(official.syncedAt).toLocaleDateString()})</>}
+              {parseDbTimestamp(official.syncedAt) && (
+                <> (synced {parseDbTimestamp(official.syncedAt)!.toLocaleDateString()})</>
+              )}
             </p>
           )}
         </div>

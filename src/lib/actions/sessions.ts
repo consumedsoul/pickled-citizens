@@ -1,6 +1,6 @@
 'use server';
 
-import { effectiveDupr } from '@/lib/dupr';
+import { effectiveDupr, isDuprInRange, DUPR_RANGE_ERROR } from '@/lib/dupr';
 
 import { revalidatePath } from 'next/cache';
 import { requireUserId, getCurrentEmail } from '@/lib/db/auth-helpers';
@@ -169,6 +169,13 @@ export async function createSessionWithTeamsAction(input: {
         throw new Error('Every player must be a member of this league');
       }
     }
+  }
+  // Guest ratings feed balancing and the session page like a member's, so
+  // they get the same range check as a profile DUPR, not just the browser's.
+  for (const g of input.guests) {
+    const n = Number(g.dupr);
+    if (!Number.isFinite(n) || !isDuprInRange(n)) throw new Error(DUPR_RANGE_ERROR);
+    if (!g.displayName?.trim()) throw new Error('Every guest needs a name');
   }
   const callerEmail = await getCurrentEmail();
 

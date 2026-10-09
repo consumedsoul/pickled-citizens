@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { requireUserId } from '@/lib/db/auth-helpers';
+import { requireUserId, getCurrentEmail } from '@/lib/db/auth-helpers';
 import {
   getProfileById,
   updateProfile,
@@ -38,33 +38,38 @@ export async function updateMyProfile(input: ProfileFields): Promise<{ ok: true 
  * Used by /auth/complete to populate the domain fields (gender, DUPR)
  * that Clerk doesn't capture during signup. The base profile row is created
  * by the Clerk webhook on user.created.
+ *
+ * The email is read from Clerk, never from the request: "add player by
+ * email" resolves `profiles.email`, so a caller-supplied address would let a
+ * signed-in user claim someone else's invitations. The other fields go
+ * through the same `sanitize()` as `updateMyProfile`, so an out-of-range DUPR
+ * is refused here too. The `email` key is still accepted for older clients
+ * but ignored.
  */
 export async function completeMyProfile(input: ProfileFields & {
   email?: string;
 }): Promise<{ ok: true; isNew: boolean }> {
   const userId = await requireUserId();
-  const existing = await getProfileById(userId);
+  const clean = sanitize(input);
+  const [existing, clerkEmail] = await Promise.all([getProfileById(userId), getCurrentEmail()]);
   const isNew = !existing;
+  const email = clerkEmail ?? existing?.email ?? null;
   await upsertProfile({
     id: userId,
-    email: input.email?.toLowerCase() ?? existing?.email ?? null,
-    firstName: input.firstName ?? existing?.firstName ?? null,
-    lastName: input.lastName ?? existing?.lastName ?? null,
-    gender: input.gender ?? existing?.gender ?? null,
-    selfReportedDupr:
-      input.selfReportedDupr ?? existing?.selfReportedDupr ?? null,
-    duprId: input.duprId ?? existing?.duprId ?? null,
-    duprUrl:
-      input.duprUrl !== undefined
-        ? normalizeDuprUrl(input.duprUrl)
-        : existing?.duprUrl ?? null,
-    displayName: input.displayName ?? existing?.displayName ?? null,
+    email,
+    firstName: clean.firstName ?? existing?.firstName ?? null,
+    lastName: clean.lastName ?? existing?.lastName ?? null,
+    gender: clean.gender ?? existing?.gender ?? null,
+    selfReportedDupr: clean.selfReportedDupr ?? existing?.selfReportedDupr ?? null,
+    duprId: clean.duprId ?? existing?.duprId ?? null,
+    duprUrl: clean.duprUrl !== undefined ? clean.duprUrl : existing?.duprUrl ?? null,
+    displayName: clean.displayName ?? existing?.displayName ?? null,
   });
   if (isNew) {
     await logAdminEvent({
       eventType: 'user.signup',
       userId,
-      userEmail: input.email?.toLowerCase() ?? null,
+      userEmail: email,
       payload: { source: 'auth_complete' },
     });
   }

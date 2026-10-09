@@ -54,9 +54,42 @@ describe('listSessionGamesForLeague', () => {
       team2Score: 0,
     });
     // Session time leads; completion time only breaks ties within a session.
-    expect(games[0].playedAt).toBe('2026-09-01T18:00:00Z|2026-09-01T18:30:00Z');
-    expect(games[1].playedAt).toBe('2026-09-08T00:00:00Z|');
+    expect(games[0].playedAt).toBe('2026-09-01T18:00|2026-09-01T18:30');
+    expect(games[1].playedAt).toBe('2026-09-08T00:00|');
     expect(h.selectsUsed()).toBe(4);
+  });
+
+  it('orders a dated session and an undated one on the same day by one timestamp shape', async () => {
+    const { listSessionGamesForLeague } = await import('@/lib/db/queries/league-standings');
+    const { compareGames } = await import('@/lib/standings');
+    useDb([
+      [
+        // datetime-local text from the session form
+        { id: 'late', scheduledFor: '2026-10-03T19:00', createdAt: '2026-09-30T00:00:00.000Z' },
+        // no date: falls back to an ISO instant written by the app
+        { id: 'early', scheduledFor: null, createdAt: '2026-10-03T09:15:00.000Z' },
+        // no date: falls back to SQLite's own default text
+        { id: 'mid', scheduledFor: null, createdAt: '2026-10-03 12:00:00' },
+      ],
+      [
+        { id: 'M1', sessionId: 'late', scheduledOrder: 1 },
+        { id: 'M2', sessionId: 'early', scheduledOrder: 1 },
+        { id: 'M3', sessionId: 'mid', scheduledOrder: 1 },
+      ],
+      [
+        { matchId: 'M1', team1Score: 1, team2Score: 0, completedAt: '2026-10-03 19:40:00' },
+        { matchId: 'M2', team1Score: 1, team2Score: 0, completedAt: null },
+        { matchId: 'M3', team1Score: 1, team2Score: 0, completedAt: null },
+      ],
+      [],
+    ]);
+    const games = await listSessionGamesForLeague('L1');
+    expect(games.map((g) => g.playedAt)).toEqual([
+      '2026-10-03T19:00|2026-10-03T19:40',
+      '2026-10-03T09:15|',
+      '2026-10-03T12:00|',
+    ]);
+    expect([...games].sort(compareGames).map((g) => g.sessionId)).toEqual(['early', 'mid', 'late']);
   });
 
   it('short-circuits a league with no sessions or no matches', async () => {

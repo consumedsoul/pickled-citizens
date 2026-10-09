@@ -3,6 +3,7 @@ import { getDbAsync } from '../client';
 import { chunkedInArray } from '../chunk';
 import { gameSessions, matches, matchPlayers, matchResults } from '../schema';
 import { computeStandings, type SessionGame, type Standings } from '@/lib/standings';
+import { sortableTimestamp } from '@/lib/formatters';
 
 /**
  * Read path for the league board. `leagueId` is the subject, not a gate: the
@@ -24,8 +25,11 @@ export async function listSessionGamesForLeague(leagueId: string): Promise<Sessi
     .from(gameSessions)
     .where(eq(gameSessions.leagueId, leagueId));
   if (sessions.length === 0) return [];
+  // scheduledFor is wall-clock text from a datetime-local input; createdAt is
+  // an ISO instant. Both are reduced to one shape so string order holds when a
+  // session without a date falls back to its creation time.
   const sessionTime = new Map(
-    sessions.map((s) => [s.id, s.scheduledFor ?? s.createdAt ?? '']),
+    sessions.map((s) => [s.id, sortableTimestamp(s.scheduledFor ?? s.createdAt)]),
   );
 
   const matchRows = await chunkedInArray(Array.from(sessionTime.keys()), (chunk) =>
@@ -80,7 +84,7 @@ export async function listSessionGamesForLeague(leagueId: string): Promise<Sessi
       sessionId: m.sessionId,
       // Session time first so a score typed in late still lands in its week;
       // completedAt only breaks ties inside one session.
-      playedAt: `${sessionTime.get(m.sessionId) ?? ''}|${r.completedAt ?? ''}`,
+      playedAt: `${sessionTime.get(m.sessionId) ?? ''}|${sortableTimestamp(r.completedAt)}`,
       order: m.scheduledOrder ?? 0,
       team1,
       team2,

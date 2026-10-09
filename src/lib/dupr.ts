@@ -15,21 +15,30 @@ export const DUPR_URL_EXAMPLE = 'https://dashboard.dupr.com/dashboard/player/766
 export const DUPR_RANGE_ERROR = 'DUPR must be between 1.000 and 8.500.';
 export const DUPR_FORMAT_ERROR = 'DUPR must be a number like 3.750.';
 export const DUPR_URL_ERROR =
-  'DUPR profile link must be a dupr.com address, e.g. ' + DUPR_URL_EXAMPLE;
+  'DUPR profile link must be a dupr.com player page, e.g. ' + DUPR_URL_EXAMPLE;
+
+/** A usable rating: a finite number inside the DUPR scale. */
+function usableRating(value: number | null | undefined): number | null {
+  if (value == null) return null;
+  const n = Number(value);
+  return Number.isFinite(n) && isDuprInRange(n) ? n : null;
+}
 
 /**
  * The rating the app balances and ranks with: the official dupr.com rating
  * when the weekly sync has read one, otherwise what the player typed in.
+ *
+ * Both values are range-checked here, not only at write time. The official
+ * rating is written by a browser agent reading a rendered page (see
+ * docs/dupr-sync.md), so a misread number must not silently reorder every
+ * session the player is in; an out-of-range official rating falls back to
+ * the self-reported one as if the sync had never run.
  */
 export function effectiveDupr(p: {
   duprRating?: number | null;
   selfReportedDupr?: number | null;
 }): number | null {
-  if (p.duprRating != null && Number.isFinite(Number(p.duprRating))) return Number(p.duprRating);
-  if (p.selfReportedDupr != null && Number.isFinite(Number(p.selfReportedDupr))) {
-    return Number(p.selfReportedDupr);
-  }
-  return null;
+  return usableRating(p.duprRating) ?? usableRating(p.selfReportedDupr);
 }
 
 /** 3.5 → "3.500". */
@@ -52,8 +61,13 @@ export function isDuprInRange(n: number): boolean {
 
 /**
  * Normalises a pasted DUPR profile link. Empty input means "no link" (null).
- * Anything that is not an http(s) address on dupr.com is rejected so the
- * admin page never renders a link to an arbitrary site.
+ *
+ * Only a player page (`/dashboard/player/<digits>`) on dupr.com is accepted,
+ * and it is rewritten to the canonical form. The weekly sync opens every
+ * stored link in a logged-in browser, so this is what keeps a stored link from
+ * being an arbitrary dupr.com page (settings, sign-out) or another site. It
+ * does not stop a player linking someone else's page; the sync compares the
+ * page's player name with the profile name for that.
  */
 export function normalizeDuprUrl(input: string | null | undefined): string | null {
   const trimmed = (input ?? '').trim();
@@ -66,9 +80,9 @@ export function normalizeDuprUrl(input: string | null | undefined): string | nul
   }
   const host = url.hostname.toLowerCase();
   const onDupr = host === 'dupr.com' || host.endsWith('.dupr.com');
-  if ((url.protocol !== 'https:' && url.protocol !== 'http:') || !onDupr) {
+  const player = url.pathname.match(/^\/dashboard\/player\/(\d+)\/?$/);
+  if ((url.protocol !== 'https:' && url.protocol !== 'http:') || !onDupr || !player) {
     throw new Error(DUPR_URL_ERROR);
   }
-  url.protocol = 'https:';
-  return url.toString();
+  return `https://dashboard.dupr.com/dashboard/player/${player[1]}`;
 }

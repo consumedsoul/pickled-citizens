@@ -89,7 +89,6 @@ app/                    # Next.js App Router pages & API routes
   api/
     admin/users/        # POST/PATCH/DELETE — admin user mgmt (Clerk + D1)
     clerkwebhook/       # Clerk lifecycle webhook (svix-verified)
-    dupr-score/         # DUPR score stub
   admin/                # Super-admin pages (events, users, leagues)
   auth/                 # Clerk SignIn/SignUp + /auth/complete profile finisher
   leagues/[id]/         # League detail page
@@ -123,7 +122,7 @@ middleware.ts           # clerkMiddleware — CSP nonce + admin gating
 drizzle/                # Drizzle-generated D1 migrations (apply via wrangler)
 scripts/                # write-pages-worker.mjs
 __tests__/              # Vitest: team generation, authorization, user sessions/leagues, actions, pages worker
-docs/                   # prd.md + AUDITS.md (pointer to the external audit trail)
+docs/                   # prd.md, dupr-sync.md (the weekly dupr.com rating sync), AUDITS.md (pointer to the external audit trail)
 ```
 
 Path alias: `@/*` maps to `./src/*`.
@@ -148,7 +147,7 @@ D1 is SQLite. The schema is defined in TypeScript via Drizzle at `src/lib/db/sch
 
 ### Important Details
 
-- **Authorization is tested.** `__tests__/authorization.test.ts` covers `isLeagueMember`, `canManageSession`, `canViewSession`, `clearMatchResult`, `removeMember` (sole-admin and owner guards), `updateMemberRole` (owner and last-admin guards), `createLeague`/`updateLeague` (3-league cap, unique name), `addGuests`, `listLeagueMemberIds` and `chunkedInArray`'s 90-param boundary. `__tests__/user-sessions.test.ts` covers the shared owned-or-played session pipeline. Both stub `getDbAsync` only via `__tests__/helpers/fake-db.ts` — no database needed. Add a case when you add a rule.
+- **Authorization is tested.** `__tests__/authorization.test.ts` covers `isLeagueMember`, `canManageSession`, `canViewSession`, `clearMatchResult`, `removeMember` (sole-admin and owner guards), `updateMemberRole` (owner and last-admin guards), `createLeague`/`updateLeague` (3-league cap, unique name), `addGuests`, `listLeagueMemberIds` and `chunkedInArray`'s 90-param boundary. `__tests__/user-sessions.test.ts` covers the shared owned-or-played session pipeline. `__tests__/actions.test.ts` covers the server-action layer: session detail shape, non-member refusals, `completeMyProfile` taking its email from Clerk rather than the request, and guest DUPR range checks. `__tests__/clerk-webhook.test.ts` pins the svix signature gate. All stub `getDbAsync` only via `__tests__/helpers/fake-db.ts` — no database needed. Add a case when you add a rule.
 - **League ownership beats the role row.** `leagues.owner_id` is the source of truth for owner powers (`isLeagueAdmin`/`isLeagueMember` short-circuit on it), so the 3-league cap counts owned leagues, the owner's role cannot be changed, and the owner cannot leave or be removed — only delete the league. There is no ownership transfer yet.
 - **D1 has no RLS.** Authorization is enforced in TypeScript, but **not uniformly at the query layer**. *Mutations* in `src/lib/db/queries/` take the caller's ID and check ownership/membership themselves. *Reads* (`getSessionById`, `listLeagues`, `listMembersOfLeague`, `listAllProfiles`, `listAdminEvents`, `listGuestsForSession`, `listMatchesForSession`, `listPlayersForMatches`) take **no caller ID and perform no check** — the calling server action or page owns the gate. Server actions are POST-reachable RPC endpoints; "the page only renders for members" is not a defense.
 - **All user-id columns are `text`** — Clerk user IDs are not UUIDs. No FKs to an `auth.users` table.
@@ -169,13 +168,14 @@ Email `hun@ghkim.com` is the super-admin. Referenced in `src/lib/constants.ts` (
 
 ## Data Access Pattern
 
+**The server derives identity fields; the client never supplies them.** Email, owner and creator IDs, and timestamps come from Clerk or the clock inside the action, not from the request body (`completeMyProfile` is the template). Numbers that feed balancing (member and guest DUPR) are range-checked in the action, and `effectiveDupr()` re-checks the synced official rating because its writer is a browser agent outside this repo.
+
 D1 is server-only. Client components must NOT import from `@/lib/db`; they call **server actions** under `src/lib/actions/` which compose query-module calls and add auth checks.
 
 ## API Routes
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/api/dupr-score` | Stub — returns `{ score: null }`. Awaits mydupr.com integration |
 | POST/PATCH/DELETE | `/api/admin/users` | Admin-only Clerk user + profile management. |
 | POST | `/api/clerkwebhook` | Svix-verified. user.created/updated/deleted lifecycle hooks. |
 
@@ -183,7 +183,9 @@ Session OG/Twitter tags are built in `app/sessions/[id]/layout.tsx` `generateMet
 not by an API route. There is deliberately no public session-data endpoint — the old
 `/api/session/[id]/metadata` and `/api/og` routes were unauthenticated, uncalled, and
 retired to `_delete/2026-09-18/`; the uncalled `/api/leagues/leave` route
-followed on 2026-10-02 (leaving goes through `leaveLeagueAction`).
+followed on 2026-10-02 (leaving goes through `leaveLeagueAction`), and the
+uncalled `/api/dupr-score` stub on 2026-10-08 (official ratings arrive via the
+browser sync in `docs/dupr-sync.md`, not an API).
 
 ## Known Gotchas
 

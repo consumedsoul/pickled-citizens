@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
+import { parseDbTimestamp } from '@/lib/formatters';
 import type { AdminEventOut } from '@/lib/db/queries/admin';
 
 type Props = {
@@ -97,7 +98,7 @@ export default function AdminEventsClient({
         <>
           <div className="divide-y divide-app-border">
             {events.map((event) => {
-              const created = event.createdAt ? new Date(event.createdAt) : null;
+              const created = parseDbTimestamp(event.createdAt);
               const timestamp = created ? created.toLocaleString() : '';
               const parts: string[] = [event.eventType];
               if (event.userEmail) parts.push(`by ${event.userEmail}`);

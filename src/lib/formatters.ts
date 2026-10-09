@@ -10,12 +10,39 @@
 // ---------------------------------------------------------------------------
 
 /**
+ * SQLite's `datetime('now')` writes "2026-10-03 19:00:00": UTC, but with no
+ * "T" or "Z", so `new Date()` reads it as local time in Chrome and as an
+ * invalid date in some Safari versions. Rewrite that shape as ISO UTC and
+ * leave every other string alone.
+ */
+export function normalizeDbTimestamp(value: string): string {
+  const m = value.match(/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})$/);
+  return m ? `${m[1]}T${m[2]}Z` : value;
+}
+
+/** `new Date()` for a column that may hold SQLite or ISO text; null when invalid. */
+export function parseDbTimestamp(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const d = new Date(normalizeDbTimestamp(value));
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/**
+ * One shape for string comparison: "YYYY-MM-DDTHH:MM". Accepts datetime-local
+ * text ("2026-10-03T19:00"), ISO instants and SQLite text; "" when empty.
+ */
+export function sortableTimestamp(value: string | null | undefined): string {
+  if (!value) return "";
+  return normalizeDbTimestamp(value).replace(" ", "T").slice(0, 16);
+}
+
+/**
  * Format an ISO date string into a human-readable locale string.
  * Returns "Not scheduled" when the value is null / undefined / invalid.
  */
 export function formatDateTime(value: string | null | undefined): string {
   if (!value) return "Not scheduled";
-  const d = new Date(value);
+  const d = new Date(normalizeDbTimestamp(value));
   if (Number.isNaN(d.getTime())) return "Not scheduled";
   return d.toLocaleString(undefined, {
     weekday: "long",

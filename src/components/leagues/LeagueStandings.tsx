@@ -146,7 +146,6 @@ function StandingsTable({
             const name = displayPlayerName({
               first_name: row.firstName,
               last_name: row.lastName,
-              email: row.email,
             });
             const playedLast = row.lastWins + row.lastLosses > 0;
             return (
@@ -172,7 +171,6 @@ function StandingsTable({
                           {displayPlayerNameShort({
                             first_name: r.firstName,
                             last_name: r.lastName,
-                            email: r.email,
                           })}{' '}
                           <span className="font-mono text-app-text">
                             {r.wins}–{r.losses}

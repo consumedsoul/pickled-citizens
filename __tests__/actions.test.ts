@@ -102,6 +102,67 @@ describe('getSessionDetail', () => {
   });
 });
 
+describe('completeMyProfile', () => {
+  it('stores the Clerk email, not the one in the request, and sanitises the rest', async () => {
+    await signInAs('newbie');
+    const { completeMyProfile } = await import('@/lib/actions/profile');
+    const { logAdminEvent } = await import('@/lib/db/queries/admin');
+    const h = useDb([[]]); // no profile row yet
+    const result = await completeMyProfile({
+      email: 'victim@example.com',
+      firstName: '  Pat ',
+      gender: 'f',
+      selfReportedDupr: 3.5,
+      duprUrl: 'http://dupr.com/dashboard/player/42/',
+    });
+    expect(result).toEqual({ ok: true, isNew: true });
+    expect(h.inserts).toHaveLength(1);
+    expect(h.inserts[0]).toMatchObject({
+      id: 'newbie',
+      email: 'caller@example.com',
+      firstName: 'Pat',
+      gender: 'f',
+      selfReportedDupr: 3.5,
+      duprUrl: 'https://dashboard.dupr.com/dashboard/player/42',
+    });
+    expect(JSON.stringify(h.inserts[0])).not.toContain('victim');
+    expect(vi.mocked(logAdminEvent).mock.calls[0][0]).toMatchObject({
+      eventType: 'user.signup',
+      userEmail: 'caller@example.com',
+    });
+  });
+
+  it('keeps the existing email when Clerk has none, and does not log a second signup', async () => {
+    await signInAs('returning');
+    const { completeMyProfile } = await import('@/lib/actions/profile');
+    const { getCurrentEmail } = await import('@/lib/db/auth-helpers');
+    const { logAdminEvent } = await import('@/lib/db/queries/admin');
+    vi.mocked(getCurrentEmail).mockResolvedValueOnce(null);
+    const h = useDb([[{ id: 'returning', email: 'kept@example.com', firstName: 'Old', gender: 'm' }]]);
+    const result = await completeMyProfile({ email: 'victim@example.com', selfReportedDupr: 4 });
+    expect(result).toEqual({ ok: true, isNew: false });
+    expect(h.inserts[0]).toMatchObject({
+      email: 'kept@example.com',
+      firstName: 'Old',
+      gender: 'm',
+      selfReportedDupr: 4,
+    });
+    expect(logAdminEvent).not.toHaveBeenCalled();
+  });
+
+  it('refuses an out-of-range DUPR before reading or writing anything', async () => {
+    await signInAs('newbie');
+    const { completeMyProfile } = await import('@/lib/actions/profile');
+    const h = useDb([[]]);
+    await expect(completeMyProfile({ selfReportedDupr: 99 })).rejects.toThrow(/1\.000 and 8\.500/);
+    await expect(
+      completeMyProfile({ selfReportedDupr: 'abc' as unknown as number }),
+    ).rejects.toThrow(/1\.000 and 8\.500/);
+    expect(h.selectsUsed()).toBe(0);
+    expect(h.inserts).toEqual([]);
+  });
+});
+
 describe('createSessionWithTeamsAction', () => {
   const input = {
     leagueId: 'L1',
@@ -133,6 +194,35 @@ describe('createSessionWithTeamsAction', () => {
     );
     expect(h.selectsUsed()).toBe(4);
     expect(h.batches).toEqual([]);
+  });
+
+  it('refuses a guest DUPR outside the scale before creating anything', async () => {
+    await signInAs('caller');
+    const { createSessionWithTeamsAction } = await import('@/lib/actions/sessions');
+    const h = useDb([
+      [league],
+      [{ userId: 'caller' }],
+      [league],
+      [{ userId: 'caller' }],
+    ]);
+    await expect(
+      createSessionWithTeamsAction({
+        ...input,
+        guests: [{ syntheticId: 'g1', displayName: 'Ringer', dupr: 42 }],
+        matches: [
+          {
+            scheduledOrder: 0,
+            players: [
+              { userId: 'caller', team: 1 as const, position: 0 as const },
+              { syntheticId: 'g1', team: 2 as const, position: 0 as const },
+            ],
+          },
+        ],
+      }),
+    ).rejects.toThrow(/1\.000 and 8\.500/);
+    expect(h.selectsUsed()).toBe(4);
+    expect(h.batches).toEqual([]);
+    expect(h.inserts).toEqual([]);
   });
 
   it('refuses a caller who is not in the league at all', async () => {

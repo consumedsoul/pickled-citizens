@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, FormEvent } from 'react';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Modal } from '@/components/ui/Modal';
+import { parseDbTimestamp } from '@/lib/formatters';
 import { listAdminUsersAction, type AdminUserView } from '@/lib/actions/admin';
 import {
   DUPR_FORMAT_ERROR,
@@ -215,10 +216,8 @@ export default function AdminUsersPage() {
   }
 
   function formatDate(value: string | null) {
-    if (!value) return '—';
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return '—';
-    return d.toLocaleString();
+    // dupr_synced_at is SQLite text (no zone marker); the rest is ISO.
+    return parseDbTimestamp(value)?.toLocaleString() ?? '—';
   }
 
   function displayName(user: AdminUserView) {

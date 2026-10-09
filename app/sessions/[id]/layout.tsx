@@ -1,14 +1,15 @@
 import { Metadata } from 'next';
 import { getSessionById } from '@/lib/db/queries/sessions';
 import { getLeagueById } from '@/lib/db/queries/leagues';
+import { parseDbTimestamp } from '@/lib/formatters';
 
 const DISPLAY_TIMEZONE = process.env.DISPLAY_TIMEZONE || 'America/Los_Angeles';
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pickledcitizens.com';
 
 const formatDateTimeForTitle = (value: string | null) => {
   if (!value) return 'Not scheduled';
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return 'Not scheduled';
+  const d = parseDbTimestamp(value);
+  if (!d) return 'Not scheduled';
   return d
     .toLocaleString('en-US', {
       weekday: 'short',
