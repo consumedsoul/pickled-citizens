@@ -93,4 +93,28 @@ describe('POST /api/clerkwebhook', () => {
       expect.objectContaining({ eventType: 'user.signup', userId: 'user_1' }),
     );
   });
+
+  it('leaves the stored name alone when Clerk has none (admin-created accounts)', async () => {
+    verify.mockReturnValue({
+      type: 'user.created',
+      data: {
+        id: 'user_2',
+        primary_email_address_id: 'em_1',
+        email_addresses: [{ id: 'em_1', email_address: 'jordan@example.com' }],
+        first_name: null,
+        last_name: '',
+        image_url: null,
+      },
+    });
+    const { POST } = await import('@/../app/api/clerkwebhook/route');
+    const { upsertProfile } = await import('@/lib/db/queries/profiles');
+    const res = await POST(signed('{}'));
+    expect(res.status).toBe(200);
+    const arg = vi.mocked(upsertProfile).mock.calls[0][0];
+    expect(arg.email).toBe('jordan@example.com');
+    // undefined, not null: an undefined field is skipped by the upsert, so the
+    // name the admin typed a moment earlier survives this event.
+    expect(arg.firstName).toBeUndefined();
+    expect(arg.lastName).toBeUndefined();
+  });
 });

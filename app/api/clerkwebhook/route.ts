@@ -56,11 +56,14 @@ export async function POST(request: Request) {
         u.email_addresses[0]?.email_address ??
         null;
 
+      // A name Clerk does not have is left alone (undefined = not written),
+      // not nulled: admin-created accounts get their name from the create
+      // form, and this event used to land right after and blank it out.
       await upsertProfile({
         id: u.id,
         email: primaryEmail?.toLowerCase() ?? null,
-        firstName: u.first_name ?? null,
-        lastName: u.last_name ?? null,
+        firstName: u.first_name || undefined,
+        lastName: u.last_name || undefined,
         avatarUrl: u.image_url ?? null,
       });
 

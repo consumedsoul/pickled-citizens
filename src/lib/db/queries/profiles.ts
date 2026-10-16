@@ -22,6 +22,11 @@ export async function listAllProfiles(): Promise<Profile[]> {
   return db.select().from(profiles);
 }
 
+/**
+ * Insert or update a profile. On conflict, a field that is `undefined` is left
+ * as it was (Drizzle drops undefined from `set`), while `null` clears it. The
+ * Clerk webhook relies on this to avoid blanking names it does not know.
+ */
 export async function upsertProfile(profile: NewProfile): Promise<void> {
   const db = await getDbAsync();
   const now = new Date().toISOString();

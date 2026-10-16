@@ -77,9 +77,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'league_ids must be a list of ids.' }, { status: 400 });
     }
 
-    // Create the Clerk user (skipping verification so admin can pre-create accounts).
+    const firstName = body.first_name?.trim() || null;
+    const lastName = body.last_name?.trim() || null;
+
+    // Create the Clerk user (skipping verification so admin can pre-create
+    // accounts). The name goes to Clerk too: its user.created webhook upserts
+    // the profile moments after this handler does, and a nameless Clerk user
+    // used to arrive as blank names that wiped the ones typed here.
     const created = await clerk().users.createUser({
       emailAddress: [email],
+      firstName: firstName ?? undefined,
+      lastName: lastName ?? undefined,
       skipPasswordRequirement: true,
       skipPasswordChecks: true,
     });
@@ -87,8 +95,8 @@ export async function POST(request: NextRequest) {
     await upsertProfile({
       id: created.id,
       email,
-      firstName: body.first_name?.trim() || null,
-      lastName: body.last_name?.trim() || null,
+      firstName,
+      lastName,
       selfReportedDupr: dupr,
       duprUrl,
     });
@@ -146,6 +154,26 @@ export async function PATCH(request: NextRequest) {
     }
 
     await updateProfile(body.userId, patch);
+
+    // Mirror name edits to Clerk so its profile page and later user.updated
+    // webhooks carry the same name instead of reverting this edit.
+    if (body.first_name !== undefined || body.last_name !== undefined) {
+      try {
+        await clerk().users.updateUser(body.userId, {
+          ...(body.first_name !== undefined ? { firstName: body.first_name ?? '' } : {}),
+          ...(body.last_name !== undefined ? { lastName: body.last_name ?? '' } : {}),
+        });
+      } catch (err) {
+        await logAdminEvent({
+          eventType: 'admin.clerk_update_failed',
+          userEmail: callerEmail,
+          payload: {
+            target_user_id: body.userId,
+            error: err instanceof Error ? err.message : String(err),
+          },
+        });
+      }
+    }
 
     await logAdminEvent({
       eventType: 'admin.user_profile_updated',
