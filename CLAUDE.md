@@ -121,7 +121,7 @@ src/
 middleware.ts           # clerkMiddleware — CSP nonce + admin gating
 drizzle/                # Drizzle-generated D1 migrations (apply via wrangler)
 scripts/                # write-pages-worker.mjs
-__tests__/              # Vitest: team generation, authorization, user sessions/leagues, actions, pages worker
+__tests__/              # Vitest: team generation, authorization, standings, DUPR, formatters, user sessions/leagues, actions, Clerk webhook, pages worker
 docs/                   # prd.md, dupr-sync.md (the weekly dupr.com rating sync), AUDITS.md (pointer to the external audit trail)
 ```
 

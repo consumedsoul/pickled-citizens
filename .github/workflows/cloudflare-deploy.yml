@@ -1,5 +1,5 @@
 # Pages auto-deploys via Cloudflare's GitHub integration on push to main.
-# This workflow runs typecheck + lint as a sanity gate; it does not deploy.
+# This workflow runs typecheck + lint + tests as a sanity gate; it does not deploy.
 name: CI
 
 "on":

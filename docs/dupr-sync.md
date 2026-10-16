@@ -8,8 +8,10 @@ reliable reader.
 
 What one run does:
 
-1. `SELECT id, dupr_url FROM profiles WHERE dupr_url IS NOT NULL` via the
-   Cloudflare D1 connector (database `pickled-citizens`).
+1. `SELECT id, first_name, last_name, dupr_url, dupr_rating FROM profiles
+   WHERE dupr_url IS NOT NULL` via the Cloudflare D1 connector (database
+   `pickled-citizens`). The names feed the mismatch check in step 3 and the
+   old rating feeds the "biggest moves" line in step 5.
 2. Opens each `dupr_url` in Chrome (Claude in Chrome) and reads the number
    under **Rating → Doubles** and the player name on the page. `NR` means not
    yet rated and is skipped. The app only stores links of the form
@@ -19,12 +21,18 @@ What one run does:
 3. Skips and reports, without writing, any value outside **1.000–8.500** and
    any page whose player name does not match the profile's first/last name
    (a player can paste someone else's link).
-4. `UPDATE profiles SET dupr_rating = ?, dupr_synced_at = datetime('now')
-   WHERE id = ?` for each rating read. `self_reported_dupr` is never touched.
-   (`datetime('now')` is UTC text with no zone marker; the app parses it with
-   `parseDbTimestamp` in `src/lib/formatters.ts`.)
+4. `UPDATE profiles SET dupr_rating = ?, dupr_synced_at =
+   strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = ?` for each rating read,
+   values passed as bound parameters. `self_reported_dupr` is never touched.
+   (The timestamp is ISO UTC; the app reads it with `parseDbTimestamp` in
+   `src/lib/formatters.ts`, which also accepts SQLite's `datetime('now')`
+   shape should a run ever write that.)
 5. Posts a summary (updated / skipped / failed / mismatched names, and the
-   biggest rating moves since last week) back to the session.
+   biggest rating moves since last week, flagging any move over 0.500) back
+   to the session.
+
+The task's full prompt lives outside the repo at
+`~/.claude/scheduled-tasks/weekly-dupr-sync/SKILL.md`; this page mirrors it.
 
 The app (`src/lib/dupr.ts` → `effectiveDupr`) uses `dupr_rating` when it is
 inside 1.000–8.500 and falls back to `self_reported_dupr` otherwise, so a

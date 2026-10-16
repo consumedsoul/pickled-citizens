@@ -225,6 +225,65 @@ describe('createSessionWithTeamsAction', () => {
     expect(h.inserts).toEqual([]);
   });
 
+  it('refuses a match plan it cannot build before creating the session', async () => {
+    // The session, guests and matches are three unrelated D1 writes, so a plan
+    // that references a guest the request never defined must fail before the
+    // first of them, not leave an empty session behind.
+    await signInAs('caller');
+    const { createSessionWithTeamsAction } = await import('@/lib/actions/sessions');
+    const h = useDb([
+      [league],
+      [{ userId: 'caller' }],
+      [league],
+      [{ userId: 'caller' }],
+    ]);
+    await expect(
+      createSessionWithTeamsAction({
+        ...input,
+        guests: [{ syntheticId: 'g1', displayName: 'Ringer', dupr: 3.5 }],
+        matches: [
+          {
+            scheduledOrder: 0,
+            players: [
+              { userId: 'caller', team: 1 as const, position: 0 as const },
+              { syntheticId: 'g-undefined', team: 2 as const, position: 0 as const },
+            ],
+          },
+        ],
+      }),
+    ).rejects.toThrow('Missing guest mapping for g-undefined');
+    expect(h.selectsUsed()).toBe(4);
+    expect(h.inserts).toEqual([]);
+    expect(h.batches).toEqual([]);
+  });
+
+  it('refuses a player with neither a user ID nor a guest ID before creating the session', async () => {
+    await signInAs('caller');
+    const { createSessionWithTeamsAction } = await import('@/lib/actions/sessions');
+    const h = useDb([
+      [league],
+      [{ userId: 'caller' }],
+      [league],
+      [{ userId: 'caller' }],
+    ]);
+    await expect(
+      createSessionWithTeamsAction({
+        ...input,
+        matches: [
+          {
+            scheduledOrder: 0,
+            players: [
+              { userId: 'caller', team: 1 as const, position: 0 as const },
+              { team: 2 as const, position: 0 as const },
+            ],
+          },
+        ],
+      }),
+    ).rejects.toThrow('Match player must have userId or syntheticId');
+    expect(h.inserts).toEqual([]);
+    expect(h.batches).toEqual([]);
+  });
+
   it('refuses a caller who is not in the league at all', async () => {
     await signInAs('outsider');
     const { createSessionWithTeamsAction } = await import('@/lib/actions/sessions');

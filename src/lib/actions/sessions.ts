@@ -177,6 +177,35 @@ export async function createSessionWithTeamsAction(input: {
     if (!Number.isFinite(n) || !isDuprInRange(n)) throw new Error(DUPR_RANGE_ERROR);
     if (!g.displayName?.trim()) throw new Error('Every guest needs a name');
   }
+  // Resolve the whole match plan before the first write. The session, its
+  // guests and its matches are three separate D1 writes with no transaction,
+  // so a plan that cannot be built (a player with neither ID, a guest ID the
+  // request never defined) must fail here, not after an empty session exists.
+  const guestIndexBySyntheticId = new Map(input.guests.map((g, i) => [g.syntheticId, i] as const));
+  const newMatches = input.matches.map((m) => ({
+    scheduledOrder: m.scheduledOrder,
+    status: 'scheduled' as const,
+  }));
+  const plan: Array<{
+    matchIndex: number;
+    userId?: string;
+    guestIndex?: number;
+    team: 1 | 2;
+    position: number;
+  }> = [];
+  input.matches.forEach((m, idx) => {
+    for (const p of m.players) {
+      if (p.syntheticId) {
+        const guestIndex = guestIndexBySyntheticId.get(p.syntheticId);
+        if (guestIndex === undefined) throw new Error(`Missing guest mapping for ${p.syntheticId}`);
+        plan.push({ matchIndex: idx, guestIndex, team: p.team, position: p.position });
+      } else if (p.userId) {
+        plan.push({ matchIndex: idx, userId: p.userId, team: p.team, position: p.position });
+      } else {
+        throw new Error('Match player must have userId or syntheticId');
+      }
+    }
+  });
   const callerEmail = await getCurrentEmail();
 
   const session = await createSession(userId, {
@@ -186,37 +215,15 @@ export async function createSessionWithTeamsAction(input: {
     location: null,
   });
 
-  // Create guests, mapping syntheticId -> real DB id
+  // Create guests; guestIds[i] is the real DB id of input.guests[i]
   const guestIds = await addGuests(userId, session.id, input.guests);
-  const syntheticToGuestId = new Map(
-    input.guests.map((g, i) => [g.syntheticId, guestIds[i]] as const),
-  );
-
-  // Build matches + players plan for replaceSessionMatches
-  const newMatches = input.matches.map((m) => ({
-    scheduledOrder: m.scheduledOrder,
-    status: 'scheduled' as const,
+  const newPlayers = plan.map((p) => ({
+    matchIndex: p.matchIndex,
+    userId: p.userId ?? null,
+    guestId: p.guestIndex === undefined ? null : guestIds[p.guestIndex],
+    team: p.team,
+    position: p.position,
   }));
-  const newPlayers: Array<{
-    matchIndex: number;
-    userId?: string | null;
-    guestId?: string | null;
-    team: 1 | 2;
-    position: number;
-  }> = [];
-  input.matches.forEach((m, idx) => {
-    for (const p of m.players) {
-      if (p.syntheticId) {
-        const guestId = syntheticToGuestId.get(p.syntheticId);
-        if (!guestId) throw new Error(`Missing guest mapping for ${p.syntheticId}`);
-        newPlayers.push({ matchIndex: idx, guestId, team: p.team, position: p.position });
-      } else if (p.userId) {
-        newPlayers.push({ matchIndex: idx, userId: p.userId, team: p.team, position: p.position });
-      } else {
-        throw new Error('Match player must have userId or syntheticId');
-      }
-    }
-  });
 
   await replaceSessionMatches(userId, session.id, newMatches, newPlayers);
 
