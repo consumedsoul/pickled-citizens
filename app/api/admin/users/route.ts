@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
       first_name?: string;
       last_name?: string;
       self_reported_dupr?: number | null;
+      dupr_url?: string | null;
     } | null;
 
     if (!body?.email?.trim()) {
@@ -65,6 +66,10 @@ export async function POST(request: NextRequest) {
     const dupr = parseDupr(body.self_reported_dupr ?? null);
     if (dupr === undefined) {
       return NextResponse.json({ error: DUPR_ERROR }, { status: 400 });
+    }
+    const duprUrl = parseDuprUrl(body.dupr_url ?? null);
+    if (duprUrl === undefined) {
+      return NextResponse.json({ error: DUPR_URL_ERROR }, { status: 400 });
     }
 
     // Create the Clerk user (skipping verification so admin can pre-create accounts).
@@ -80,6 +85,7 @@ export async function POST(request: NextRequest) {
       firstName: body.first_name?.trim() || null,
       lastName: body.last_name?.trim() || null,
       selfReportedDupr: dupr,
+      duprUrl,
     });
 
     await logAdminEvent({

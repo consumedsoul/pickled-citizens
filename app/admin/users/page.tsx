@@ -39,6 +39,7 @@ export default function AdminUsersPage() {
   const [createFirstName, setCreateFirstName] = useState('');
   const [createLastName, setCreateLastName] = useState('');
   const [createDupr, setCreateDupr] = useState('');
+  const [createDuprUrl, setCreateDuprUrl] = useState('');
   const [creating, setCreating] = useState(false);
 
   const loadUsers = useCallback(async () => {
@@ -185,6 +186,13 @@ export default function AdminUsersPage() {
       }
       dupr = n;
     }
+    let duprUrl: string | null;
+    try {
+      duprUrl = normalizeDuprUrl(createDuprUrl);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Invalid DUPR profile link.');
+      return;
+    }
     setCreating(true);
     setError(null);
     try {
@@ -196,6 +204,7 @@ export default function AdminUsersPage() {
           first_name: createFirstName.trim() || undefined,
           last_name: createLastName.trim() || undefined,
           self_reported_dupr: dupr,
+          dupr_url: duprUrl,
         }),
       });
       const json = (await response.json().catch(() => null)) as
@@ -206,6 +215,7 @@ export default function AdminUsersPage() {
       setCreateFirstName('');
       setCreateLastName('');
       setCreateDupr('');
+      setCreateDuprUrl('');
       setShowCreateForm(false);
       await loadUsers();
     } catch (err) {
@@ -277,6 +287,13 @@ export default function AdminUsersPage() {
                 placeholder="DUPR (1.000 - 8.500)"
                 value={createDupr}
                 onChange={(e) => setCreateDupr(e.target.value)}
+                className="w-full px-3 py-2 border border-app-border bg-transparent text-app-text text-sm focus:outline-none focus:border-app-text transition-colors"
+              />
+              <input
+                type="url"
+                placeholder="DUPR profile link (dupr.com player page)"
+                value={createDuprUrl}
+                onChange={(e) => setCreateDuprUrl(e.target.value)}
                 className="w-full px-3 py-2 border border-app-border bg-transparent text-app-text text-sm focus:outline-none focus:border-app-text transition-colors"
               />
               <div className="flex gap-2">
