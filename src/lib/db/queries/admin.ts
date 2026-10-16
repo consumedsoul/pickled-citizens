@@ -1,4 +1,4 @@
-import { count, desc, eq, like } from 'drizzle-orm';
+import { count, desc, eq, inArray, like } from 'drizzle-orm';
 import { getDbAsync } from '../client';
 import { adminEvents, leagueMembers, leagues, profiles, type AdminEvent } from '../schema';
 import { encodeJson, decodeJson, type Json } from '../json';
@@ -88,6 +88,41 @@ export async function logAdminEvent(input: {
  * Note: D1 batch is sequential; on partial failure the operation is *not*
  * rolled back. Any partial state should be cleaned up by re-running.
  */
+/**
+ * Add a user to leagues as the super-admin, who is not necessarily a league
+ * admin (so `addMember`'s league-admin gate does not fit). The caller MUST be
+ * `requireAdmin()`-gated. Unknown league ids are skipped; returns the ids
+ * actually joined. Existing memberships are left untouched.
+ */
+export async function adminAddUserToLeagues(
+  userId: string,
+  email: string,
+  leagueIds: string[],
+): Promise<string[]> {
+  const ids = Array.from(new Set(leagueIds));
+  if (ids.length === 0) return [];
+  const db = await getDbAsync();
+  const known = await db
+    .select({ id: leagues.id })
+    .from(leagues)
+    .where(inArray(leagues.id, ids));
+  if (known.length === 0) return [];
+  const now = new Date().toISOString();
+  await db
+    .insert(leagueMembers)
+    .values(
+      known.map((l) => ({
+        leagueId: l.id,
+        userId,
+        email,
+        role: 'player' as const,
+        createdAt: now,
+      })),
+    )
+    .onConflictDoNothing();
+  return known.map((l) => l.id);
+}
+
 export async function deleteUserAppData(userId: string): Promise<void> {
   const db = await getDbAsync();
   const ops = [

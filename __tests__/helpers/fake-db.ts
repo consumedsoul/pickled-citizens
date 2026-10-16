@@ -45,6 +45,7 @@ export function makeDb(selectResults: Row[][]) {
       inserts.push(v);
       return Promise.resolve(undefined);
     };
+    op.onConflictDoNothing = op.onConflictDoUpdate;
     op.then = (resolve: (x: undefined) => unknown, reject: (e: unknown) => unknown) => {
       inserts.push(v);
       return Promise.resolve(undefined).then(resolve, reject);

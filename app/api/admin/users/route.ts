@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClerkClient } from '@clerk/backend';
 import { requireAdmin, AuthorizationError } from '@/lib/db/auth-helpers';
 import { upsertProfile, updateProfile } from '@/lib/db/queries/profiles';
-import { deleteUserAppData, logAdminEvent } from '@/lib/db/queries/admin';
+import { adminAddUserToLeagues, deleteUserAppData, logAdminEvent } from '@/lib/db/queries/admin';
 import { isDuprInRange, normalizeDuprUrl, DUPR_RANGE_ERROR, DUPR_URL_ERROR } from '@/lib/dupr';
 
 function clerk() {
@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
       last_name?: string;
       self_reported_dupr?: number | null;
       dupr_url?: string | null;
+      league_ids?: string[];
     } | null;
 
     if (!body?.email?.trim()) {
@@ -70,6 +71,10 @@ export async function POST(request: NextRequest) {
     const duprUrl = parseDuprUrl(body.dupr_url ?? null);
     if (duprUrl === undefined) {
       return NextResponse.json({ error: DUPR_URL_ERROR }, { status: 400 });
+    }
+    const leagueIds = body.league_ids ?? [];
+    if (!Array.isArray(leagueIds) || leagueIds.some((id) => typeof id !== 'string')) {
+      return NextResponse.json({ error: 'league_ids must be a list of ids.' }, { status: 400 });
     }
 
     // Create the Clerk user (skipping verification so admin can pre-create accounts).
@@ -88,10 +93,12 @@ export async function POST(request: NextRequest) {
       duprUrl,
     });
 
+    const joined = await adminAddUserToLeagues(created.id, email, leagueIds);
+
     await logAdminEvent({
       eventType: 'admin.user_created',
       userEmail: callerEmail,
-      payload: { created_user_id: created.id, created_email: email },
+      payload: { created_user_id: created.id, created_email: email, league_ids: joined },
     });
 
     return NextResponse.json({ ok: true, userId: created.id });

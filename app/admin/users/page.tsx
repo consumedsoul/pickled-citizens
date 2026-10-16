@@ -5,7 +5,11 @@ import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Modal } from '@/components/ui/Modal';
 import { parseDbTimestamp } from '@/lib/formatters';
-import { listAdminUsersAction, type AdminUserView } from '@/lib/actions/admin';
+import {
+  listAdminLeaguesAction,
+  listAdminUsersAction,
+  type AdminUserView,
+} from '@/lib/actions/admin';
 import {
   DUPR_FORMAT_ERROR,
   DUPR_RANGE_ERROR,
@@ -27,6 +31,7 @@ type EditState = {
 export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<AdminUserView[]>([]);
+  const [allLeagues, setAllLeagues] = useState<Array<{ id: string; name: string }>>([]);
   const [error, setError] = useState<string | null>(null);
 
   const [editing, setEditing] = useState<EditState | null>(null);
@@ -40,14 +45,19 @@ export default function AdminUsersPage() {
   const [createLastName, setCreateLastName] = useState('');
   const [createDupr, setCreateDupr] = useState('');
   const [createDuprUrl, setCreateDuprUrl] = useState('');
+  const [createLeagueIds, setCreateLeagueIds] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const rows = await listAdminUsersAction();
+      const [rows, leagueRows] = await Promise.all([
+        listAdminUsersAction(),
+        listAdminLeaguesAction(),
+      ]);
       setUsers(rows);
+      setAllLeagues(leagueRows);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load users.');
     } finally {
@@ -114,6 +124,7 @@ export default function AdminUsersPage() {
           last_name: last || null,
           self_reported_dupr: dupr,
           dupr_url: duprUrl,
+          league_ids: createLeagueIds,
         }),
       });
       const json = (await response.json().catch(() => null)) as
@@ -205,6 +216,7 @@ export default function AdminUsersPage() {
           last_name: createLastName.trim() || undefined,
           self_reported_dupr: dupr,
           dupr_url: duprUrl,
+          league_ids: createLeagueIds,
         }),
       });
       const json = (await response.json().catch(() => null)) as
@@ -216,6 +228,7 @@ export default function AdminUsersPage() {
       setCreateLastName('');
       setCreateDupr('');
       setCreateDuprUrl('');
+      setCreateLeagueIds([]);
       setShowCreateForm(false);
       await loadUsers();
     } catch (err) {
@@ -296,6 +309,36 @@ export default function AdminUsersPage() {
                 onChange={(e) => setCreateDuprUrl(e.target.value)}
                 className="w-full px-3 py-2 border border-app-border bg-transparent text-app-text text-sm focus:outline-none focus:border-app-text transition-colors"
               />
+              {allLeagues.length > 0 && (
+                <fieldset className="border border-app-border px-3 py-2">
+                  <legend className="text-xs text-app-muted px-1">Add to leagues</legend>
+                  <div className="grid gap-1.5 mt-1">
+                    {allLeagues.map((league) => {
+                      const checked = createLeagueIds.includes(league.id);
+                      return (
+                        <label
+                          key={league.id}
+                          className="flex items-center gap-2 text-sm cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) =>
+                              setCreateLeagueIds((prev) =>
+                                e.target.checked
+                                  ? [...prev, league.id]
+                                  : prev.filter((id) => id !== league.id),
+                              )
+                            }
+                            className="accent-app-text"
+                          />
+                          {league.name}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </fieldset>
+              )}
               <div className="flex gap-2">
                 <Button variant="primary" type="submit" disabled={creating}>
                   {creating ? 'Creating...' : 'Create'}

@@ -2,6 +2,7 @@
 
 import { requireAdmin } from '@/lib/db/auth-helpers';
 import { listAllProfiles } from '@/lib/db/queries/profiles';
+import { listLeagues } from '@/lib/db/queries/leagues';
 import { getDbAsync } from '@/lib/db/client';
 import { chunkedInArray } from '@/lib/db/chunk';
 import { leagueMembers, leagues } from '@/lib/db/schema';
@@ -19,6 +20,15 @@ export type AdminUserView = {
   updatedAt: string | null;
   leagues: Array<{ id: string; name: string }>;
 };
+
+/** Every league, by name, for the create-user league checklist. */
+export async function listAdminLeaguesAction(): Promise<Array<{ id: string; name: string }>> {
+  await requireAdmin();
+  const rows = await listLeagues();
+  return rows
+    .map((l) => ({ id: l.id, name: l.name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
 
 /** Returns all profiles with their league memberships, sorted by name. */
 export async function listAdminUsersAction(): Promise<AdminUserView[]> {
