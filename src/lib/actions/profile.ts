@@ -10,6 +10,7 @@ import {
 import { logAdminEvent } from '@/lib/db/queries/admin';
 import type { Profile } from '@/lib/db/schema';
 import { normalizeDuprUrl, isDuprInRange, DUPR_RANGE_ERROR } from '@/lib/dupr';
+import { clerkBackend, MAX_NAME_LENGTH } from '@/lib/clerk';
 
 export type ProfileFields = {
   firstName?: string | null;
@@ -30,6 +31,27 @@ export async function updateMyProfile(input: ProfileFields): Promise<{ ok: true 
   const userId = await requireUserId();
   const patch = sanitize(input);
   await updateProfile(userId, patch);
+
+  // Mirror name edits to Clerk here, on the server, the way the admin route
+  // does. The webhook writes Clerk's non-blank name on every user.updated, so
+  // a name that lives only in D1 is reverted by the next email, avatar or
+  // password change. A Clerk failure is logged, not surfaced: the profile row
+  // is already saved and the player can simply save again.
+  if (patch.firstName !== undefined || patch.lastName !== undefined) {
+    try {
+      await clerkBackend().users.updateUser(userId, {
+        ...(patch.firstName !== undefined ? { firstName: patch.firstName ?? '' } : {}),
+        ...(patch.lastName !== undefined ? { lastName: patch.lastName ?? '' } : {}),
+      });
+    } catch (err) {
+      await logAdminEvent({
+        eventType: 'profile.clerk_update_failed',
+        userId,
+        payload: { error: err instanceof Error ? err.message : String(err) },
+      });
+    }
+  }
+
   revalidatePath('/profile');
   return { ok: true };
 }
@@ -79,8 +101,8 @@ export async function completeMyProfile(input: ProfileFields & {
 
 function sanitize(input: ProfileFields): ProfileFields {
   const out: ProfileFields = {};
-  if (input.firstName !== undefined) out.firstName = input.firstName?.trim() || null;
-  if (input.lastName !== undefined) out.lastName = input.lastName?.trim() || null;
+  if (input.firstName !== undefined) out.firstName = cleanName(input.firstName);
+  if (input.lastName !== undefined) out.lastName = cleanName(input.lastName);
   if (input.gender !== undefined) out.gender = input.gender || null;
   if (input.selfReportedDupr !== undefined) {
     if (input.selfReportedDupr === null) {
@@ -97,4 +119,14 @@ function sanitize(input: ProfileFields): ProfileFields {
   if (input.duprUrl !== undefined) out.duprUrl = normalizeDuprUrl(input.duprUrl);
   if (input.displayName !== undefined) out.displayName = input.displayName?.trim() || null;
   return out;
+}
+
+/** Trim, treat blank as null, and bound the length (the column has no CHECK). */
+function cleanName(value: string | null | undefined): string | null {
+  const trimmed = typeof value === 'string' ? value.trim() : '';
+  if (!trimmed) return null;
+  if (trimmed.length > MAX_NAME_LENGTH) {
+    throw new Error(`Names must be ${MAX_NAME_LENGTH} characters or fewer.`);
+  }
+  return trimmed;
 }

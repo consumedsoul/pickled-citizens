@@ -10,6 +10,11 @@ import { useDb } from './helpers/fake-db';
 vi.mock('@/lib/db/client', async () => (await import('./helpers/fake-db')).dbMock);
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 vi.mock('@/lib/db/queries/admin', () => ({ logAdminEvent: vi.fn(async () => undefined) }));
+const clerkUsers = { updateUser: vi.fn(async () => ({})) };
+vi.mock('@/lib/clerk', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/clerk')>('@/lib/clerk');
+  return { ...actual, clerkBackend: () => ({ users: clerkUsers }) };
+});
 vi.mock('@/lib/db/auth-helpers', () => {
   class AuthorizationError extends Error {
     constructor(
@@ -160,6 +165,47 @@ describe('completeMyProfile', () => {
     ).rejects.toThrow(/1\.000 and 8\.500/);
     expect(h.selectsUsed()).toBe(0);
     expect(h.inserts).toEqual([]);
+  });
+});
+
+describe('updateMyProfile', () => {
+  it('writes the trimmed name to D1 and mirrors it to Clerk for the signed-in user only', async () => {
+    await signInAs('me');
+    const { updateMyProfile } = await import('@/lib/actions/profile');
+    const h = useDb([]);
+    await updateMyProfile({ firstName: ' Pat ', lastName: 'Lee', selfReportedDupr: 4 });
+    expect(h.updates).toHaveLength(1);
+    expect(clerkUsers.updateUser).toHaveBeenCalledWith('me', { firstName: 'Pat', lastName: 'Lee' });
+  });
+
+  it('leaves Clerk alone when the name was not edited', async () => {
+    await signInAs('me');
+    const { updateMyProfile } = await import('@/lib/actions/profile');
+    useDb([]);
+    await updateMyProfile({ selfReportedDupr: 4 });
+    expect(clerkUsers.updateUser).not.toHaveBeenCalled();
+  });
+
+  it('keeps the D1 save and logs it when the Clerk mirror fails', async () => {
+    await signInAs('me');
+    const { updateMyProfile } = await import('@/lib/actions/profile');
+    const { logAdminEvent } = await import('@/lib/db/queries/admin');
+    clerkUsers.updateUser.mockRejectedValueOnce(new Error('clerk down'));
+    const h = useDb([]);
+    await expect(updateMyProfile({ firstName: 'Pat' })).resolves.toEqual({ ok: true });
+    expect(h.updates).toHaveLength(1);
+    expect(logAdminEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ eventType: 'profile.clerk_update_failed', userId: 'me' }),
+    );
+  });
+
+  it('refuses a name over the length bound before writing', async () => {
+    await signInAs('me');
+    const { updateMyProfile } = await import('@/lib/actions/profile');
+    const h = useDb([]);
+    await expect(updateMyProfile({ firstName: 'x'.repeat(101) })).rejects.toThrow(/100 characters/);
+    expect(h.updates).toHaveLength(0);
+    expect(clerkUsers.updateUser).not.toHaveBeenCalled();
   });
 });
 

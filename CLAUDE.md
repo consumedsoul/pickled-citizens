@@ -111,6 +111,7 @@ src/
       json.ts           # encode/decode helpers for admin_events.payload (TEXT JSON)
       queries/          # Per-domain query modules with explicit auth checks
     actions/            # 'use server' actions called from client components
+    clerk.ts            # clerkBackend() — Clerk Backend API client; MAX_NAME_LENGTH; Clerk error shape
     constants.ts        # Shared constants (ADMIN_EMAIL, MAX_LEAGUES, GENDER_OPTIONS)
     formatters.ts       # Shared formatting utilities
     dupr.ts             # DUPR rating format (3 decimals), range/parse, and profile-link validation
@@ -121,7 +122,7 @@ src/
 middleware.ts           # clerkMiddleware — CSP nonce + admin gating
 drizzle/                # Drizzle-generated D1 migrations (apply via wrangler)
 scripts/                # write-pages-worker.mjs
-__tests__/              # Vitest: team generation, authorization, standings, DUPR, formatters, user sessions/leagues, actions, Clerk webhook, pages worker
+__tests__/              # Vitest: team generation, authorization, standings, DUPR, formatters, user sessions/leagues, actions, admin users (route + league join), Clerk webhook, pages worker
 docs/                   # prd.md, dupr-sync.md (the weekly dupr.com rating sync), AUDITS.md (pointer to the external audit trail)
 ```
 
@@ -147,7 +148,7 @@ D1 is SQLite. The schema is defined in TypeScript via Drizzle at `src/lib/db/sch
 
 ### Important Details
 
-- **Authorization is tested.** `__tests__/authorization.test.ts` covers `isLeagueMember`, `canManageSession`, `canViewSession`, `clearMatchResult`, `removeMember` (sole-admin and owner guards), `updateMemberRole` (owner and last-admin guards), `createLeague`/`updateLeague` (3-league cap, unique name), `addGuests`, `listLeagueMemberIds` and `chunkedInArray`'s 90-param boundary. `__tests__/user-sessions.test.ts` covers the shared owned-or-played session pipeline. `__tests__/actions.test.ts` covers the server-action layer: session detail shape, non-member refusals, `completeMyProfile` taking its email from Clerk rather than the request, and guest DUPR range checks. `__tests__/clerk-webhook.test.ts` pins the svix signature gate. All stub `getDbAsync` only via `__tests__/helpers/fake-db.ts` — no database needed. Add a case when you add a rule.
+- **Authorization is tested.** `__tests__/authorization.test.ts` covers `isLeagueMember`, `canManageSession`, `canViewSession`, `clearMatchResult`, `removeMember` (sole-admin and owner guards), `updateMemberRole` (owner and last-admin guards), `createLeague`/`updateLeague` (3-league cap, unique name), `addGuests`, `listLeagueMemberIds` and `chunkedInArray`'s 90-param boundary. `__tests__/user-sessions.test.ts` covers the shared owned-or-played session pipeline. `__tests__/actions.test.ts` covers the server-action layer: session detail shape, non-member refusals, `completeMyProfile` taking its email from Clerk rather than the request, and guest DUPR range checks. `__tests__/clerk-webhook.test.ts` pins the svix signature gate. `__tests__/admin-users.test.ts` covers `/api/admin/users` (admin gate, name/DUPR-link/league-id validation, duplicate-email 409, partial-create reporting, name mirroring to Clerk) and the chunked league join. All stub `getDbAsync` only via `__tests__/helpers/fake-db.ts` — no database needed. Add a case when you add a rule.
 - **League ownership beats the role row.** `leagues.owner_id` is the source of truth for owner powers (`isLeagueAdmin`/`isLeagueMember` short-circuit on it), so the 3-league cap counts owned leagues, the owner's role cannot be changed, and the owner cannot leave or be removed — only delete the league. There is no ownership transfer yet.
 - **D1 has no RLS.** Authorization is enforced in TypeScript, but **not uniformly at the query layer**. *Mutations* in `src/lib/db/queries/` take the caller's ID and check ownership/membership themselves. *Reads* (`getSessionById`, `listLeagues`, `listMembersOfLeague`, `listAllProfiles`, `listAdminEvents`, `listGuestsForSession`, `listMatchesForSession`, `listPlayersForMatches`) take **no caller ID and perform no check** — the calling server action or page owns the gate. Server actions are POST-reachable RPC endpoints; "the page only renders for members" is not a defense.
 - **All user-id columns are `text`** — Clerk user IDs are not UUIDs. No FKs to an `auth.users` table.

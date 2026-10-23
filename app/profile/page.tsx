@@ -148,8 +148,9 @@ export default function ProfilePage() {
       });
       setDuprUrl(duprUrlNormalized ?? '');
       setSelfDupr(formatDupr(selfDuprParsed));
-      // Sync first/last name to Clerk so they show up everywhere.
-      await user?.update({ firstName: firstName.trim(), lastName: lastName.trim() });
+      // The action mirrors the name to Clerk; refresh the cached Clerk user
+      // so the embedded account panel shows it without a page reload.
+      await user?.reload().catch(() => undefined);
       setSuccess('Profile saved.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save profile.');

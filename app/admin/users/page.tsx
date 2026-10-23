@@ -124,7 +124,6 @@ export default function AdminUsersPage() {
           last_name: last || null,
           self_reported_dupr: dupr,
           dupr_url: duprUrl,
-          league_ids: createLeagueIds,
         }),
       });
       const json = (await response.json().catch(() => null)) as
@@ -220,9 +219,14 @@ export default function AdminUsersPage() {
         }),
       });
       const json = (await response.json().catch(() => null)) as
-        | { ok?: boolean; error?: string }
+        | { ok?: boolean; error?: string; userId?: string }
         | null;
-      if (!response.ok) throw new Error(json?.error ?? 'Failed to create user.');
+      if (!response.ok) {
+        // A partial create (Clerk account made, profile or league step failed)
+        // still produced a user: reload so it appears and can be edited.
+        if (json?.userId) await loadUsers();
+        throw new Error(json?.error ?? 'Failed to create user.');
+      }
       setCreateEmail('');
       setCreateFirstName('');
       setCreateLastName('');

@@ -6,7 +6,7 @@ match results with lifetime statistics.
 
 **Live site:** [pickledcitizens.com](https://pickledcitizens.com)
 
-> _Last updated: 2026-10-08_
+> _Last updated: 2026-10-23_
 
 ---
 
@@ -27,7 +27,8 @@ match results with lifetime statistics.
 - **Match tracking** — record per-match scores, view team and per-player win/loss
   records and lifetime statistics.
 - **Admin tools** — a single super-admin sees `/admin/events` (audit log),
-  `/admin/users`, and `/admin/leagues`.
+  `/admin/users` (create a user with name, DUPR, dupr.com link and league
+  picks, edit or delete one), and `/admin/leagues`.
 - **Social sharing** — Open Graph and Twitter card metadata per session, with a static social image.
 
 ---
@@ -72,9 +73,10 @@ src/
     teamGeneration.ts      Snaking team-balance algorithm (unit-tested)
     standings.ts           League board: win % + rivals, derived from results
     dupr.ts                DUPR formatting, range and profile-link validation
+    clerk.ts               Clerk Backend API client + name length bound
 middleware.ts              Clerk middleware — CSP nonce + /admin gating
 drizzle/                   Drizzle-generated D1 migrations
-__tests__/                 Vitest tests (team generation, authorization, standings, DUPR, actions, webhook)
+__tests__/                 Vitest tests (team generation, authorization, standings, DUPR, actions, admin users, webhook)
 docs/dupr-sync.md          How the weekly official-DUPR sync runs
 ```
 

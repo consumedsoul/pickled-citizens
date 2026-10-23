@@ -12,7 +12,8 @@ export const runtime = 'nodejs';
  *
  * Handles user lifecycle events from Clerk:
  *  - user.created  -> create a profile row keyed by Clerk user ID
- *  - user.updated  -> sync email and name fields
+ *  - user.updated  -> sync email, avatar, and any non-blank name (a name Clerk
+ *                     lacks is left as stored, so admin-typed names survive)
  *  - user.deleted  -> cascade-delete app data
  *
  * Set CLERK_WEBHOOK_SIGNING_SECRET in Cloudflare secrets and configure the

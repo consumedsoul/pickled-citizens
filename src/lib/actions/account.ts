@@ -1,18 +1,12 @@
 'use server';
 
-import { createClerkClient } from '@clerk/backend';
 import { eq, and, ne, inArray } from 'drizzle-orm';
 import { requireUserId, getCurrentEmail } from '@/lib/db/auth-helpers';
 import { getDbAsync } from '@/lib/db/client';
 import { chunkedInArray } from '@/lib/db/chunk';
 import { leagueMembers, leagues } from '@/lib/db/schema';
 import { deleteUserAppData, logAdminEvent } from '@/lib/db/queries/admin';
-
-function clerk() {
-  const secret = process.env.CLERK_SECRET_KEY;
-  if (!secret) throw new Error('CLERK_SECRET_KEY not configured');
-  return createClerkClient({ secretKey: secret });
-}
+import { clerkBackend } from '@/lib/clerk';
 
 // Not exported: every export of a 'use server' module becomes a POST-reachable
 // action, and this is only a helper for deleteMyAccount.
@@ -69,7 +63,7 @@ export async function deleteMyAccount(): Promise<{ ok: true }> {
 
   await deleteUserAppData(userId);
   try {
-    await clerk().users.deleteUser(userId);
+    await clerkBackend().users.deleteUser(userId);
   } catch (err) {
     await logAdminEvent({
       eventType: 'account.clerk_delete_failed',
