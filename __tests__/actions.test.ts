@@ -64,7 +64,8 @@ describe('getSessionDetail', () => {
         { id: 'creator', email: 'c@example.com', firstName: 'C', lastName: 'R', selfReportedDupr: 4 },
       ],
       [league],
-      [league], // canManageSession → isLeagueOwner
+      [league], // canManageSession → isLeagueAdmin: league row (not the owner) …
+      [], // … then the membership row — none, "ex" has left the league
     ]);
     const detail = await getSessionDetail('S1');
     expect(detail).not.toBeNull();
@@ -81,7 +82,7 @@ describe('getSessionDetail', () => {
       results: [{ matchId: 'M1' }],
       guests: [{ id: 'G1' }],
     });
-    expect(h.selectsUsed()).toBe(8);
+    expect(h.selectsUsed()).toBe(9);
   });
 
   it('returns null to a non-member before loading results, guests or profiles', async () => {

@@ -92,7 +92,7 @@ export async function getSessionDetail(sessionId: string) {
     leagueName,
     viewerId: userId,
     // The page's edit controls must follow the same rule the write paths
-    // enforce (creator or league owner), not a narrower copy of it.
+    // enforce (creator or league admin), not a narrower copy of it.
     canManage: await canManageSession(userId, session),
   };
 }

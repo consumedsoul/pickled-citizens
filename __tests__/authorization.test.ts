@@ -96,11 +96,28 @@ describe('canManageSession', () => {
     ).toBe(true);
   });
 
+  it('allows a league admin who did not create the session', async () => {
+    const { canManageSession } = await import('@/lib/db/queries/sessions');
+    // League row (not the owner), then the caller's membership row.
+    useDb([[{ id: 'L1', ownerId: 'owner' }], [{ role: 'admin' }]]);
+    expect(
+      await canManageSession('admin', { createdBy: 'someone-else', leagueId: 'L1' }),
+    ).toBe(true);
+  });
+
   it('rejects a plain league member', async () => {
     const { canManageSession } = await import('@/lib/db/queries/sessions');
-    useDb([[{ id: 'L1', ownerId: 'owner' }]]);
+    useDb([[{ id: 'L1', ownerId: 'owner' }], [{ role: 'player' }]]);
     expect(
       await canManageSession('member', { createdBy: 'creator', leagueId: 'L1' }),
+    ).toBe(false);
+  });
+
+  it('rejects a non-member of the league', async () => {
+    const { canManageSession } = await import('@/lib/db/queries/sessions');
+    useDb([[{ id: 'L1', ownerId: 'owner' }], []]);
+    expect(
+      await canManageSession('stranger', { createdBy: 'creator', leagueId: 'L1' }),
     ).toBe(false);
   });
 

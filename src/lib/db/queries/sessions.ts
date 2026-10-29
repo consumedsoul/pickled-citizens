@@ -8,7 +8,7 @@ import {
   type SessionGuest,
 } from '../schema';
 import { AuthorizationError } from '../auth-helpers';
-import { isLeagueOwner, isLeagueMember } from './leagues';
+import { isLeagueAdmin, isLeagueMember } from './leagues';
 
 export async function getSessionById(id: string): Promise<GameSession | null> {
   const db = await getDbAsync();
@@ -16,18 +16,24 @@ export async function getSessionById(id: string): Promise<GameSession | null> {
   return rows[0] ?? null;
 }
 
+/**
+ * Write access to a session: scores, guests, deletion. The creator, or anyone
+ * who runs the league — its owner or a member with the admin role. League
+ * admins manage sessions other admins created; without this they could only
+ * read them.
+ */
 export async function canManageSession(
   callerId: string,
   session: Pick<GameSession, 'createdBy' | 'leagueId'>,
 ): Promise<boolean> {
   if (session.createdBy === callerId) return true;
-  if (session.leagueId && (await isLeagueOwner(session.leagueId, callerId))) return true;
+  if (session.leagueId && (await isLeagueAdmin(session.leagueId, callerId))) return true;
   return false;
 }
 
 /**
  * Read access to a session. Broader than canManageSession: any league member
- * may view, not just the creator and league owner.
+ * may view, not just the creator and league admins.
  *
  * `participantIds` are the user IDs already loaded from match_players. They
  * matter because `game_sessions.league_id` is ON DELETE SET NULL — deleting a

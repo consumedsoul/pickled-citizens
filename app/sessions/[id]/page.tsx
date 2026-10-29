@@ -464,7 +464,7 @@ export default function SessionDetailPage() {
     };
   }, [sessionId, isLoaded, userId, router]);
 
-  // Server-computed: the session creator or the league owner.
+  // Server-computed: the session creator or a league admin (owner included).
   const canEdit = !!session && canManage;
 
   const teamStats = useMemo<{ team1: TeamStats; team2: TeamStats }>(() => {
@@ -681,7 +681,7 @@ export default function SessionDetailPage() {
       {error && <p className="text-app-danger text-sm mb-4">{error}</p>}
       {!canEdit && (
         <p className="text-app-muted text-xs mb-4">
-          Only the session creator or the league owner can update match results. You can still
+          Only the session creator or a league admin can update match results. You can still
           view the current standings.
         </p>
       )}
