@@ -6,7 +6,7 @@ match results with lifetime statistics.
 
 **Live site:** [pickledcitizens.com](https://pickledcitizens.com)
 
-> _Last updated: 2026-10-23_
+> _Last updated: 2026-10-30_
 
 ---
 
@@ -25,7 +25,9 @@ match results with lifetime statistics.
   reads the official doubles rating into the profile without overwriting the
   self-reported one. See [`docs/dupr-sync.md`](docs/dupr-sync.md).
 - **Match tracking** — record per-match scores, view team and per-player win/loss
-  records and lifetime statistics.
+  records and lifetime statistics. A session's creator or any admin of its league
+  can mark wins, clear them, or delete the session; a delete is permanent, so the
+  audit log keeps a snapshot of the players and scores it removed.
 - **Admin tools** — a single super-admin sees `/admin/events` (audit log),
   `/admin/users` (create a user with name, DUPR, dupr.com link and league
   picks, edit or delete one), and `/admin/leagues`.

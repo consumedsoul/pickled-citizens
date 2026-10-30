@@ -3,7 +3,7 @@
 import { effectiveDupr, isDuprInRange, DUPR_RANGE_ERROR } from '@/lib/dupr';
 
 import { revalidatePath } from 'next/cache';
-import { requireUserId, getCurrentEmail } from '@/lib/db/auth-helpers';
+import { requireUserId, getCurrentEmail, AuthorizationError } from '@/lib/db/auth-helpers';
 import {
   createSession,
   deleteSession,
@@ -97,20 +97,72 @@ export async function getSessionDetail(sessionId: string) {
   };
 }
 
+/**
+ * Deleting a session cascades its matches, players, scores and guests, and
+ * those games leave the league rankings with no undo. The log row therefore
+ * keeps a full snapshot — enough to say whose session it was and to re-enter
+ * it by hand if the delete was a mistake — not just the id.
+ */
 export async function deleteSessionAction(input: { sessionId: string }) {
   const userId = await requireUserId();
-  const callerEmail = await getCurrentEmail();
   const session = await getSessionById(input.sessionId);
-  await deleteSession(userId, input.sessionId);
+  // Nothing to delete, nothing to log: a `session.deleted` row for a session
+  // that never existed would only confuse the audit trail.
+  if (!session) return { ok: true };
+  if (!(await canManageSession(userId, session))) {
+    throw new AuthorizationError(403, 'Cannot delete this session');
+  }
+
+  const matches = await listMatchesForSession(session.id);
+  const matchIds = matches.map((m) => m.id);
+  const [players, results, guests] = await Promise.all([
+    listPlayersForMatches(matchIds),
+    listResultsForMatches(matchIds),
+    listGuestsForSession(session.id),
+  ]);
+  const snapshot = {
+    session_id: session.id,
+    league_id: session.leagueId,
+    created_by: session.createdBy,
+    created_at: session.createdAt,
+    scheduled_for: session.scheduledFor,
+    player_count: session.playerCount,
+    location: session.location,
+    guests: guests.map((g) => ({ id: g.id, display_name: g.displayName, dupr: g.dupr })),
+    matches: matches
+      .slice()
+      .sort((a, b) => (a.scheduledOrder ?? 0) - (b.scheduledOrder ?? 0))
+      .map((m) => {
+        const r = results.find((x) => x.matchId === m.id);
+        const side = (team: number) =>
+          players
+            .filter((p) => p.matchId === m.id && p.team === team)
+            .sort((a, b) => a.position - b.position)
+            .map((p) => p.userId ?? `guest:${p.guestId}`);
+        return {
+          id: m.id,
+          order: m.scheduledOrder,
+          status: m.status,
+          team1: side(1),
+          team2: side(2),
+          team1_score: r?.team1Score ?? null,
+          team2_score: r?.team2Score ?? null,
+          completed_at: r?.completedAt ?? null,
+        };
+      }),
+  };
+
+  const callerEmail = await getCurrentEmail();
+  await deleteSession(userId, session.id);
   await logAdminEvent({
     eventType: 'session.deleted',
     userId,
     userEmail: callerEmail,
-    leagueId: session?.leagueId ?? null,
-    payload: { session_id: input.sessionId },
+    leagueId: session.leagueId,
+    payload: snapshot,
   });
   revalidatePath('/sessions');
-  if (session?.leagueId) revalidatePath(`/leagues/${session.leagueId}`);
+  if (session.leagueId) revalidatePath(`/leagues/${session.leagueId}`);
   return { ok: true };
 }
 

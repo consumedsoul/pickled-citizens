@@ -108,6 +108,135 @@ describe('getSessionDetail', () => {
   });
 });
 
+describe('deleteSessionAction', () => {
+  async function logged() {
+    const { logAdminEvent } = await import('@/lib/db/queries/admin');
+    return vi.mocked(logAdminEvent).mock.calls.map((c) => c[0]);
+  }
+
+  it('lets a league admin delete another admin\'s session and logs a full snapshot', async () => {
+    await signInAs('admin');
+    const { deleteSessionAction } = await import('@/lib/actions/sessions');
+    const h = useDb([
+      [{ ...session, scheduledFor: '2026-10-28T02:00:00Z' }],
+      [league], // canManageSession → isLeagueAdmin: league row (owner is "creator") …
+      [{ role: 'admin' }], // … then the caller's admin row
+      [
+        { id: 'M2', sessionId: 'S1', scheduledOrder: 1, status: 'scheduled' },
+        { id: 'M1', sessionId: 'S1', scheduledOrder: 0, status: 'completed' },
+      ],
+      [
+        { matchId: 'M1', userId: 'creator', guestId: null, team: 1, position: 0 },
+        { matchId: 'M1', userId: null, guestId: 'G1', team: 2, position: 1 },
+        { matchId: 'M1', userId: 'p3', guestId: null, team: 2, position: 0 },
+        { matchId: 'M1', userId: 'p2', guestId: null, team: 1, position: 1 },
+      ],
+      [{ matchId: 'M1', team1Score: 1, team2Score: 0, completedAt: '2026-10-28T03:00:00Z' }],
+      [{ id: 'G1', sessionId: 'S1', displayName: 'Ringer', dupr: 4.25 }],
+      // deleteSession re-reads the session and re-checks the gate.
+      [session],
+      [league],
+      [{ role: 'admin' }],
+    ]);
+    expect(await deleteSessionAction({ sessionId: 'S1' })).toEqual({ ok: true });
+    expect(h.deleteCalls).toHaveLength(1);
+    const events = await logged();
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      eventType: 'session.deleted',
+      userId: 'admin',
+      leagueId: 'L1',
+      payload: {
+        session_id: 'S1',
+        created_by: 'creator',
+        scheduled_for: '2026-10-28T02:00:00Z',
+        player_count: 8,
+        guests: [{ id: 'G1', display_name: 'Ringer', dupr: 4.25 }],
+        matches: [
+          {
+            id: 'M1',
+            status: 'completed',
+            team1: ['creator', 'p2'],
+            team2: ['p3', 'guest:G1'],
+            team1_score: 1,
+            team2_score: 0,
+            completed_at: '2026-10-28T03:00:00Z',
+          },
+          { id: 'M2', status: 'scheduled', team1: [], team2: [], team1_score: null },
+        ],
+      },
+    });
+  });
+
+  it('refuses an admin of a different league before reading or deleting anything', async () => {
+    await signInAs('other-league-admin');
+    const { deleteSessionAction } = await import('@/lib/actions/sessions');
+    const h = useDb([
+      [session],
+      [league], // L1's owner is "creator" …
+      [], // … and the caller has no L1 membership row
+    ]);
+    await expect(deleteSessionAction({ sessionId: 'S1' })).rejects.toMatchObject({
+      statusCode: 403,
+    });
+    expect(h.selectsUsed()).toBe(3);
+    expect(h.deleteCalls).toHaveLength(0);
+    expect(await logged()).toEqual([]);
+  });
+
+  it('logs nothing for a session that does not exist', async () => {
+    await signInAs('creator');
+    const { deleteSessionAction } = await import('@/lib/actions/sessions');
+    const h = useDb([[]]);
+    expect(await deleteSessionAction({ sessionId: 'missing' })).toEqual({ ok: true });
+    expect(h.deleteCalls).toHaveLength(0);
+    expect(await logged()).toEqual([]);
+  });
+});
+
+describe('deleteLeagueAction', () => {
+  it('logs the league name and roster, not just the id', async () => {
+    await signInAs('creator');
+    const { deleteLeagueAction } = await import('@/lib/actions/leagues');
+    const h = useDb([
+      [league], // the league
+      [league], // isLeagueOwner
+      [
+        { leagueId: 'L1', userId: 'creator', role: 'admin', email: 'c@example.com' },
+        { leagueId: 'L1', userId: 'p2', role: 'player', email: null },
+      ],
+      [league], // deleteLeague's own owner check
+    ]);
+    expect(await deleteLeagueAction({ leagueId: 'L1' })).toEqual({ ok: true });
+    expect(h.deleteCalls).toHaveLength(1);
+    const { logAdminEvent } = await import('@/lib/db/queries/admin');
+    expect(vi.mocked(logAdminEvent).mock.calls[0][0]).toMatchObject({
+      eventType: 'league.deleted',
+      leagueId: 'L1',
+      payload: {
+        name: 'Tuesday Crew',
+        owner_id: 'creator',
+        members: [
+          { user_id: 'creator', role: 'admin', email: 'c@example.com' },
+          { user_id: 'p2', role: 'player', email: null },
+        ],
+      },
+    });
+  });
+
+  it('refuses a league admin who is not the owner before deleting', async () => {
+    await signInAs('admin');
+    const { deleteLeagueAction } = await import('@/lib/actions/leagues');
+    const h = useDb([[league], [league]]);
+    await expect(deleteLeagueAction({ leagueId: 'L1' })).rejects.toMatchObject({
+      statusCode: 403,
+    });
+    expect(h.deleteCalls).toHaveLength(0);
+    const { logAdminEvent } = await import('@/lib/db/queries/admin');
+    expect(vi.mocked(logAdminEvent)).not.toHaveBeenCalled();
+  });
+});
+
 describe('completeMyProfile', () => {
   it('stores the Clerk email, not the one in the request, and sanitises the rest', async () => {
     await signInAs('newbie');
